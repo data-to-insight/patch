@@ -1,0 +1,16 @@
+---
+---
+
+<body>
+    <h1>PATCh App Directory</h1>
+    <ul>
+    {% for app in site.data.apps %}
+    <li>
+        <a href="https://share.stlite.net/#url=https://raw.githubusercontent.com/SocialFinanceDigitalLabs/patch/main/apps/{{ app.repo }}{% for r in app.reqs %}&req={{r}}{% endfor %}" target="_blank">
+        {{ app.name }}
+        </a>
+    </li>
+    {% endfor %}
+    </ul>
+
+</body>

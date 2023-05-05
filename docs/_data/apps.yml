@@ -1,0 +1,13 @@
+- name: Intro
+  repo: 000_intro/PATCh_app.py
+
+- name: Template
+  repo: 001_template/streamlit_app.py
+
+- name: Quality Data
+  repo: 002_quality_data_usecase_EH/quality_data_usecase_EH.py
+  reqs: [plotly, openpyxl]
+
+- name: Stage of CS Provision
+  repo: 005_stage_of_cs_provision/app.py
+  reqs: [matplotlib]
