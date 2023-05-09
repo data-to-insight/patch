@@ -2,12 +2,12 @@
 
 https://sfdl.org.uk/patch
 
-This is a [directory of web applications](https://sfdl.org.uk/patch) using only Python that run entirely in the browser. It uses mainly two libraries:
+This is a [directory of web applications](https://sfdl.org.uk/patch) built with Python. The apps run entirely in the browser. It uses mainly two libraries:
 
 - [streamlit](https://docs.streamlit.io/) - web applications using simple python code. Check the documentation to learn how to write apps.
 - [stlite](https://github.com/whitphx/stlite) - allows to use stramlit in the browser (using pyodide). If you're just writing apps, you don't have to worry about this.
 
-All you need to do is to write your own streamlit apps and they will be accessible from and running within any browser - all the data a user uploads or the analysis/charts/tables made by the python code are all processed within the browser. You 
+All you need to do is to write your own streamlit apps and they will be accessible from the directory of apps.
 
 # How to start
 
@@ -51,6 +51,3 @@ Let's go ahead and create, run and publish a small testing app.
 3. If you need to use external libraries (such as `matplotlib` to render charts or `openpyxl` to read excel files) ensure that those libraries are listed in a `requirements.txt` file in the same directory as your python file is. check [this example for guidance](/apps/002_quality_data_usecase_EH/requirements.txt). 
 
 4. Once you are happy with your changes, you are ready to publish your app (pending on approval) by making a pull request with your new app. Once your code is approved and merged, it will be displayed in the directory of apps in https://sfdl.org.uk/patch.
-
-
-
