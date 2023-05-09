@@ -19,7 +19,7 @@ Let's go ahead and create, run and publish a small testing app.
 ## Setup the editor
 1. Open the [web-based editor](https://github.com/github/dev) on this repository by pressiong the . key.
 
-2. Ensure you have the suggested extensions installed - a popup should open on the lower left side of your screen a few seconds after you open this editor. If it doesn't, go to the sidebar of the editor, click on the `extensions` icon and check the `recommended` section. You should see a social finance extension called `sf-stlite` (if not, search for it). Install it.
+2. Ensure you have the suggested extensions installed - a popup should open on the lower right side of your screen a few seconds after you open this editor. If it doesn't, go to the sidebar of the editor, click on the `extensions` icon and check the `recommended` section. You should see a social finance extension called `sf-stlite` (if not, search for it). Install it.
 
 ## Create an app
 1. Go to the [apps](./apps) directory and create a new directory for your app (for example, `apps/my_very_first_app`) and create your main app python file within it (it can be `apps/my_very_first_app/app.py` or `apps/my_very_first_app/my_very_first_app.py` or whatever you want).
