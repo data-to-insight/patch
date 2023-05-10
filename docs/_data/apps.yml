@@ -14,4 +14,4 @@
 
 - name: Quality Data Sankey
   repo: 004_quality_data_build_sankey/app.py
-  reqs: [plotly]
+  reqs: [plotly, openpyxl]
