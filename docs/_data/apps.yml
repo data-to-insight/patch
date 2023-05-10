@@ -12,6 +12,6 @@
   repo: 003_stage_of_cs_provision/app.py
   reqs: [matplotlib]
 
-- name: Stage of CS Provision
+- name: Quality Data Sankey
   repo: 004_quality_data_build_sankey/app.py
   reqs: [plotly]
