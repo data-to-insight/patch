@@ -15,3 +15,6 @@
 - name: Quality Data Sankey
   repo: 004_quality_data_build_sankey/app.py
   reqs: [plotly, openpyxl]
+
+- name: Multi Page Test
+  repo: 005_multi_page_test/Home.py
