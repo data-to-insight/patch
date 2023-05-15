@@ -11,7 +11,8 @@ st.markdown(
 This editor uses **stlite** is a port of _Streamlit_ to Wasm, powered by Pyodide,
 that runs completely on web browsers.
 
-The official repository is [🔗 here](https://github.com/whitphx/stlite).
+To contribute to PATCh apps, see it's documentation [here](https://github.com/SocialFinanceDigitalLabs/patch/blob/main/README.md).
+The official stlite repository is [🔗 here](https://github.com/whitphx/stlite).
 
 If you are new to Streamlit, read the Getting Started tutorial [🔗 here](https://docs.streamlit.io/library/get-started) first
 (don't worry, it only takes a few minutes 👍),

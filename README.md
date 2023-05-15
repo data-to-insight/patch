@@ -29,7 +29,7 @@ few seconds after you open this editor. If it doesn't, go to the sidebar of the 
 and check the `recommended` section. You should see a social finance extension called `sf-stlite` (if not, search for
 it). Install it.
 
-> :warning: ensure 
+> :warning: please ensure you have installed the `sf-stlite` extension and not the original `stlite` extension - the latter currently doesn't work while the former is an adaptation written by Social Finance that works properly.
 
 ## Create an app
 1. Go to the [apps](./apps) directory and make a new directory for your app (for example, `apps/my_very_first_app`) 
@@ -58,13 +58,13 @@ and create your main app python file within it (it can be `apps/my_very_first_ap
 1. With your app's python file opened (and focused), click on the `stlite` icon on the sidebar (it should be the one 
 bellow the `github` icon) and press "Launch stlite preview". 
 
-    ![Screenshot of stlite Icon](/img/stlite.png) 
+    ![Screenshot of stlite Icon](/docs/img/stlite.png) 
 
 2. You can also run it from vscode command palette: `ctrl` + `shift` + `P` and search for the command 
 `launch stlite preview`. You should now see a preview on the right side of your editor, while your app's code is in 
 your left side:
 
-    ![Screenshot of launching preview](/img/preview_sample.gif)
+    ![Screenshot of launching preview](/docs/img/preview_sample.gif)
 
 3. You can now edit the code and, once you save the python file, it will update the app's preview accordingly. If it 
 doesn't, edit the settings of your streamlit preview screen (on the top right button) and check the "Run on save" 
