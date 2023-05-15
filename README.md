@@ -29,6 +29,8 @@ few seconds after you open this editor. If it doesn't, go to the sidebar of the 
 and check the `recommended` section. You should see a social finance extension called `sf-stlite` (if not, search for
 it). Install it.
 
+> :warning: ensure 
+
 ## Create an app
 1. Go to the [apps](./apps) directory and make a new directory for your app (for example, `apps/my_very_first_app`) 
 and create your main app python file within it (it can be `apps/my_very_first_app/app.py` or 
