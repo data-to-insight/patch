@@ -18,6 +18,3 @@
 
 - name: Multi Page Test
   repo: 005_multi_page_test/Home.py
-
-- name: Imports Test
-  repo: 006_imports_test/app.py
