@@ -1,7 +1,9 @@
 import streamlit as st
-from utils.code import double
+import pandas as pd
 
-st.write('hello!')
+df = pd.read_csv('data.csv')
 
-st.write(double(3))
+st.write(df)
+
+
 
