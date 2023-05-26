@@ -1,0 +1,61 @@
+---
+---
+
+<head>
+  <link
+    rel="stylesheet"
+    type="text/css"
+    href="{{site.baseurl}}assets/css/materialize.css"
+  />
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h4 class="blue darken-2 white-text" style="padding: 20px">
+        PATCh Gallery of Apps
+      </h4>
+    </div>
+    <section>
+      <p>
+        Data to Insight is a national project led by local authorities with
+        support from the ADCS, DLUHC, DfE and Ofsted to help local authorities
+        make better use of data. This is a gallery of small apps that run entirely
+        in the browser. You can run one by clicking on the "Go to app" link of each app.
+      </p>
+      <p>
+        To learn how to create an app click
+        <a
+          href="https://github.com/SocialFinanceDigitalLabs/patch/blob/main/README.md"
+          target="_blank"
+          >here</a
+        >.
+      </p>
+    </section>
+
+    <div class="row">
+      {% for app in site.data.apps %}
+      <div class="col s12 m4">
+        <div class="card large">
+          <div class="card-content">
+            <span class="card-title">{{app.name}}</span>
+            <p>{{ app.description }}</p>
+            {% if app.image %}
+            <div class="card-image">
+              <img src="img/app_previews/{{app.image}}" />
+            </div>
+            {% endif %}
+          </div>
+          <div class="card-action">
+            <a
+              target="_blank"
+              class="blue-text text-darken-2"
+              href="https://share.stlite.net/#url=https://raw.githubusercontent.com/SocialFinanceDigitalLabs/patch/main/apps/{{ app.repo }}{% for r in app.reqs %}&req={{r}}{% endfor %}"
+              >Go to app</a
+            >
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</body>
