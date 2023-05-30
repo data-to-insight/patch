@@ -74,6 +74,6 @@ option - that will ensure your preview reloads every time you change something i
 ensure that those libraries are listed in a `requirements.txt` file in the same directory as your python file is. 
 Check [this example for guidance](/apps/002_quality_data_usecase_EH/requirements.txt). 
 
-5. Once you are happy with your changes, you are ready to publish your app (pending on approval) by making a pull 
-request with your new app. Once your code is approved and merged, it will be displayed in the directory of apps in 
+5. Once you are happy with your changes, you are ready to publish your app (pending on approval) by making a [pull 
+request with your new app](https://docs.github.com/en/codespaces/the-githubdev-web-based-editor#create-a-pull-request). Once your code is approved and merged, it will be displayed in the directory of apps in 
 https://sfdl.org.uk/patch.
