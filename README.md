@@ -21,10 +21,12 @@ Let's go ahead and create, run and publish a small testing app.
 
 
 ## Setup the editor
-1. Open the [web-based editor](https://github.com/github/dev) on this repository by pressiong the . key on the keyboard 
-or by [clicking here](https://github.dev/SocialFinanceDigitalLabs/patch).
 
-2. Ensure you have the suggested extensions installed - a popup should open on the lower right side of your screen a 
+1. Start by [creating a new branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository#creating-a-branch-via-the-branches-overview). This is where your code will live until you are ready to publish your app.
+
+2. Within that branch, go back to the repository main page (where you can read this document) and open the [web-based editor](https://github.com/github/dev) on this repository by pressiong the . key on the keyboard.
+
+3. Ensure you have the suggested extensions installed - a popup should open on the lower right side of your screen a 
 few seconds after you open this editor. If it doesn't, go to the sidebar of the editor, click on the `extensions` icon 
 and check the `recommended` section. You should see a social finance extension called `sf-stlite` (if not, search for
 it). Install it.

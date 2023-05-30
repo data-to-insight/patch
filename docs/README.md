@@ -23,8 +23,6 @@ where:
 |image| *optional* - app's preview/screenshot image. the images should live in the directory [`docs/img/app_previews`](./img/app_previews/) so that it's accessible through the jekyll website. If there's no image, don't add this field.
 
 
-
-
 # To test locally
 ```bash
 JEKYLL_VERSION=3.8 \
