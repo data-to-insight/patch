@@ -528,6 +528,47 @@ if uploaded_files:
     df_lim = check[(df["type"] == "referral") | (df["last_status"] == 1) | (df["first_status"] == 1)]
     df_lim = df_lim.groupby('ref_id').apply(dup_last_row).reset_index(drop=True)
 
+    # ################################
+    # # FILTERS 
+    # ################################
+    # df = df_lim
+    # #gender options
+    # with st.sidebar:
+    #     gender_option = st.sidebar.multiselect(
+    #     'What gender options category would you like?',
+    #     options=(df['gender'].unique()), default=(df['gender'].unique()))
+    # df = df[df["gender"].isin(gender_option)] 
+    
+    # #source options
+    # with st.sidebar:
+    #     source_option = st.sidebar.multiselect(
+    #     'What referral source options category would you like?',
+    #     options=(df['ref_source'].unique()), default=(df['ref_source'].unique()))
+    # df = df[df["ref_source"].isin(source_option)] 
+
+    # # Ethnicity options
+    # with st.sidebar:
+    #     ethnicity_option = st.sidebar.multiselect(
+    #     'What ethnicity options category would you like?',
+    #     options=(df['ethnicity'].unique()), default=(df['ethnicity'].unique()))
+    # df = df[df["ethnicity"].isin(ethnicity_option)] 
+
+    # # number of referrals in the year
+    # with st.sidebar:
+    #         num_of_refs = st.sidebar.slider('Number of referrals within 12 months',
+    #                         min_value=0,
+    #                         max_value=int(df['num_ref'].max()),
+    #                         value=[0,int(df['num_ref'].max())])
+    # df = df[(df['num_ref'].astype(int) >= num_of_refs[0]) & (df['num_ref'].astype(int) <= num_of_refs[1])]
+
+    # with st.sidebar:
+    #         ages = st.sidebar.slider('Age range of children',
+    #                         min_value=0,
+    #                         max_value=int(df['age'].max()),
+    #                         value=[0,int(df['age'].max())])
+    # df = df[(df['age'].astype(int) >= ages[0]) & (df['age'].astype(int) <= ages[1])]
+
+
     #####################################
     # STEP 2 - RESHAPING - this code is actually okay except do we want to duplicate the row if first status = final status
     #######################################
