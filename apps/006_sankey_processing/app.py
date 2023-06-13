@@ -436,9 +436,9 @@ if uploaded_files:
     #create new ID for each child-referral sequence 
     df["ref_id"] = df["id"].astype("str") +  "_" +  df["id_cum_referral"].astype("str")
 
-    #################################
-    #Filters
-    #################################
+    ################################
+    # LIMIT THE SAMPLE TO THOSE WITH 45 DAYS BETWEEN REFERRAL AND FINAL DATE IN DATA SET 
+    ################################
     
     #going to spread by referral ID 
     referral_vars = ["ethnicity", "age", "gender", "number of referrals in last 12 months", "referral source"]
@@ -455,7 +455,20 @@ if uploaded_files:
     #MERGE FILTERING VARIABLES BACK ON 
     df = df.drop(referral_vars, axis=1) 
     df = df.merge(ref_dta, left_on = "ref_id", right_on = "ref_id", validate ="many_to_one")
+    
 
+    last_date = df["date"].max()
+    df["time_diff"] = last_date - df["ref_date"]
+    df["time_diff"] = df["time_diff"].dt.days
+    # limit to those who have at least 45 days following referral
+    df = df[df["time_diff"] >= 45]
+
+    # Clean up data with clean up nfa function
+    df = df.groupby("ref_id").apply(clean_up_NFAs).sort_values(by=['id', 'date']).reset_index(drop=True)
+
+    ################################
+    # FILTERS 
+    ################################
 
     #gender options
     with st.sidebar:
@@ -494,18 +507,7 @@ if uploaded_files:
     df = df[(df['age'].astype(int) >= ages[0]) & (df['age'].astype(int) <= ages[1])]
 
 
-    ################################
-    # LIMIT THE SAMPLE TO THOSE WITH 45 DAYS BETWEEN REFERRAL AND FINAL DATE IN DATA SET 
-    ################################
-    last_date = df["date"].max()
-    print(last_date)
-    df["time_diff"] = last_date - df["ref_date"]
-    df["time_diff"] = df["time_diff"].dt.days
-    # limit to those who have at least 45 days following referral
-    df = df[df["time_diff"] >= 45]
 
-    # Clean up data with clean up nfa function
-    df = df.groupby("ref_id").apply(clean_up_NFAs).sort_values(by=['id', 'date']).reset_index(drop=True)
 
     ################################################
     # SET UP LOGIC FOR SKIPPING CIN PLAN
