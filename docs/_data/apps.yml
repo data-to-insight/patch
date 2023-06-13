@@ -28,7 +28,7 @@
 
 - name: Quality Data Sankey including pre-processing 
   repo: 006_sankey_processing/app.py
-  reqs: [plotly]
+  reqs: [plotly, openpyxl]
   description: "Use case for quality data sankey diagram which accepts CSVs with fixed column names"
   image: 004_quality_data_build_sankey.jpg
 
