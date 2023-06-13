@@ -147,7 +147,10 @@ def clean_up_NFAs(dta):
     dta = dta.sort_values(by = ["ref_id", "date", "event_ord"])
     # REFERRAL NFAS 
     # we know referrals are going to be the first obs within each referral id
-    if dta.iloc[0]["referral nfa?"] == "Yes": 
+    dta['referral nfa?'] = dta['referral nfa?'].astype('str')
+    if ('y' in dta.iloc[0]["referral nfa?"].lower()) | \
+        ('nfa' in dta.iloc[0]["referral nfa?"].lower()) | \
+        ('1' in dta.iloc[0]["referral nfa?"]): 
         # if the last event is a contact, save thelast row and the referral 
         print("referral NFA")
         if dta.iloc[-1]["type"] == "contact":
