@@ -3,18 +3,11 @@ import pandas as pd
 import numpy as np
 import datetime
 import plotly.graph_objects as go
+#from pyodide.http import open_url
 
 
 st.title('test')
-'''
-The csvs must start with the first row as the header, then the data
-All child ID columns must be child unique id
-Gender columns must be called gender
-referrals within the year must be number of referrals in last 12 months
-referral sources must be referral source
-referrla nfa colum must be referral nfa?
-case status must be called case status
-'''
+
 
 names = ['assessment_nfa',
         'cin_start',
@@ -76,6 +69,8 @@ journey_events = {'contact': {'contacts':'contact_dttm'},
 
 types_to_var = ["referral", "assessment_start", "cpp_start", "lac_start", "assessment_authorised", "cin_start"]    
 
+#lookups = open_url("https://github.com/data-to-insight/patch/blob/main/apps/006_sankey_processing/annex_a_lookups.pickle")
+
 def build_annexarecord(data, events=journey_events):
     '''
     Creates a flat file with three columns:
@@ -96,7 +91,7 @@ def build_annexarecord(data, events=journey_events):
        
         # Load Annex A list
         df = data[list_number] 
-        
+        df = df.loc[:,~df.columns.duplicated()]
         # Get date column information
         df.columns = [col.lower().strip() for col in df.columns]
 
@@ -294,37 +289,119 @@ def journey_fy(data, filtering_vars = ["gender", "ethnicity"]):
     #rename type to source 
     return data
 
-uploaded_files = st.file_uploader('Upload annex a here:', accept_multiple_files=True)
+uploaded_files = st.file_uploader('Upload annex a here as set of csvs or single excel file:', accept_multiple_files=True)
 if uploaded_files:
-    loaded_files = {uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in uploaded_files}
+    if len(uploaded_files) > 1:
+        loaded_files = {uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in uploaded_files}
+        data_dict = {}
+        for file in loaded_files.items():
+            if ('list 1' in file[0].lower()) | ('contacts' in file[0].lower()):
+                data_dict['contacts'] = file[1]
+            if ('list 2' in file[0].lower()) | ('help' in file[0].lower()):
+                data_dict['early_help_assessments'] = file[1]
+            if ('list 3' in file[0].lower()) | ('referral' in file[0].lower()):
+                data_dict['referrals'] = file[1]
+            if ('list 4' in file[0].lower()) | ('assess' in file[0].lower()) & ~('early' in file[0].lower()):
+                data_dict['assessments'] = file[1]
+            if ('list 5' in file[0].lower()) | ('47' in file[0].lower()):
+                data_dict['section_47'] = file[1]
+            if ('list 6' in file[0].lower()) | (('need' in file[0].lower()) & ('child' in file[0].lower())):
+                data_dict['children_in_need'] = file[1]
+                print(data_dict['children_in_need'])
+            if ('list 7' in file[0].lower()) | ('protection' in file[0].lower()) | ('cpp' in file[0].lower()):
+                data_dict['child_protection_plans'] = file[1]
+            if ('list 8' in file[0].lower()) | ('care' in file[0].lower()) & ~('leaver' in file[0].lower()):
+                data_dict['children_in_care'] = file[1]
+            if ('list 9' in file[0].lower()) | ('leaver' in file[0].lower()):
+                data_dict['care_leavers'] = file[1]
 
-    data_dict = {}
+    else:
+        loaded_file = pd.read_excel(uploaded_files[0], sheet_name=None)
+        data_dict = {}
+        keys_list = list(loaded_file.keys())
+        for key in keys_list:
+            if ('list 1' in key.lower()) | ('contacts' in key.lower()):
+                data_dict['contacts'] = loaded_file[key]
+            if ('list 2' in key.lower()) | ('help' in key.lower()):
+                    data_dict['early_help_assessments'] = loaded_file[key]
+            if ('list 3' in key.lower()) | ('referral' in key.lower()):
+                    data_dict['referrals'] = loaded_file[key]
+            if ('list 4' in key.lower()) | ('assess' in key.lower()) & ~('early' in key.lower()):
+                    data_dict['assessments'] = loaded_file[key]
+            if ('list 5' in key.lower()) | ('47' in key.lower()):
+                    data_dict['section_47'] = loaded_file[key]
+            if ('list 6' in key.lower()) | ('need' in key.lower()) | ('cin' in key.lower()):
+                    data_dict['children_in_need'] = loaded_file[key]
+            if ('list 7' in key.lower()) | ('protection' in key.lower()) | ('cpp' in key.lower()):
+                    data_dict['child_protection_plans'] = loaded_file[key]
+            if ('list 8' in key.lower()) | ('care' in key.lower()) & ~('leaver' in key.lower()):
+                    data_dict['children_in_care'] = loaded_file[key]
+            if ('list 9' in key.lower()) | ('leaver' in key.lower()):
+                    data_dict['care_leavers'] = loaded_file[key]
 
-    for file in loaded_files.items():
-        if ('list 1' in file[0].lower()) | ('contacts' in file[0].lower()):
-            data_dict['contacts'] = file[1]
-        if ('list 2' in file[0].lower()) | ('help' in file[0].lower()):
-            data_dict['early_help_assessments'] = file[1]
-        if ('list 3' in file[0].lower()) | ('referral' in file[0].lower()):
-            data_dict['referrals'] = file[1]
-        if ('list 4' in file[0].lower()) | ('assess' in file[0].lower()) & ~('early' in file[0].lower()):
-            data_dict['assessments'] = file[1]
-        if ('list 5' in file[0].lower()) | ('47' in file[0].lower()):
-            data_dict['section_47'] = file[1]
-        if ('list 6' in file[0].lower()) | (('need' in file[0].lower()) & ('child' in file[0].lower())):
-            data_dict['children_in_need'] = file[1]
-            print(data_dict['children_in_need'])
-        if ('list 7' in file[0].lower()) | ('protection' in file[0].lower()) | ('cpp' in file[0].lower()):
-            data_dict['child_protection_plans'] = file[1]
-        if ('list 8' in file[0].lower()) | ('care' in file[0].lower()) & ~('leaver' in file[0].lower()):
-            data_dict['children_in_care'] = file[1]
-        if ('list 9' in file[0].lower()) | ('leaver' in file[0].lower()):
-            data_dict['care_leavers'] = file[1]
+
+    data_dict['contacts'].rename(columns={data_dict['contacts'].columns[0]: 'child unique id', 
+                                         data_dict['contacts'].columns[1]: 'gender',
+                                         data_dict['contacts'].columns[2]: 'ethnicity',
+                                         data_dict['contacts'].columns[5]: 'contact_dttm'},
+                                         inplace=True) 
+    data_dict['early_help_assessments'].rename(columns={data_dict['early_help_assessments'].columns[0]: 'child unique id', 
+                                         data_dict['early_help_assessments'].columns[1]: 'gender',
+                                         data_dict['early_help_assessments'].columns[2]: 'ethnicity',
+                                         data_dict['early_help_assessments'].columns[3]: 'dob',
+                                         data_dict['early_help_assessments'].columns[5]: 'eha_startdate',
+                                         data_dict['early_help_assessments'].columns[6]: 'eha_completeddate'},
+                                         inplace=True)    
+    data_dict['referrals'].rename(columns={data_dict['referrals'].columns[0]: 'child unique id', 
+                                         data_dict['referrals'].columns[1]: 'gender',
+                                         data_dict['referrals'].columns[2]: 'ethnicity',
+                                         data_dict['referrals'].columns[5]: 'refrl_start_dttm',
+                                         data_dict['referrals'].columns[6]: 'referral source',
+                                         data_dict['referrals'].columns[7]: 'referral nfa?',
+                                         data_dict['referrals'].columns[8]: 'number of referrals in last 12 months'},
+                                         inplace=True)  
+    data_dict['assessments'].rename(columns={data_dict['assessments'].columns[0]: 'child unique id', 
+                                         data_dict['assessments'].columns[1]: 'gender',
+                                         data_dict['assessments'].columns[2]: 'ethnicity',
+                                         data_dict['assessments'].columns[6]: 'assessmentstartdate',
+                                         data_dict['assessments'].columns[8]: 'dateofauthorisation'},
+                                         inplace=True)  
+                                         #got here
+    data_dict['section_47'].rename(columns={data_dict['section_47'].columns[0]: 'child unique id', 
+                                         data_dict['section_47'].columns[1]: 'gender',
+                                         data_dict['section_47'].columns[2]: 'ethnicity',
+                                         data_dict['section_47'].columns[6]: 'startdate',
+                                         data_dict['section_47'].columns[8]: 'cpdate'},
+                                         inplace=True)
+    data_dict['children_in_need'].rename(columns={data_dict['children_in_need'].columns[0]: 'child unique id', 
+                                         data_dict['children_in_need'].columns[1]: 'gender',
+                                         data_dict['children_in_need'].columns[2]: 'ethnicity',
+                                         data_dict['children_in_need'].columns[6]: 'cinstartdate',
+                                         data_dict['children_in_need'].columns[9]: 'cinclosuredate',
+                                         data_dict['children_in_need'].columns[11]: 'case status'},
+                                         inplace=True)    
+    data_dict['child_protection_plans'].rename(columns={data_dict['child_protection_plans'].columns[0]: 'child unique id', 
+                                         data_dict['child_protection_plans'].columns[1]: 'gender',
+                                         data_dict['child_protection_plans'].columns[2]: 'ethnicity',
+                                         data_dict['child_protection_plans'].columns[6]: 'start_dttm2',
+                                         data_dict['child_protection_plans'].columns[12]: 'end_dttm2'},
+                                         inplace=True)  
+    data_dict['children_in_care'].rename(columns={data_dict['children_in_care'].columns[0]: 'child unique id', 
+                                         data_dict['children_in_care'].columns[1]: 'gender',
+                                         data_dict['children_in_care'].columns[2]: 'ethnicity',
+                                         data_dict['children_in_care'].columns[7]: 'startdaterecentcareepisode',
+                                         data_dict['children_in_care'].columns[20]: 'dateceasedlac'},
+                                         inplace=True)      
+    data_dict['care_leavers'].rename(columns={data_dict['care_leavers'].columns[0]: 'child unique id', 
+                                         data_dict['care_leavers'].columns[1]: 'gender',
+                                         data_dict['care_leavers'].columns[2]: 'ethnicity'},
+                                         inplace=True) 
+
 
     all_data = build_annexarecord(data_dict)
 
-    #test = all_data[["child unique id", "type", "date"]]
-    #st.write(test.astype('object'))
+    # Renaming necessary column headers
+
 
     # extract the first type of event an individual has 
     first_event = all_data.sort_values("date").groupby('child unique id').first()
@@ -369,6 +446,8 @@ if uploaded_files:
     ref_dta =ref_dta.rename(columns = {"number of referrals in last 12 months":"num_ref",  
                                     "referral source" : "ref_source", 
                                     "date" : "ref_date"})
+
+    ref_dta['num_ref'] = ref_dta['num_ref'].astype('float')
 
     #MERGE FILTERING VARIABLES BACK ON 
     df = df.drop(referral_vars, axis=1) 
