@@ -152,7 +152,7 @@ def clean_up_NFAs(dta):
         ('nfa' in dta.iloc[0]["referral nfa?"].lower()) | \
         ('1' in dta.iloc[0]["referral nfa?"]): 
         # if the last event is a contact, save thelast row and the referral 
-        print("referral NFA")
+        
         if dta.iloc[-1]["type"] == "contact":
             dta_first = dta.iloc[[0]]
             dta_last  = dta.iloc[[-1]]
