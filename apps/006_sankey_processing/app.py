@@ -289,32 +289,56 @@ def journey_fy(data, filtering_vars = ["gender", "ethnicity"]):
     #rename type to source 
     return data
 
-uploaded_files = st.file_uploader('Upload annex a here:', accept_multiple_files=True)
+uploaded_files = st.file_uploader('Upload annex a here as set of csvs or single excel file:', accept_multiple_files=True)
 if uploaded_files:
-    loaded_files = {uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in uploaded_files}
+    if len(uploaded_files) > 1:
+        loaded_files = {uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in uploaded_files}
+        data_dict = {}
+        for file in loaded_files.items():
+            if ('list 1' in file[0].lower()) | ('contacts' in file[0].lower()):
+                data_dict['contacts'] = file[1]
+            if ('list 2' in file[0].lower()) | ('help' in file[0].lower()):
+                data_dict['early_help_assessments'] = file[1]
+            if ('list 3' in file[0].lower()) | ('referral' in file[0].lower()):
+                data_dict['referrals'] = file[1]
+            if ('list 4' in file[0].lower()) | ('assess' in file[0].lower()) & ~('early' in file[0].lower()):
+                data_dict['assessments'] = file[1]
+            if ('list 5' in file[0].lower()) | ('47' in file[0].lower()):
+                data_dict['section_47'] = file[1]
+            if ('list 6' in file[0].lower()) | (('need' in file[0].lower()) & ('child' in file[0].lower())):
+                data_dict['children_in_need'] = file[1]
+                print(data_dict['children_in_need'])
+            if ('list 7' in file[0].lower()) | ('protection' in file[0].lower()) | ('cpp' in file[0].lower()):
+                data_dict['child_protection_plans'] = file[1]
+            if ('list 8' in file[0].lower()) | ('care' in file[0].lower()) & ~('leaver' in file[0].lower()):
+                data_dict['children_in_care'] = file[1]
+            if ('list 9' in file[0].lower()) | ('leaver' in file[0].lower()):
+                data_dict['care_leavers'] = file[1]
 
-    data_dict = {}
+    else:
+        loaded_file = pd.read_excel(uploaded_files[0], sheet_name=None)
+        data_dict = {}
+        keys_list = list(loaded_file.keys())
+        for key in keys_list:
+            if ('list 1' in key.lower()) | ('contacts' in key.lower()):
+                data_dict['contacts'] = loaded_file[key]
+            if ('list 2' in key.lower()) | ('help' in key.lower()):
+                    data_dict['early_help_assessments'] = loaded_file[key]
+            if ('list 3' in key.lower()) | ('referral' in key.lower()):
+                    data_dict['referrals'] = loaded_file[key]
+            if ('list 4' in key.lower()) | ('assess' in key.lower()) & ~('early' in key.lower()):
+                    data_dict['assessments'] = loaded_file[key]
+            if ('list 5' in key.lower()) | ('47' in key.lower()):
+                    data_dict['section_47'] = loaded_file[key]
+            if ('list 6' in key.lower()) | ('need' in key.lower()) | ('cin' in key.lower()):
+                    data_dict['children_in_need'] = loaded_file[key]
+            if ('list 7' in key.lower()) | ('protection' in key.lower()) | ('cpp' in key.lower()):
+                    data_dict['child_protection_plans'] = loaded_file[key]
+            if ('list 8' in key.lower()) | ('care' in key.lower()) & ~('leaver' in key.lower()):
+                    data_dict['children_in_care'] = loaded_file[key]
+            if ('list 9' in key.lower()) | ('leaver' in key.lower()):
+                    data_dict['care_leavers'] = loaded_file[key]
 
-    for file in loaded_files.items():
-        if ('list 1' in file[0].lower()) | ('contacts' in file[0].lower()):
-            data_dict['contacts'] = file[1]
-        if ('list 2' in file[0].lower()) | ('help' in file[0].lower()):
-            data_dict['early_help_assessments'] = file[1]
-        if ('list 3' in file[0].lower()) | ('referral' in file[0].lower()):
-            data_dict['referrals'] = file[1]
-        if ('list 4' in file[0].lower()) | ('assess' in file[0].lower()) & ~('early' in file[0].lower()):
-            data_dict['assessments'] = file[1]
-        if ('list 5' in file[0].lower()) | ('47' in file[0].lower()):
-            data_dict['section_47'] = file[1]
-        if ('list 6' in file[0].lower()) | (('need' in file[0].lower()) & ('child' in file[0].lower())):
-            data_dict['children_in_need'] = file[1]
-            print(data_dict['children_in_need'])
-        if ('list 7' in file[0].lower()) | ('protection' in file[0].lower()) | ('cpp' in file[0].lower()):
-            data_dict['child_protection_plans'] = file[1]
-        if ('list 8' in file[0].lower()) | ('care' in file[0].lower()) & ~('leaver' in file[0].lower()):
-            data_dict['children_in_care'] = file[1]
-        if ('list 9' in file[0].lower()) | ('leaver' in file[0].lower()):
-            data_dict['care_leavers'] = file[1]
 
     data_dict['contacts'].rename(columns={data_dict['contacts'].columns[0]: 'child unique id', 
                                          data_dict['contacts'].columns[1]: 'gender',
