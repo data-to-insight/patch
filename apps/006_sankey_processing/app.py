@@ -144,7 +144,8 @@ def file_upload_fn(uploaded_files):
                                          data_dict['assessments'].columns[1]: 'gender',
                                          data_dict['assessments'].columns[2]: 'ethnicity',
                                          data_dict['assessments'].columns[6]: 'assessmentstartdate',
-                                         data_dict['assessments'].columns[8]: 'dateofauthorisation'},
+                                         data_dict['assessments'].columns[8]: 'dateofauthorisation',
+                                         data_dict['assessments'].columns[10]: "was the child assessed as requiring la children's social care support"},
                                          inplace=True)  
                                          #got here
     data_dict['section_47'].rename(columns={data_dict['section_47'].columns[0]: 'child unique id', 
@@ -256,7 +257,10 @@ def clean_up_NFAs(dta):
     dta = dta.sort_values(by = ["ref_id", "date", "event_ord"])
     # REFERRAL NFAS 
     # we know referrals are going to be the first obs within each referral id
-    if dta.iloc[0]["referral nfa?"] == "Yes": 
+    dta['referral nfa?'] = dta['referral nfa?'].astype('str')
+    if ('y' in dta.iloc[0]["referral nfa?"].lower()) | \
+        ('nfa' in dta.iloc[0]["referral nfa?"].lower()) | \
+        ('1' in dta.iloc[0]["referral nfa?"]): 
         # if the last event is a contact, save thelast row and the referral 
         print("referral NFA")
         if dta.iloc[-1]["type"] == "contact":
@@ -284,8 +288,13 @@ def clean_up_NFAs(dta):
         # extract first index where there is an assessment (should be 1, but making sure)
         fa_i = asmt_index[0][0]
         # if they were assessment nfa...
-        if "CS Close Case" in dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"]: # -> make this more generic
-            print("First assessment was NFA")
+        if ("CS Close Case" in dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"]) :
+        #dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"] == (
+            # 'b) No' |
+            # '0 - No'|   
+            # 'N' |
+            # 'No'|
+            # 'False'):
             # if the last event is a contact, save that the first row (referral), assessment row (should be 1), and contact 
             if dta.iloc[-1]["type"] == "contact":
                 dta = dta.iloc[[0, fa_i, -1]]
@@ -397,7 +406,7 @@ def journey_fy(data, filtering_vars = ["gender", "ethnicity"]):
     return data
 
 uploaded_files = st.file_uploader('Upload annex a here as set of csvs or single excel file:', accept_multiple_files=True)
-if uploaded_files:
+if (len(uploaded_files) > 0) & ('filters' not in st.session_state):
     st.write('got here')
     data_dict = file_upload_fn(uploaded_files)
 
@@ -471,6 +480,10 @@ if uploaded_files:
     #################################
     #Filters
     #################################
+
+    # Initialize session state to not re run code each time
+    if 'filters' not in st.session_state:
+        st.session_state['filters'] = df
 
     #gender options
     with st.sidebar:
@@ -586,3 +599,121 @@ if uploaded_files:
 
     st.write(df.astype(object))
     st.write('got here')
+
+    #############################
+    # Session for changes to widgets
+    #############################
+if (len(uploaded_files) > 0) & ('filters' in st.session_state):
+    df = st.session_state['filters']
+
+        #gender options
+    with st.sidebar:
+        gender_option = st.sidebar.multiselect(
+        'What gender options category would you like?',
+        options=(df['gender'].unique()), default=(df['gender'].unique()))
+    df = df[df["gender"].isin(gender_option)] 
+    
+    #source options
+    with st.sidebar:
+        source_option = st.sidebar.multiselect(
+        'What referral source options category would you like?',
+        options=(df['ref_source'].unique()), default=(df['ref_source'].unique()))
+    df = df[df["ref_source"].isin(source_option)] 
+
+    # Ethnicity options
+    with st.sidebar:
+        ethnicity_option = st.sidebar.multiselect(
+        'What ethnicity options category would you like?',
+        options=(df['ethnicity'].unique()), default=(df['ethnicity'].unique()))
+    df = df[df["ethnicity"].isin(ethnicity_option)] 
+
+    # number of referrals in the year
+    with st.sidebar:
+            num_of_refs = st.sidebar.slider('Number of referrals within 12 months',
+                            min_value=0,
+                            max_value=int(df['num_ref'].max()),
+                            value=[0,int(df['num_ref'].max())])
+    df = df[(df['num_ref'].astype(int) >= num_of_refs[0]) & (df['num_ref'].astype(int) <= num_of_refs[1])]
+
+    with st.sidebar:
+            ages = st.sidebar.slider('Age range of children',
+                            min_value=0,
+                            max_value=int(df['age'].max()),
+                            value=[0,int(df['age'].max())])
+    df = df[(df['age'].astype(int) >= ages[0]) & (df['age'].astype(int) <= ages[1])]
+
+
+
+
+    ################################################
+    # SET UP LOGIC FOR SKIPPING CIN PLAN
+    ################################################
+    # below is the number of days of lag time after cin start date and CPP/LAC before we consider it a different plan step 
+    days_real_cin = 70 
+    # variable for is cin or is lac 
+    df['is_cpp_lac'] = ((df["is_cpp_start"] == 1) | (df['is_lac_start'] == 1)).astype("int")
+    df['is_cin_cpp_lac'] = ((df["is_cpp_start"] == 1) | (df['is_lac_start'] == 1) | (df['is_cin_start'] == 1)).astype("int")
+    df = df.groupby('ref_id').apply(drop_fake_cin).reset_index(drop=True)
+
+
+    df = df.groupby('ref_id').apply(flag_last_status).reset_index(drop=True)
+    df = df.groupby('ref_id').apply(flag_first_status).reset_index(drop=True)
+
+    # LIMIT OBSERVATIONS
+    check = df[["id", "ref_id", "date", "type", "event_ord", "last_status", "first_status", "case status", "check", "ethnicity", "gender"]].sort_values(by = ['id', 'date'])
+    df_lim = check[(df["type"] == "referral") | (df["last_status"] == 1) | (df["first_status"] == 1)]
+    df_lim = df_lim.groupby('ref_id').apply(dup_last_row).reset_index(drop=True)
+
+    #####################################
+    # STEP 2 - RESHAPING - this code is actually okay except do we want to duplicate the row if first status = final status
+    #######################################
+    
+    journey = df_lim.groupby('ref_id').apply(journey_fy).reset_index(drop=True)
+    journey = journey[["target", "source", "ref_id"]]
+
+    # collapse data frame 
+    df = journey.groupby(['target', 'source']).count().reset_index()
+
+    #####################################
+    # Sankey
+    #####################################
+    df = df.merge(labs, left_on = "target", right_on = "name")
+    df = df.rename(columns = {'lab':'target_lab'})
+    df = df.merge(labs, left_on = "source", right_on = "name")
+    df = df.rename(columns = {'lab':'source_lab'})
+    df = df.drop(columns = ["name_x", "target", "source", "name_y"])
+    df = df.rename(columns = {'target_lab':'target','source_lab':'source'})
+    source_string = df["source"].values.tolist()
+    target_string = df["target"].values.tolist()
+
+    # create index values for source and target 
+    combo = source_string + target_string
+    all_options = np.unique(combo)
+    options_to_merge = pd.DataFrame(all_options, columns = ["options"])
+    options_to_merge.reset_index(inplace=True)
+    options_to_merge = options_to_merge.rename(columns = {'index':'sankey_index'})
+    labels = options_to_merge["options"].values.tolist()
+
+
+    # first merge the index values for source
+    df_ind = df.merge(options_to_merge, left_on = "source", right_on = "options")
+    # rename and drop so we can re-merge
+    df_ind = df_ind.rename(columns = {"sankey_index":"source_index"})
+    df_ind = df_ind.drop(columns = "options")
+    # merge the index values for target 
+    df_ind = df_ind.merge(options_to_merge, left_on = "target", right_on = "options")
+    df_ind = df_ind.rename(columns = {"sankey_index":"target_index"})
+
+    #turn columns into arrays so we can create a dictionary for the Sankey input
+    source = df_ind["source_index"].values.tolist()
+    target = df_ind["target_index"].values.tolist()
+    value  = df_ind["ref_id"].values.tolist()
+
+    link = dict(source = source, target = target, value = value)
+    node = dict(label = labels, pad = 15, thickness = 5)
+
+    
+    data = go.Sankey(link = link, node = node)
+    fig = go.Figure(data)
+    st.plotly_chart(fig)
+    st.write(df.astype(object))
