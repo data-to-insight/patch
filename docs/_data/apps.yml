@@ -32,10 +32,5 @@
   description: "Use case for quality data sankey diagram which accepts CSVs with fixed column names"
   image: 004_quality_data_build_sankey.jpg
 
-- name: Sankey cache test
-  repo: 007_sankey_cache_test/app.py
-  reqs: [plotly, openpyxl]
-  description: test for sankey with cache for long running functions
-  image: 004_quality_data_build_sankey.jpg
 
 
