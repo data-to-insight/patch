@@ -1,7 +1,5 @@
 # PATCh
 
-https://sfdl.org.uk/patch
-
 This is a [directory of web applications](https://sfdl.org.uk/patch) built with Python. The apps run entirely in the 
 browser. It uses mainly two libraries:
 
