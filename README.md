@@ -1,7 +1,6 @@
 # PATCh
-
 This is a [directory of web applications](https://patch.datatoinsight.org) built with Python. The apps run entirely in the 
-browser. It uses mainly two libraries:
+
 
 - [streamlit](https://docs.streamlit.io/) - web applications using simple python code. Check the documentation to learn 
 how to write apps.
@@ -22,7 +21,7 @@ Let's go ahead and create, run and publish a small testing app.
 
 1. Start by [creating a new branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository#creating-a-branch-via-the-branches-overview). This is where your code will live until you are ready to publish your app.
 
-2. Within that branch, go back to the repository main page (where you can read this document) and open the [web-based editor](https://github.com/github/dev) on this repository by pressiong the . key on the keyboard.
+2. Within that branch, go back to the repository main page (where you can read this document) and open the [web-based editor](https://github.com/github/dev) on this repository by pressing the . key on the keyboard.
 
 3. Ensure you have the suggested extensions installed - a popup should open on the lower right side of your screen a 
 few seconds after you open this editor. If it doesn't, go to the sidebar of the editor, click on the `extensions` icon 
@@ -76,3 +75,4 @@ Check [this example for guidance](/apps/002_quality_data_usecase_EH/requirements
 
 5. Once you are happy with your changes, you are ready to publish your app (pending on approval) by making a [pull 
 request with your new app](https://docs.github.com/en/codespaces/the-githubdev-web-based-editor#create-a-pull-request). Once your code is approved and merged, it will be displayed in the directory of apps in https://patch.datatoinsight.org.
+
