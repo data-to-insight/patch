@@ -1,9 +1,6 @@
 # PATCh
+This is a [directory of web applications](https://patch.datatoinsight.org) built with Python. The apps run entirely in the 
 
-https://data-to-insight.github.io/patch
-
-This is a [directory of web applications](https://data-to-insight.github.io/patch) built with Python. The apps run entirely in the 
-browser. It uses mainly two libraries:
 
 - [streamlit](https://docs.streamlit.io/) - web applications using simple python code. Check the documentation to learn 
 how to write apps.
@@ -77,4 +74,5 @@ ensure that those libraries are listed in a `requirements.txt` file in the same 
 Check [this example for guidance](/apps/002_quality_data_usecase_EH/requirements.txt). 
 
 5. Once you are happy with your changes, you are ready to publish your app (pending on approval) by making a [pull 
-request with your new app](https://docs.github.com/en/codespaces/the-githubdev-web-based-editor#create-a-pull-request). Once your code is approved and merged, it will be displayed in the directory of apps in https://data-to-insight.github.io/patch.
+request with your new app](https://docs.github.com/en/codespaces/the-githubdev-web-based-editor#create-a-pull-request). Once your code is approved and merged, it will be displayed in the directory of apps in https://patch.datatoinsight.org.
+
