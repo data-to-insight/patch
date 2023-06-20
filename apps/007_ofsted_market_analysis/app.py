@@ -3,9 +3,13 @@ import pandas as pd
 import plotly.express as px
 import matplotlib
 
+# Title and description
+st.write('Ofsted Market Analysis - small providers by region')
+st.write('This tool analyses a list of social care providers as provided by Ofsted.')
+st.write('The user can filter on one or multiple regions, as well as a maximum threshold of settings per owner, to view a list of socal care settings that fit these criteria.')
 
 # Takes "Ofsted Social care providers list for LAs"
-uploaded_files = st.file_uploader('Upload Ofsted social care providers list', accept_multiple_files=False)
+uploaded_files = st.file_uploader('Upload Ofsted social care providers list:', accept_multiple_files=False)
 
 if uploaded_files:
     if uploaded_files.name[-4:] == '.csv':
@@ -14,7 +18,7 @@ if uploaded_files:
         loaded_files = {uploaded_files.name: pd.read_excel(uploaded_files)}
     
     for file in loaded_files.items():
-        st.write(file[0]) # Print the key from the dictionary for this file
+        st.write('Displaying "' + file[0] + '"') # Print the key from the dictionary for this file
         #st.dataframe(file[1]) # Print the dataframe from the dictionary for this file
 
     # Access the dataframe for the file
@@ -90,10 +94,14 @@ if uploaded_files:
     #st.dataframe(counts)
 
     # Create a plot
+    st.write('This chart summarises the number of ')
     fig = px.bar(counts,
                  x = 'Number of settings with this owner',
                  y = 'URN',
                  color = 'Region',
+                 labels={
+                     "Number of settings with this owner": "Number of settings per owner",
+                     "URN": "Number of owners"},
                  #color_discrete_sequence = ['Red', 'Light Blue'],
                  barmode = 'group'
     )
