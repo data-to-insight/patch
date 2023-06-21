@@ -25,9 +25,12 @@ if uploaded_file:
     epis.columns = map(str.lower, epis.columns)
     header.columns = map(str.lower, header.columns)
     distance.columns = map(str.lower, distance.columns)
+    
+    epis.index.rename('index', inplace=True)
+    st.table(epis)
 
     epis = epis.merge(distance, on='id', how='left')
-
+    
     epis["cnt"] = 1
     # tag the number of episodes
     epis = epis.sort_values(by = ["id","decom"])
