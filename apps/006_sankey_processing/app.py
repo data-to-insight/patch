@@ -145,7 +145,7 @@ def file_upload_fn(uploaded_files):
                                          data_dict['assessments'].columns[2]: 'ethnicity',
                                          data_dict['assessments'].columns[6]: 'assessmentstartdate',
                                          data_dict['assessments'].columns[8]: 'dateofauthorisation',
-                                         data_dict['assessments'].columns[10]: "was the child assessed as requiring la children's social care support"},
+                                         data_dict['assessments'].columns[9]: "was the child assessed as requiring la children’s social care support?"},
                                          inplace=True)  
                                          #got here
     data_dict['section_47'].rename(columns={data_dict['section_47'].columns[0]: 'child unique id', 
@@ -288,13 +288,13 @@ def clean_up_NFAs(dta):
         # extract first index where there is an assessment (should be 1, but making sure)
         fa_i = asmt_index[0][0]
         # if they were assessment nfa...
-        if ("CS Close Case" in dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"]) :
-        #dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"] == (
-            # 'b) No' |
-            # '0 - No'|   
-            # 'N' |
-            # 'No'|
-            # 'False'):
+        if ("CS Close Case" in dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"]) | \
+        dta.iloc[fa_i]["was the child assessed as requiring la children’s social care support?"] == (
+            'b) No' |
+            '0 - No'|   
+            'N' |
+            'No'|
+            'False'):
             # if the last event is a contact, save that the first row (referral), assessment row (should be 1), and contact 
             if dta.iloc[-1]["type"] == "contact":
                 dta = dta.iloc[[0, fa_i, -1]]
