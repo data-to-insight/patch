@@ -105,12 +105,13 @@ if uploaded_file:
                "temp":"Temporary placement", "res_sch": "Residential school"}] 
     
     result = {key: val for key, val in zip(labels, dicts)}
-
     xvar = st.selectbox('Select' , options=list(vars.keys()), format_func=format_func)
+    st.write(result[xvar].keys())
 
     dt= epis.sort_values(by = xvar)
     dt['ind'] = dt.reset_index().index
     dt[xvar] = dt[xvar].astype(object)
+    
     fig = px.scatter(dt, 
                  x = "pl_distance", 
                  color = dt[xvar].map(result[xvar]),
@@ -121,4 +122,14 @@ if uploaded_file:
                       legend_title_text = vars[xvar])
     fig.update_yaxes(showticklabels=False)
     st.plotly_chart(fig)
+    
 
+
+    dt_coll = dt
+
+    for v in result[xvar].keys():
+        dt_coll[xvar] = np.where(dt[xvar] == v, result[xvar][v], dt_coll[xvar])
+     
+    dt_coll = dt.groupby(xvar)["pl_distance"].mean()
+    st.write("Average distance by characteristic")
+    st.table(dt_coll)
