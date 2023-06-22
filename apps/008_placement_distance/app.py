@@ -29,9 +29,8 @@ if uploaded_file:
     epis['ind'] = epis.reset_index().index
     distance['ind'] = distance.reset_index().index
 
-
     epis = epis.merge(distance, on=['id', 'ind'], validate='one_to_one')
-    
+
     # tag the number of episodes
     epis["cnt"] = 1
     epis = epis.sort_values(by = ["id","decom"])
@@ -69,13 +68,12 @@ if uploaded_file:
                   "other": ["Z1"], 
                    "temp": ["T0", "T1", "T2", "T3", "T4"], 
                    "res_sch": ["S1"]}
-    
+     
     epis["pt_group"] = ""
     for g in pt_groups.keys(): 
         epis["pt_group"] = np.where(epis["place"].isin(pt_groups[g]), g, epis["pt_group"])
  
 
-    #st.write(epis)
     vars = {'first_placement':"First placement?",
             'gender':"Gender", 
             "ethnicity": "Ethnicity",
@@ -106,7 +104,6 @@ if uploaded_file:
     
     result = {key: val for key, val in zip(labels, dicts)}
     xvar = st.selectbox('Select' , options=list(vars.keys()), format_func=format_func)
-    st.write(result[xvar].keys())
 
     dt= epis.sort_values(by = xvar)
     dt['ind'] = dt.reset_index().index
@@ -131,5 +128,5 @@ if uploaded_file:
         dt_coll[xvar] = np.where(dt[xvar] == v, result[xvar][v], dt_coll[xvar])
      
     dt_coll = dt.groupby(xvar)["pl_distance"].mean()
-    st.write("Average distance by characteristic")
+    st.write("Average distance by characteristic: " + vars[xvar])
     st.table(dt_coll)
