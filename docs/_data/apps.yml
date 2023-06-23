@@ -30,7 +30,7 @@
   repo: 006_sankey_processing/app.py
   reqs: [plotly, openpyxl]
   description: "Use case for quality data sankey diagram."
-  image: 006_quality_data_build_sankey.jpg
+  image: 006_sankey.jpg
 
 - name: Ofsted care provider market analysis tool 
   repo: 007_ofsted_market_analysis/app.py
