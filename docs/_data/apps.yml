@@ -43,4 +43,9 @@
   description: "Python deployment of the disproportionality tool to compare ethnic breakdowns between LAs or other settings."
   image: 008_disproportionality.jpg
 
+- name: PATCh Demo 
+  repo: 009_PATCh_demo/app.py
+  reqs: [plotly]
+  description: "A demo of the PATCh tool with a very simple example of the type of visualisaiton/dashboarding thats possible."
+  image: 009_demo.jpg
 
