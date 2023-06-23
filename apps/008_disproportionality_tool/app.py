@@ -7,6 +7,10 @@ from scipy.stats import chisquare
 from pyodide.http import open_url
 import matplotlib.pyplot as plt
 import seaborn as sns
+st.title('Disproportionality Tool')
+st.write('A Python deployment of the excel disproportionality tool allowing the comparison of ethnic breakdowns between LAs (as reported by the DFE), and numbers input by the user.\
+        There are tabs for graphs and data for Relative Rate Index, Rate per 10,000, and percentages for both sub and main groups. These can be navigated using arrow keys. Statistically significant \
+        differences between chosen LA and input figures are displayed using different coloured bars in the plots. LA, time period, and comparison numbers can be entered in the sidebar to the left.')
 
 # Ingress data for benchmarking
 @st.cache_data
@@ -75,7 +79,7 @@ def denominator(LA, Date):
     #  Returns the dataframe from the function.
     return LAdf
 
-@st.cache_data
+
 def calcs_for_plots():
     #  Calculating percentages.
     percentages = []
@@ -279,45 +283,104 @@ def calcs_for_plots():
     comparison_df['No Sig Diff PCT'] = no_sig_diff_PCT
     return comparison_df
 
-
-
-
-# Sample data
-ethnic_input = {
-    'White_White_British' : 60000,
-    'White_Any_other_White_background' : 3000,
-    'White_Gypsy_Roma' : 300,
-    'White_Irish' :250,
-    'White_Traveller_of_Irish_heritage' : 80,
-    'Asian_Any_other_Asian_background' : 558,
-    'Asian_Bangladeshi' : 871,
-    'Asian_Chinese' : 244,
-    'Asian__indian' : 350,
-    'Asian_Pakistani' : 70,
-    'Black_Any_other_Black_background' : 120,
-    'Black_Black_African' : 500,
-    'Black_Black_Caribbean' : 90,
-    'Mixed_Any_other_Mixed_background' : 1500,
-    'Mixed_White_and_Asian' : 730,
-    'Mixed_White_and_Black_African' : 839,
-    'Mixed_White_and_Black_Caribbean' : 751,
-    'Any_other_ethnic_group' : 558,
-    'Not_obtained' : 0,
-    'Refused' : 0,
-    'Unclassified' : 1120,
-    'White' : 63630,
-    'Asian' : 2093,
-    'Black' : 710,
-    'Mixed' : 3820,
-    'Other' : 558,
-    'Unclassified_total' : 1120,
-}
-
-
 data = file_ingress()
+
+
+with st.sidebar:
+    Year = st.sidebar.selectbox('Select time period', options=data['time_period'].unique())
+    la_name = st.sidebar.selectbox('Select LA', options=data['la_name'].unique())
+
+with st.sidebar:
+    st.sidebar.write('Input numbers of ethnic subgroups for comparison to LA numbers.')
+    wb = st.sidebar.number_input('White British', value=60000)
+    waob = st.sidebar.number_input('White any other background', value=3000)
+    wgr = st.sidebar.number_input('White Gypsy Roma', value=300)
+    wiri = st.sidebar.number_input('White Irish', value=250)
+    wti = st.sidebar.number_input('White Traveller of Irish Heritage', value=100)
+    aobg = st.sidebar.number_input('Asian any other Asian Background', value=600)
+    abg = st.sidebar.number_input('Asian Bangladeshi', value=900)
+    ach = st.sidebar.number_input('Asian Chinese', value=250)
+    aind = st.sidebar.number_input('Asian Indian', value=350)
+    apk = st.sidebar.number_input('Asian Pakistani', value=50)
+    baob = st.sidebar.number_input('Black any other background', value=150)
+    bafr = st.sidebar.number_input('Black African', value=500)
+    bcbr = st.sidebar.number_input('Black Carribean', value=100)
+    maob = st.sidebar.number_input('Mixed any other background', value=1500)
+    mwa = st.sidebar.number_input('Mixed White Asian', value=750)
+    mwba = st.sidebar.number_input('Mixed White and Black African', value=900)
+    mwbc = st.sidebar.number_input('Mixed White and Black Carribean', value=750)
+    aoeg = st.sidebar.number_input('Any other ethnic group', value=550)
+    nobt = st.sidebar.number_input('Not obtained', value=0)
+    ref = st.sidebar.number_input('Refused', value=0)
+    unc = st.sidebar.number_input('Unclassified', value=1150)
+    # white = st.sidebar.number_input('White', value=63650)
+    # black = st.sidebar.number_input('Black', value=750)
+    # asian = st.sidebar.number_input('Asian', value=2150)
+    # mixed = st.sidebar.number_input('Mixed', value=3900)
+    # other = st.sidebar.number_input('Other', value=550)
+    # unctot = st.sidebar.number_input('Unclassified total', value=1150)
+
+ethnic_input = {
+    'White_White_British' : wb,
+    'White_Any_other_White_background' : waob,
+    'White_Gypsy_Roma' : wgr,
+    'White_Irish' : wiri,
+    'White_Traveller_of_Irish_heritage' : wti,
+    'Asian_Any_other_Asian_background' : aobg,
+    'Asian_Bangladeshi' : abg,
+    'Asian_Chinese' : ach,
+    'Asian__indian' : aind,
+    'Asian_Pakistani' : apk,
+    'Black_Any_other_Black_background' : baob,
+    'Black_Black_African' : bafr,
+    'Black_Black_Caribbean' : bcbr,
+    'Mixed_Any_other_Mixed_background' : maob,
+    'Mixed_White_and_Asian' : mwa,
+    'Mixed_White_and_Black_African' : mwba,
+    'Mixed_White_and_Black_Caribbean' : mwbc,
+    'Any_other_ethnic_group' : aoeg,
+    'Not_obtained' : nobt,
+    'Refused' : ref,
+    'Unclassified' : unc,
+    'White' : wb + waob + wgr + wiri + wti,
+    'Asian' : aobg + abg + ach + aind + apk,
+    'Black' : baob + bafr + bcbr,
+    'Mixed' : maob + mwa + mwba + mwbc,
+    'Other' : aoeg ,
+    'Unclassified_total' : unc + nobt + ref,
+}
+# Excel test values for comparison to tool
+# ethnic_input = {
+#     'White_White_British' : 60000,
+#     'White_Any_other_White_background' : 3000,
+#     'White_Gypsy_Roma' : 300,
+#     'White_Irish' :250,
+#     'White_Traveller_of_Irish_heritage' : 80,
+#     'Asian_Any_other_Asian_background' : 558,
+#     'Asian_Bangladeshi' : 871,
+#     'Asian_Chinese' : 244,
+#     'Asian__indian' : 350,
+#     'Asian_Pakistani' : 70,
+#     'Black_Any_other_Black_background' : 120,
+#     'Black_Black_African' : 500,
+#     'Black_Black_Caribbean' : 90,
+#     'Mixed_Any_other_Mixed_background' : 1500,
+#     'Mixed_White_and_Asian' : 730,
+#     'Mixed_White_and_Black_African' : 839,
+#     'Mixed_White_and_Black_Caribbean' : 751,
+#     'Any_other_ethnic_group' : 558,
+#     'Not_obtained' : 0,
+#     'Refused' : 0,
+#     'Unclassified' : 1120,
+#     'White' : 63630,
+#     'Asian' : 2093,
+#     'Black' : 710,
+#     'Mixed' : 3820,
+#     'Other' : 558,
+#     'Unclassified_total' : 1120,
+# }
+
 InputList = [*ethnic_input.values()]
-Year = 202122
-la_name = 'East Sussex'
 
 comparison_df = denominator(la_name, Year)
 comparison_df['numerator'] = InputList
@@ -337,48 +400,244 @@ total_known_ethnicity_denominator = comparison_df['denominator'].iloc[21:26].sum
 comparison_df = calcs_for_plots()
 
 
-#  Creates a pandas plot of the relevant colums of comparison_df to reproduce the relevant disproportionality tool chart.
-#  The table includes all the ethnic minority sub-groups and uses variables from the setup to name columns correctly.
-RRI_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'RRI']].iloc[:21]
-RRI_tab.set_index('ethnicity')
-RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
-
-#  Sets the size of the table as otherwise pandas plot function returns an unreadably small table.
-plt.rcParams['figure.figsize'] = [20, 5]
-
-#  Plots the dataframe as a figure for sharing.
-ax = plt.subplot(111, frame_on=False) #  No visible frame.
-ax.xaxis.set_visible(False)  #  Hide the x axis.
-ax.yaxis.set_visible(False)  #  Hide the y axis.
-
-hue_diff_ = [] #  Empty list for the different colours.
-for i in range(len(comparison_df.iloc[:21])): #  Slices comparison_df to only select sub-groups.
-    if comparison_df['Chart Titles'].iloc[i] == 'WBRI': #  Returns black if white british.
-        hue = 'black'
-    elif comparison_df['No Sig Diff (RRI)'].iloc[i] > 0:  #  elif means other colours will only be returned if the WBRI check was not True.
-        hue = "grey"
-    elif comparison_df['Sig Higher RRI'].iloc[i] == 0:
-        hue = "blue"
-    elif comparison_df['Sig Lower RRI'].iloc[i] == 0:
-        hue = "red"
-
-    hue_diff_.append(hue) #  Updates list with colours.
-
-#  Sets the palette for the seaborn graoh to follow, this is updated for later plots.
-sns.set_palette(sns.color_palette(hue_diff_)) 
-
-fig, ax = plt.subplots()
-#plt.rcParams['figure.figsize'] = [10, 5] #  Updates the figure size for the plot as the previous figure size was set for the table.
-ax = sns.barplot(data=comparison_df.iloc[:21], x='Chart Titles', y='RRI') #  Barplot with x and y values set.
-plt.xticks(rotation=90) #  Rotates x ticks for readability.
-ax.set_ylabel('RRI of each ethnic group') #  Sets titles for x, y, and plot.
-ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff') #  Uses x titles to set key to keep the plot tight.
-ax.set_title('RRI of minority sub-ethnic groups compared to White British')
 
 
-st.pyplot(ax.figure, use_container_width=True)
-st.table(RRI_tab)
 
 
-st.write('got here')
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(['RRI subgroup',
+                                            'RRI main groups', 
+                                            'Rate per 10k subgroups', 
+                                            'Rate per 10k main-groups',
+                                            'Percentages subgroups',
+                                            'Percentages main-groups'])
+with tab1:
+    #  Creates a pandas plot of the relevant colums of comparison_df to reproduce the relevant disproportionality tool chart.
+    #  The table includes all the ethnic minority sub-groups and uses variables from the setup to name columns correctly.
+    RRI_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'RRI']].iloc[:21]
+    RRI_tab.set_index('ethnicity')
+    RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+
+    #  Sets the size of the table as otherwise pandas plot function returns an unreadably small table.
+    plt.rcParams['figure.figsize'] = [20, 5]
+
+    #  Plots the dataframe as a figure for sharing.
+    ax = plt.subplot(111, frame_on=False) #  No visible frame.
+    ax.xaxis.set_visible(False)  #  Hide the x axis.
+    ax.yaxis.set_visible(False)  #  Hide the y axis.
+
+    hue_diff_ = [] #  Empty list for the different colours.
+    for i in range(len(comparison_df.iloc[:21])): #  Slices comparison_df to only select sub-groups.
+        if comparison_df['Chart Titles'].iloc[i] == 'WBRI': #  Returns black if white british.
+            hue = 'black'
+        elif comparison_df['No Sig Diff (RRI)'].iloc[i] > 0:  #  elif means other colours will only be returned if the WBRI check was not True.
+            hue = "grey"
+        elif comparison_df['Sig Higher RRI'].iloc[i] == 0:
+            hue = "blue"
+        elif comparison_df['Sig Lower RRI'].iloc[i] == 0:
+            hue = "red"
+
+        hue_diff_.append(hue) #  Updates list with colours.
+
+    #  Sets the palette for the seaborn graoh to follow, this is updated for later plots.
+    sns.set_palette(sns.color_palette(hue_diff_)) 
+
+    fig, ax = plt.subplots()
+    #plt.rcParams['figure.figsize'] = [10, 5] #  Updates the figure size for the plot as the previous figure size was set for the table.
+    ax = sns.barplot(data=comparison_df.iloc[:21], x='Chart Titles', y='RRI') #  Barplot with x and y values set.
+    plt.xticks(rotation=90) #  Rotates x ticks for readability.
+    ax.set_ylabel('RRI of each ethnic group') #  Sets titles for x, y, and plot.
+    ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff') #  Uses x titles to set key to keep the plot tight.
+    ax.set_title('RRI of minority sub-ethnic groups compared to White British')
+
+    st.header('RRI subgroup charts')
+    st.pyplot(ax.figure, use_container_width=True)
+    st.table(RRI_tab)
+
+with tab2:
+    RRI_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'RRI']].iloc[21:27]
+    RRI_tab.set_index('ethnicity')
+    RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+
+    plt.rcParams['figure.figsize'] = [20, 5]
+
+    #  Plots the dataframe as a figure for sharing.
+    ax = plt.subplot(111, frame_on=False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False) 
+
+    plt.rcParams['figure.figsize'] = [5, 5]
+    hue_diff_RRI = []
+    for i in range(len(comparison_df.iloc[21:27])):
+        if comparison_df['Chart Titles'].iloc[21 + i] == 'White':
+            hue = "black"
+        elif comparison_df['No Sig Diff (RRI)'].iloc[21 + i] > 0:
+            hue = "grey"
+        elif comparison_df['Sig Lower RRI'].iloc[21 + i] != 0:
+            hue = "blue"
+        elif comparison_df['Sig Higher RRI'].iloc[21 + i] != 0:
+            hue = "red"
+        hue_diff_RRI.append(hue)
+
+
+    sns.set_palette(sns.color_palette(hue_diff_RRI))
+    fig, ax = plt.subplots()
+
+    ax = sns.barplot(data=comparison_df.iloc[21:27], x='Chart Titles', y='RRI')
+    plt.xticks(rotation=90)
+    ax.set_ylabel('RRI of each ethnic group')
+    ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
+    ax.set_title('RRI of minority sub-ethnic groups compared to White British')
+
+    st.header('RRI main-group charts')
+    st.pyplot(ax.figure, use_container_width=True)
+    st.table(RRI_tab)
+
+with tab3:
+    RP10k_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'Higher Lower']].iloc[:21]
+    RP10k_tab.set_index('ethnicity')
+    RP10k_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year)+ ' Population'}, inplace=True)
+
+    plt.rcParams['figure.figsize'] = [20, 5]
+
+    #  plots the dataframe as a figure for sharing
+    ax = plt.subplot(111, frame_on=False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False)  
+
+    hue_diff_ = []
+    for i in range(len(comparison_df.iloc[:21])):
+        if comparison_df['No Sig Diff RP10k'].iloc[i] > 0:
+            hue = "grey"
+        elif comparison_df['Sig Higher RP10k'].iloc[i] == 0:
+            hue = "blue"
+        elif comparison_df['Sig Lower RP10k'].iloc[i] == 0:
+            hue = "red"
+
+        hue_diff_.append(hue)
+
+    sns.set_palette(sns.color_palette(hue_diff_))
+
+    plt.rcParams['figure.figsize'] = [10, 5]
+
+    fig, ax = plt.subplots()
+    ax = sns.barplot(data=comparison_df.iloc[:21], x='Chart Titles', y='Rate per 10,000')
+    plt.xticks(rotation=90)
+    ax.set_ylabel('Rater per 10,000')
+    ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
+    ax.set_title('Rater per 10,000 population of sub-ethnic groups')
+
+    st.header('Rate per 10k subgroup charts')
+    st.pyplot(ax.figure, use_container_width=True)
+    st.table(RP10k_tab)
+
+with tab4:
+    RP10k_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'Higher Lower']].iloc[21:27]
+    RP10k_tab.set_index('ethnicity')
+    RP10k_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+
+    plt.rcParams['figure.figsize'] = [20, 5]
+
+
+    ax = plt.subplot(111, frame_on=False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False)  
+
+    plt.rcParams['figure.figsize'] = [5, 5]
+    hue_diff_rp10k = []
+    for i in range(len(comparison_df.iloc[21:27])):
+        if comparison_df['Sig Lower RP10k'].iloc[21 + i] != 0:
+            hue = "blue"       
+        elif comparison_df['Sig Higher RP10k'].iloc[21 + i] != 0:
+            hue = "red"
+        else:
+            hue = "grey"
+        hue_diff_rp10k.append(hue)
+
+    sns.set_palette(sns.color_palette(hue_diff_rp10k))
+    fig, ax = plt.subplots()
+    ax = sns.barplot(data=comparison_df.iloc[21:27], x='Chart Titles', y='Rate per 10,000')
+    plt.xticks(rotation=90)
+    ax.set_ylabel('Rate per 10,000')
+    ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
+    ax.set_title('Rate per 10,000 of main ethnic groups')
+
+    st.header('Rate per 10k main-group charts')
+    st.pyplot(ax.figure, use_container_width=True)
+    st.table(RP10k_tab)
+
+with tab5:
+    PCTTab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Percentages', 'Higher Lower']].iloc[:21]
+    PCTTab.set_index('ethnicity')
+    PCTTab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+
+    plt.rcParams['figure.figsize'] = [20, 5]
+
+    ax = plt.subplot(111, frame_on = False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False)  
+
+    hue_diff_PCT = []
+    for i in range(len(comparison_df.iloc[:21])):
+        if comparison_df['Sig Higher PCT'].iloc[i] != 0:
+            hue = "red"
+        if comparison_df['No Sig Diff PCT'].iloc[i] != 0:
+            hue = "grey"
+        elif comparison_df['Sig Lower PCT'].iloc[i] != 0:
+            hue = "blue"
+
+        hue_diff_PCT.append(hue)
+
+    sns.set_palette(sns.color_palette(hue_diff_PCT))
+
+    plt.rcParams['figure.figsize'] = [10, 5]
+    fig, ax = plt.subplots()
+    ax = sns.barplot(data=comparison_df.iloc[:21], x='Chart Titles', y='Percentages')
+    plt.xticks(rotation=90)
+    ax.set_ylabel('Percentage of expected sub-ethnic group')
+    ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
+    ax.set_title('Percentage')
+
+    st.header('Percentages subgroup charts')
+    st.pyplot(ax.figure, use_container_width=True)
+    st.table(PCTTab)
+
+with tab6:
+    PCTTab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Percentages', 'Higher Lower']].iloc[21:27]
+    PCTTab.set_index('ethnicity')
+    PCTTab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+
+    plt.rcParams['figure.figsize'] = [20, 5]
+
+
+    ax = plt.subplot(111, frame_on = False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False) 
+
+    plt.rcParams['figure.figsize'] = [5, 5]
+    hue_diff_PCT = []
+    for i in range(len(comparison_df.iloc[21:27])):
+        if comparison_df['Sig Lower PCT'].iloc[21 + i] != 0:
+            hue = "blue"
+        if comparison_df['No Sig Diff PCT'].iloc[21 + i] > 0:
+            hue = "grey"
+        elif comparison_df['Sig Higher PCT'].iloc[21 + i] != 0:
+            hue = "red"
+        hue_diff_PCT.append(hue)
+
+    sns.set_palette(sns.color_palette(hue_diff_PCT))
+
+    fig, ax = plt.subplots()
+    ax = sns.barplot(data=comparison_df.iloc[21:27], x='Chart Titles', y='Percentages')
+    plt.xticks(rotation=90)
+    ax.set_ylabel('Percent')
+    ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
+    ax.set_title('Percentage of main ethnic groups compared to expected')
+
+    st.header('Percentages main-group charts')
+    st.pyplot(ax.figure, use_container_width=True)
+    st.table(PCTTab)
+
+
+
+
 

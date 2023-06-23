@@ -37,4 +37,10 @@
   reqs: [plotly, openpyxl, matplotlib]
   description: "This tool analyses a list of social care providers as provided by Ofsted."
 
+- name: Disproportionality tool 
+  repo: 008_disproportionality_tool/app.py
+  reqs: [scipy, matplotlib, seaborn]
+  description: "Python deployment of the disproportionality tool to compare ethnic breakdowns between LAs or other settings."
+  image: 008_disproportionality.jpg
+
 
