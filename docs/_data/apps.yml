@@ -8,29 +8,29 @@
   description: "Template app that asks for the user name and prints it in return."
   image: 001_template.jpg
 
-- name: Quality Data
+- name: How Early Help provision varies by Child Characteristics 
   repo: 002_quality_data_usecase_EH/app.py
   reqs: [plotly, openpyxl]
   description: "Use case for quality data charts and analysis"
   image: 002_quality_data_usecase_EH.jpg
 
-- name: Stage of CS Provision
-  repo: 003_stage_of_cs_provision/app.py
-  reqs: [matplotlib]
-  description: "Use case for stage of CS provision charts and analysis"
-  image: 003_stage_of_cs_provision.jpg
+# - name: Stage of CS Provision
+#   repo: 003_stage_of_cs_provision/app.py
+#   reqs: [matplotlib]
+#   description: "Use case for stage of CS provision charts and analysis"
+#   image: 003_stage_of_cs_provision.jpg
 
-- name: Quality Data Sankey
-  repo: 004_quality_data_build_sankey/app.py
-  reqs: [plotly, openpyxl]
-  description: "Use case for quality data sankey diagram"
-  image: 004_quality_data_build_sankey.jpg
+# - name: Quality Data Sankey
+#   repo: 004_quality_data_build_sankey/app.py
+#   reqs: [plotly, openpyxl]
+#   description: "Use case for quality data sankey diagram"
+#   image: 004_quality_data_build_sankey.jpg
 
-- name: Quality Data Sankey including pre-processing 
+- name: Annex A Journeys Sankey 
   repo: 006_sankey_processing/app.py
   reqs: [plotly, openpyxl]
   description: "Use case for quality data sankey diagram."
-  image: 004_quality_data_build_sankey.jpg
+  image: 006_quality_data_build_sankey.jpg
 
 - name: Ofsted care provider market analysis tool 
   repo: 007_ofsted_market_analysis/app.py
