@@ -56,9 +56,9 @@ def read_data(input_file):
     return data
 
 
-st.header("usecase for quality data EH")
+st.header("How Early Help provision varies by Child Characteristics")
 
-uploaded_file = st.file_uploader("Choose a dummy annex A file")
+uploaded_file = st.file_uploader("Upload XLSX containing Annex A data with the Early Help table named Early Help")
 if uploaded_file is not None:
     data = read_data(uploaded_file)
     option_to_col = {
