@@ -7,6 +7,10 @@ from scipy.stats import chisquare
 from pyodide.http import open_url
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/README.md) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/008_disproportionality_tool/app.py)")
+
 st.title('Disproportionality Tool')
 st.write('A Python deployment of the excel disproportionality tool allowing the comparison of ethnic breakdowns between LAs (as reported by the DFE), and numbers input by the user.\
         There are tabs for graphs and data for Relative Rate Index, Rate per 10,000, and percentages for both sub and main groups. These can be navigated using arrow keys. Statistically significant \

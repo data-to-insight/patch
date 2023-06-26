@@ -5,6 +5,8 @@ import datetime
 import plotly.graph_objects as go
 #from pyodide.http import open_url
 
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/README.md) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/006_Annex_A_Journey_Sankey/app.py)")
 
 st.title('Annex A Journeys Sankey Tool')
 st.write('This tool allows you to visualise the journeys children and young people take through stages of \
