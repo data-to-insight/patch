@@ -3,8 +3,11 @@ import pandas as pd
 import plotly.express as px
 import matplotlib
 
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/README.md) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/007_ofsted_market_analysis/app.py)")
+
 # Title and description
-st.write('Ofsted Market Analysis - small providers by region')
+st.title('Ofsted Market Analysis - small providers by region')
 st.write('This tool analyses a list of social care providers as provided by Ofsted.')
 st.write('The user can filter on one or multiple regions, as well as a maximum threshold of settings per owner, to view a list of socal care settings that fit these criteria.')
 

@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/README.md) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/002_quality_data_usecase_EH/app.py)")
+
 
 def read_data(input_file):
     # READ IN EARLY HELP AND COLLAPSE TO CHILD LEVEL
