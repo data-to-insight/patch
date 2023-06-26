@@ -1,5 +1,6 @@
 # PATCh
 This is a [directory of web applications](https://patch.datatoinsight.org) built with Python. The apps run entirely in the 
+browser. It uses mainly two libraries:
 
 
 - [streamlit](https://docs.streamlit.io/) - web applications using simple python code. Check the documentation to learn 
