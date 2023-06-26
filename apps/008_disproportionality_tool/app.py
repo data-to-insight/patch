@@ -291,10 +291,12 @@ data = file_ingress()
 
 
 with st.sidebar:
-    Year = st.sidebar.selectbox('Select time period', options=data['time_period'].unique())
-    la_name = st.sidebar.selectbox('Select LA', options=data['la_name'].unique())
+    time_period = st.sidebar.selectbox('Select school year for school census population data', options=data['time_period'].unique())
+    la_name = st.sidebar.selectbox('Select LA for school census population data', options=data['la_name'].unique())
 
 with st.sidebar:
+    comp_name = st.sidebar.text_input('Name of local subgroup for comparison (e.g. "CLA")', 
+                                      value='sample data')
     st.sidebar.write('Input numbers of ethnic subgroups for comparison to LA numbers.')
     wb = st.sidebar.number_input('White British', value=60000)
     waob = st.sidebar.number_input('White any other background', value=3000)
@@ -323,6 +325,8 @@ with st.sidebar:
     # mixed = st.sidebar.number_input('Mixed', value=3900)
     # other = st.sidebar.number_input('Other', value=550)
     # unctot = st.sidebar.number_input('Unclassified total', value=1150)
+
+main_plot_title = f'Proportions of ethnic groups between {la_name} and {comp_name} in census period {time_period}'
 
 ethnic_input = {
     'White_White_British' : wb,
@@ -386,7 +390,7 @@ ethnic_input = {
 
 InputList = [*ethnic_input.values()]
 
-comparison_df = denominator(la_name, Year)
+comparison_df = denominator(la_name, time_period)
 comparison_df['numerator'] = InputList
 
 #  Sums all non-White-British students from input data, slicing dataframe using correspoinding indexes and column.
@@ -419,7 +423,7 @@ with tab1:
     #  The table includes all the ethnic minority sub-groups and uses variables from the setup to name columns correctly.
     RRI_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'RRI']].iloc[:21]
     RRI_tab.set_index('ethnicity')
-    RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+    RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(time_period) + ' Population'}, inplace=True)
 
     #  Sets the size of the table as otherwise pandas plot function returns an unreadably small table.
     plt.rcParams['figure.figsize'] = [20, 5]
@@ -451,7 +455,7 @@ with tab1:
     plt.xticks(rotation=90) #  Rotates x ticks for readability.
     ax.set_ylabel('RRI of each ethnic group') #  Sets titles for x, y, and plot.
     ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff') #  Uses x titles to set key to keep the plot tight.
-    ax.set_title('RRI of minority sub-ethnic groups compared to White British')
+    ax.set_title(f'RRI of minority ethnic sub-groups in {comp_name} compared to White British in {la_name} in census period {time_period}')
 
     st.header('RRI subgroup charts')
     st.pyplot(ax.figure, use_container_width=True)
@@ -460,7 +464,7 @@ with tab1:
 with tab2:
     RRI_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'RRI']].iloc[21:27]
     RRI_tab.set_index('ethnicity')
-    RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+    RRI_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(time_period) + ' Population'}, inplace=True)
 
     plt.rcParams['figure.figsize'] = [20, 5]
 
@@ -490,7 +494,7 @@ with tab2:
     plt.xticks(rotation=90)
     ax.set_ylabel('RRI of each ethnic group')
     ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
-    ax.set_title('RRI of minority sub-ethnic groups compared to White British')
+    ax.set_title(f'RRI of minority ethnic main groups in {comp_name} compared to White British in {la_name} in census period {time_period}')
 
     st.header('RRI main-group charts')
     st.pyplot(ax.figure, use_container_width=True)
@@ -499,7 +503,7 @@ with tab2:
 with tab3:
     RP10k_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'Higher Lower']].iloc[:21]
     RP10k_tab.set_index('ethnicity')
-    RP10k_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year)+ ' Population'}, inplace=True)
+    RP10k_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(time_period)+ ' Population'}, inplace=True)
 
     plt.rcParams['figure.figsize'] = [20, 5]
 
@@ -528,7 +532,7 @@ with tab3:
     plt.xticks(rotation=90)
     ax.set_ylabel('Rater per 10,000')
     ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
-    ax.set_title('Rater per 10,000 population of sub-ethnic groups')
+    ax.set_title(f'Rate per 10,000 population of ethnic sub-groups in {comp_name} compared to {la_name} in census period {time_period}')
 
     st.header('Rate per 10k subgroup charts')
     st.pyplot(ax.figure, use_container_width=True)
@@ -537,7 +541,7 @@ with tab3:
 with tab4:
     RP10k_tab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Rate per 10,000', 'Higher Lower']].iloc[21:27]
     RP10k_tab.set_index('ethnicity')
-    RP10k_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+    RP10k_tab.rename(columns = {'numerator':'Input numbers', 'denominator':str(time_period) + ' Population'}, inplace=True)
 
     plt.rcParams['figure.figsize'] = [20, 5]
 
@@ -563,7 +567,7 @@ with tab4:
     plt.xticks(rotation=90)
     ax.set_ylabel('Rate per 10,000')
     ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
-    ax.set_title('Rate per 10,000 of main ethnic groups')
+    ax.set_title(f'Rate per 10,000 of main ethnic groups in {comp_name} compared to {la_name} in census period {time_period}')
 
     st.header('Rate per 10k main-group charts')
     st.pyplot(ax.figure, use_container_width=True)
@@ -572,7 +576,7 @@ with tab4:
 with tab5:
     PCTTab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Percentages', 'Higher Lower']].iloc[:21]
     PCTTab.set_index('ethnicity')
-    PCTTab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+    PCTTab.rename(columns = {'numerator':'Input numbers', 'denominator':str(time_period) + ' Population'}, inplace=True)
 
     plt.rcParams['figure.figsize'] = [20, 5]
 
@@ -599,7 +603,7 @@ with tab5:
     plt.xticks(rotation=90)
     ax.set_ylabel('Percentage of expected sub-ethnic group')
     ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
-    ax.set_title('Percentage')
+    ax.set_title(f'Percentage of ethnic subgroups in {comp_name} compared to {la_name} in census period {time_period}')
 
     st.header('Percentages subgroup charts')
     st.pyplot(ax.figure, use_container_width=True)
@@ -608,7 +612,7 @@ with tab5:
 with tab6:
     PCTTab = comparison_df[['ethnicity', 'numerator', 'denominator', 'Percentages', 'Higher Lower']].iloc[21:27]
     PCTTab.set_index('ethnicity')
-    PCTTab.rename(columns = {'numerator':'Input numbers', 'denominator':str(Year) + ' Population'}, inplace=True)
+    PCTTab.rename(columns = {'numerator':'Input numbers', 'denominator':str(time_period) + ' Population'}, inplace=True)
 
     plt.rcParams['figure.figsize'] = [20, 5]
 
@@ -635,7 +639,7 @@ with tab6:
     plt.xticks(rotation=90)
     ax.set_ylabel('Percent')
     ax.set_xlabel('Red = Sig higher, Blue = Sig lower, Grey = No sig diff')
-    ax.set_title('Percentage of main ethnic groups compared to expected')
+    ax.set_title(f'Percentage of main ethnic groups in {comp_name} compared to {la_name} in census period {time_period}')
 
     st.header('Percentages main-group charts')
     st.pyplot(ax.figure, use_container_width=True)
