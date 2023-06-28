@@ -5,6 +5,13 @@ import plotly.graph_objects as go
 import numpy as np
 import datetime
 
+st.write("This tool can be used to plot the distance between the post code of a looked after \
+         child placement and their home post code. In the plot, each point represents a placement. \
+         The height of the point on the plot on the y-axis does not have meaning. To create the plot, please upload \
+         the header file and placement distance file from your SSDA 903 return. Use the dropdown menu \
+         to choose the child chacteristic you would like to group the data by. \
+         The average distance by child characteristic is also displayed below the plot.") 
+
 uploaded_file = st.file_uploader('Upload file here', accept_multiple_files=True)
 if uploaded_file:
     for file in uploaded_file:
@@ -64,7 +71,7 @@ if uploaded_file:
               "black": "Black","other": "Other ethnic group","dk": "Not available"}] 
     
     result = {key: val for key, val in zip(labels, dicts)}
-    xvar = st.selectbox('Select' , options=list(vars.keys()), format_func=format_func)
+    xvar = st.selectbox('Select child characteristic to group by below:' , options=list(vars.keys()), format_func=format_func)
 
     dt= distance.sort_values(by = xvar)
     dt['ind'] = dt.reset_index().index
@@ -74,7 +81,7 @@ if uploaded_file:
                  x = "pl_distance", 
                  color = dt[xvar].map(result[xvar]),
                  y = "ind", 
-                 title = "Placement distance from home post code by child characteristics")
+                 title = "Placement distance from home post code by child characteristic:<br>" + vars[xvar])
     fig.update_layout(yaxis_title = "Placement episode", 
                       xaxis_title = "Placement distance from home post code (km)", 
                       legend_title_text = vars[xvar])
