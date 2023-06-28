@@ -12,7 +12,9 @@ All you need to do is to write your own streamlit apps and they will be accessib
 
 # How to start
 
-Let's go ahead and create, run and publish a small testing app. 
+Here are some quick video guides on [how to contribute via GitHub](https://youtu.be/LesKQw3Fbs0) and [how to write a basic app](https://youtu.be/98_n4WRdXnM) if you prefer that to reading.
+
+If not, let's go ahead and create, run and publish a small testing app. 
 
 > If you just want to see the final result, check [this python file](/apps/001_template/app.py) which creates 
 [this live app](https://share.stlite.net/#url=https://raw.githubusercontent.com/SocialFinanceDigitalLabs/patch/main/apps/001_template/app.py).
