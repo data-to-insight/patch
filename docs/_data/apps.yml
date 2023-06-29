@@ -48,4 +48,9 @@
   reqs: [plotly]
   description: "A demo of the PATCh tool with a very simple example of the type of visualisaiton/dashboarding thats possible."
   image: 009_demo.jpg
-
+  
+- name: Placement distance by child characteristic
+  repo: 010_placement_distance/app.py
+  reqs: [plotly]
+  description: "Uses header and placement distance extended to explore how placement distance varies by characteristic."
+  image: distance picture.jpg
