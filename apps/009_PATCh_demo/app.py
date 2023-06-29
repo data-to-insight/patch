@@ -8,12 +8,13 @@ from pyodide.http import open_url
 
 
 
-st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/README.md) \
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/009_PATCh_demo/app.py)")
 
 st.title('PATCh demo')
 st.write('This app is a demo for the PATCh tool showing off some features users can lean to code, and some of the types of functionality available. \
-          It uses data used for benchmarking avaliable from the DFE here: https://explore-education-statistics.service.gov.uk/find-statistics/characteristics-of-children-in-need')
+          It uses data used for benchmarking avaliable from the DFE here: https://explore-education-statistics.service.gov.uk/find-statistics/characteristics-of-children-in-need \
+         It is easy to build apps that sefely use data uploaded from your computer, but for simplicity of the demo, this app avoids that.')
 
 data = open_url("https://raw.githubusercontent.com/WillLP-code/stlite-tests/main/benchmarking%20test/data/a1.csv")
 df = pd.read_csv(data)

@@ -27,7 +27,7 @@
 #   image: 004_quality_data_build_sankey.jpg
 
 - name: Annex A Journeys Sankey 
-  repo: 006_sankey_processing/app.py
+  repo: 006_Annex_A_Journey_Sankey/app.py
   reqs: [plotly, openpyxl]
   description: "Use case for quality data sankey diagram."
   image: 006_sankey.jpg
