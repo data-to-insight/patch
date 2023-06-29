@@ -13,7 +13,8 @@ st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img
 
 st.title('PATCh demo')
 st.write('This app is a demo for the PATCh tool showing off some features users can lean to code, and some of the types of functionality available. \
-          It uses data used for benchmarking avaliable from the DFE here: https://explore-education-statistics.service.gov.uk/find-statistics/characteristics-of-children-in-need')
+          It uses data used for benchmarking avaliable from the DFE here: https://explore-education-statistics.service.gov.uk/find-statistics/characteristics-of-children-in-need \
+         It is easy to build apps that sefely use data uploaded from your computer, but for simplicity of the demo, this app avoids that.')
 
 data = open_url("https://raw.githubusercontent.com/WillLP-code/stlite-tests/main/benchmarking%20test/data/a1.csv")
 df = pd.read_csv(data)
