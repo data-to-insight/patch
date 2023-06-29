@@ -53,4 +53,4 @@
   repo: 010_placement_distance/app.py
   reqs: [plotly]
   description: "Uses header and placement distance extended to explore how placement distance varies by characteristic."
-  image: distance picture.jpg
+  image: distance picture.png
