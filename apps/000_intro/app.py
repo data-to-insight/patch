@@ -8,8 +8,19 @@ st.markdown(
     """
 ### PATCh
 
-This editor uses **stlite** is a port of _Streamlit_ to Wasm, powered by Pyodide,
-that runs completely on web browsers.
+For those interested in how PATCh apps work: every time you load a PATCh app, the webpage will use something called Pyodide to run
+Python in the browser. The product of the Python code is then displayed as HTML using a package called streamlit lite.
+This only outside connection the apps make is the initial setup to run Python in the browser. It uses **stlite**, which is is a port of
+_Streamlit_ to Wasm, powered by Pyodide,
+that runs completely on web browsers. Once an app is running it's self contained,
+you could even test this by running apps with the internet turned off once they've loaded. Pyodide uses your browser's memory 
+and other resources to run the Python code making up the apps on your computer. This is unlike many other apps which would run the Python 
+on a server somewhere and send information back and forth, which is why you can't use confidential data with them. The way streamlit 
+lite works is that every time you do something in the app, it re-runs the Python code from the beginning (not including the install). 
+This allows it to be easier to write for analysts, but does mean some apps take a while to update between widget interractions.
+
+
+
 
 To contribute to PATCh apps, see it's documentation [here](https://github.com/SocialFinanceDigitalLabs/patch/blob/main/README.md).
 The official stlite repository is [🔗 here](https://github.com/whitphx/stlite).
