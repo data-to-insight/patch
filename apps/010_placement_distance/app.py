@@ -10,9 +10,12 @@ st.write("This tool can be used to plot the distance between the post code of a 
          The height of the point on the plot on the y-axis does not have meaning. To create the plot, please upload \
          the header file and placement distance file from your SSDA 903 return. Use the dropdown menu \
          to choose the child chacteristic you would like to group the data by. \
-         The average distance by child characteristic is also displayed below the plot.") 
+         The average distance by child characteristic is also displayed below the plot. \
+         Use header, and distance and placement extended CSV files. Their filenames must include: \
+         head and distance respectively to be read and the column order for each must match that needed \
+         to paste into the ChAT.") 
 
-uploaded_file = st.file_uploader('Upload file here', accept_multiple_files=True)
+uploaded_file = st.file_uploader('Upload header.csv, and distance_and_Placement_Extended.csv', accept_multiple_files=True)
 if uploaded_file:
     for file in uploaded_file:
         if 'head' in file.name:
