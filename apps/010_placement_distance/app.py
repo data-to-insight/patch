@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import numpy as np
 import datetime
 
-st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/README.md) \
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/009_PATCh_demo/app.py)")
 
 st.write("This tool can be used to plot the distance between the post code of a looked after \
