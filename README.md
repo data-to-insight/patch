@@ -12,7 +12,7 @@ All you need to do is to write your own streamlit apps and they will be accessib
 
 # How to start
 
-Here are some quick video guides on [how to contribute via GitHub](https://youtu.be/LesKQw3Fbs0) and [how to write a basic app](https://youtu.be/98_n4WRdXnM) if you prefer that to reading.
+Here are some quick video guides on [how to contribute via GitHub](https://youtu.be/LesKQw3Fbs0) and [how to write a basic app](https://www.youtube.com/watch?v=eDslSksjFCI) if you prefer that to reading.
 
 If not, let's go ahead and create, run and publish a small testing app. 
 
