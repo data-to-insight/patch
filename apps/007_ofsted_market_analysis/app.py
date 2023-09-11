@@ -65,6 +65,20 @@ if uploaded_files:
             month = "july"
         if "august" in name.lower():
             month = "august"
+        if "september" in name.lower():
+            month = "september"
+        if "october" in name.lower():
+            month = "october"
+        if "november" in name.lower():
+            month = "november"
+        if "december" in name.lower():
+            month = "december"
+        if "january" in name.lower():
+            month = "january"
+        if "february" in name.lower():
+            month = "february"
+        if "march" in name.lower():
+            month = "march"
         file["month"] = month  # Populate new field with month name
 
         # Find CH, Non-CH or all from file name
