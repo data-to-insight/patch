@@ -4,6 +4,10 @@ import plotly.express as px
 import matplotlib
 from pyodide.http import open_url
 
+# Buttons for each page linking to code
+st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/007_ofsted_market_analysis/app.py)")
+
 def needs_coder(row, field):
     if row[field] == 'Y':
         return 'Yes'
@@ -23,12 +27,8 @@ def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_
         category_orders=var_cat_orders)
     st.plotly_chart(fig)
 
-
 data1 = open_url('https://raw.githubusercontent.com/Paggers92/PATCh_test/main/ofsted_benchmarking_app/Local%20authorities%20and%20regions.csv')
 regions = pd.read_csv(data1)
-
-st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
-             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/007_ofsted_market_analysis/app.py)")
 
 # Title and description
 st.title('Ofsted Market Analysis')
@@ -115,14 +115,9 @@ if uploaded_files:
         file.rename(columns = {'Present Drug Problems':'Present drug problems'}, inplace = True)
         file.rename(columns = {'Learning Difficulty':'Learning difficulty'}, inplace = True)
         file.rename(columns = {'Physical Disabilities':'Physical disabilities'}, inplace = True)
-        
-        #st.dataframe(file)
 
         # Put name of datasets and datasets themselves into a dictionary
         files_dict[name] = file
-        
-      
-    #files_dict
 
     # Append all datasets together to check which columns line up
     df = pd.concat(list(files_dict.values()), axis=0).reset_index()
@@ -162,7 +157,6 @@ if uploaded_files:
     df['Month-Year'] = df['month'] + '/' + df['year'].astype(str)
     df["ofsted_date_order"] = pd.to_datetime(df['Month-Year'])
     df['Ofsted date'] = df['ofsted_date_order'].apply(lambda x: x.strftime('%B-%Y'))
-    #df['Ofsted date'].dtypes
 
     # Replace values
     df['Overall effectiveness'] = df['Overall effectiveness'].replace('Requires Improvement', 'Requires improvement to be good')
