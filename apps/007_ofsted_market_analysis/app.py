@@ -16,6 +16,9 @@ def needs_coder(row, field):
     else:
         return 'No'
 
+#var_title_large = str("<p style='font-size: large'>")
+#var_title_med = str("<p style='font-size: medium'>")
+
 def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_cdm=None, var_cat_orders=None):
     fig = px.bar(data_frame,
         x = var_x,
@@ -27,14 +30,14 @@ def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_
         category_orders=var_cat_orders)
     st.plotly_chart(fig)
 
-data1 = open_url('https://raw.githubusercontent.com/Paggers92/PATCh_test/main/ofsted_benchmarking_app/Local%20authorities%20and%20regions.csv')
+data1 = open_url('https://raw.githubusercontent.com/data-to-insight/patch/main/apps/007_ofsted_market_analysis/Local%20authorities%20and%20regions.csv')
 regions = pd.read_csv(data1)
 
 # Title and description
 st.title('Ofsted Market Analysis')
-st.write('This tool analyses a list of social care settings providers as provided by Ofsted.')
-st.write('Use the sidebar selectors to filter by geography and provider type.')
-st.write('Click on the tabs below to view different breakdowns for the selected filters.')
+st.markdown('* This tool analyses a list of social care settings providers as provided by Ofsted.')
+st.markdown('* Use the sidebar selectors to filter by geography and provider type.')
+st.markdown('* Click on the tabs below the table to view different breakdowns for the selected filters.')
 
 # Takes "Ofsted Social care providers list for LAs"
 uploaded_files = st.file_uploader('Upload Ofsted social care providers list:', accept_multiple_files=True)
@@ -45,6 +48,29 @@ if uploaded_files:
     loaded_files = {uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in uploaded_files}
 
     files_dict = {}
+
+    rename_dict = {'Local Authority':'Local authority',
+                    'Provider Type':'Provider type',
+                    'Provision type':'Provider type',
+                    'Provider Subtype':'Provider subtype',
+                    'Setting Name':'Setting name',
+                    'Provider Status':'Registration status',
+                    'Registration Status':'Registration status',
+                    'Owner Name':'Owner name',
+                    'Organisation name':'Owner name',
+                    'Latest overall Effectiveness grade from last full inspection':'Overall effectiveness',
+                    'Overall Effectiveness':'Overall effectiveness',
+                    'CYP Safety':'CYP safety',
+                    'Leadership and Management':'Leadership and management',
+                    'Max Users':'Number of registered places',
+                    'Emotional and Behavioural Difficulties':'Emotional and behavioural difficulties',
+                    'Mental Disorders':'Mental disorders',
+                    'Sensory Impairment':'Sensory impairment',
+                    'Present impairment':'Present alcohol problems',
+                    'Present Alcohol Problems':'Present alcohol problems',
+                    'Present Drug Problems':'Present drug problems',
+                    'Learning Difficulty':'Learning difficulty',
+                    'Physical Disabilities':'Physical disabilities'}
 
     for name,file in loaded_files.items():
         file.dropna(axis=1, how="all", inplace=True) # Drop any fields with only nan
@@ -92,29 +118,8 @@ if uploaded_files:
 
         name = f"{month}{year}{homestype}"
 
-        # Rename columns to standard names 
-        file.rename(columns = {'Local Authority':'Local authority'}, inplace = True)
-        file.rename(columns = {'Provider Type':'Provider type'}, inplace = True)
-        file.rename(columns = {'Provision type':'Provider type'}, inplace = True)
-        file.rename(columns = {'Provider Subtype':'Provider subtype'}, inplace = True)
-        file.rename(columns = {'Setting Name':'Setting name'}, inplace = True)
-        file.rename(columns = {'Provider Status':'Registration status'}, inplace = True)
-        file.rename(columns = {'Registration Status':'Registration status'}, inplace = True)
-        file.rename(columns = {'Owner Name':'Owner name'}, inplace = True)
-        file.rename(columns = {'Organisation name':'Owner name'}, inplace = True)
-        file.rename(columns = {'Latest overall Effectiveness grade from last full inspection':'Overall effectiveness'}, inplace = True)
-        file.rename(columns = {'Overall Effectiveness':'Overall effectiveness'}, inplace = True)
-        file.rename(columns = {'CYP Safety':'CYP safety'}, inplace = True)
-        file.rename(columns = {'Leadership and Management':'Leadership and management'}, inplace = True)
-        file.rename(columns = {'Max Users':'Number of registered places'}, inplace = True)
-        file.rename(columns = {'Emotional and Behavioural Difficulties':'Emotional and behavioural difficulties'}, inplace = True)
-        file.rename(columns = {'Mental Disorders':'Mental disorders'}, inplace = True)
-        file.rename(columns = {'Sensory Impairment':'Sensory impairment'}, inplace = True)
-        file.rename(columns = {'Present impairment':'Present alcohol problems'}, inplace = True)
-        file.rename(columns = {'Present Alcohol Problems':'Present alcohol problems'}, inplace = True)
-        file.rename(columns = {'Present Drug Problems':'Present drug problems'}, inplace = True)
-        file.rename(columns = {'Learning Difficulty':'Learning difficulty'}, inplace = True)
-        file.rename(columns = {'Physical Disabilities':'Physical disabilities'}, inplace = True)
+        # Rename columns to standard names
+        file.rename(columns = rename_dict, inplace = True)
 
         # Put name of datasets and datasets themselves into a dictionary
         files_dict[name] = file
@@ -225,7 +230,7 @@ if uploaded_files:
         )
     df = df[df['Provider type'].isin(provider_type_select)]
     
-    # Display dataframe
+    # Display dataframe, reset index and don't display index column
     df_display = df[['Ofsted date',
              'Local authority',
              'Region',
@@ -248,7 +253,7 @@ if uploaded_files:
              'Present drug problems',
              'Learning difficulty',
              'Physical disabilities']].reset_index()
-    st.dataframe(df_display)
+    st.dataframe(df_display.iloc[:,1:])
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(['Setting & Beds',
                                             'Overall Effectiveness', 
@@ -266,7 +271,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Sector',
-                   var_title = f'Number of settings in {geographic_area}<br>by sector<br>{provider_type_select}',
+                   var_title = f"Number of settings in {geographic_area} by sector<br>{', '.join(provider_type_select)}",
                    var_barmode = 'group')
 
         # Group and plot average number of places per year by sector
@@ -278,7 +283,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'Average registered places per provision',
                    var_color = 'Sector',
-                   var_title = f'Average number of registered places for provisions in {geographic_area}<br>by sector<br>{provider_type_select}',
+                   var_title = f"Average number of registered places for provisions in {geographic_area} by sector<br>{', '.join(provider_type_select)}",
                    var_barmode = 'group')
 
     with tab2:
