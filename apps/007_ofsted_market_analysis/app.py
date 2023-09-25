@@ -16,16 +16,14 @@ def needs_coder(row, field):
     else:
         return 'No'
 
-#var_title_large = str("<p style='font-size: large'>")
-#var_title_med = str("<p style='font-size: medium'>")
-
-def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_cdm=None, var_cat_orders=None):
+def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_labels=None, var_cdm=None, var_cat_orders=None):
     fig = px.bar(data_frame,
         x = var_x,
         y = var_y,
         color = var_color,
         title = var_title,
         barmode=var_barmode,
+        labels=var_labels,
         color_discrete_map=var_cdm,
         category_orders=var_cat_orders)
     st.plotly_chart(fig)
@@ -272,7 +270,8 @@ if uploaded_files:
                    var_y = 'URN',
                    var_color = 'Sector',
                    var_title = f"Number of settings in {geographic_area} by sector<br>{', '.join(provider_type_select)}",
-                   var_barmode = 'group')
+                   var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"))
 
         # Group and plot average number of places per year by sector
         average_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Sector']).mean('Number of registered places').reset_index()
@@ -297,6 +296,7 @@ if uploaded_files:
                    var_color = 'Overall effectiveness',
                    var_title = f'Number of settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -316,6 +316,7 @@ if uploaded_files:
                    var_color = 'Overall effectiveness',
                    var_title = f'Number of private sector settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -336,6 +337,7 @@ if uploaded_files:
                    var_color = 'Overall effectiveness',
                    var_title = f'Number of local authority sector settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -359,6 +361,7 @@ if uploaded_files:
                    var_color = 'CYP safety',
                    var_title = f'Number of settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -379,6 +382,7 @@ if uploaded_files:
                    var_color = 'CYP safety',
                    var_title = f'Number of private sector settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -399,6 +403,7 @@ if uploaded_files:
                    var_color = 'CYP safety',
                    var_title = f'Number of local authority sector settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -421,6 +426,7 @@ if uploaded_files:
                    var_color = 'Leadership and management',
                    var_title = f'Number of settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -441,6 +447,7 @@ if uploaded_files:
                    var_color = 'Leadership and management',
                    var_title = f'Number of private sector settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -461,6 +468,7 @@ if uploaded_files:
                    var_color = 'Leadership and management',
                    var_title = f'Number of local authority sector settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}',
                    var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
                         'Outstanding' : 'blue',
                         'Good' : 'green',
@@ -493,6 +501,7 @@ if uploaded_files:
                    var_y = 'URN',
                    var_color = 'Category_of_need',
                    var_title = f'Number of settings in {geographic_area}<br>providing care for categories of need<br>{provider_type_select}',
-                   var_barmode = 'group')
+                   var_barmode = 'group',
+                   var_labels = dict(URN = "Number of settings"))
 
     pass
