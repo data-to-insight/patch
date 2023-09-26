@@ -26,8 +26,13 @@ class Drift_Data():
         df['delta'] = df.iloc[:,-1] - df.iloc[:,-2]
         df['delta'] = df['delta']/pd.Timedelta(days=1)
 
+        df.sort_values(['person_id', 'delta'], inplace=True)
         df = df[~df['delta'].between(-14, 0)]
+        df.drop(df[df['delta'] < 0].index, inplace=True)
+        df.drop_duplicates(subset=df.columns[[0, 2]], keep='first', inplace=True)
+        df.drop_duplicates(subset=df.columns[[0, 1]], keep='first', inplace=True)
 
+        st.dataframe(df)
         return df
 
 uploaded_file = st.file_uploader('Upload historical referrals, CP plan, and CLA data', accept_multiple_files=True)
