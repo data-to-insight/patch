@@ -1,27 +1,40 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/001_template/app.py)")
 
 class Drift_Data():
     def __init__(self, referrals, child_protection_plans, cla):
-        self.ref = self.data_clean(referrals, 'ref')
-        self.cp = self.data_clean(child_protection_plans, 'cp')
-        self.cla = self.data_clean(cla, 'cla')
-        self.ref_cp = self.id_merge(self.ref, self.cp)
-        self.ref_cla = self.id_merge(self.ref, self.cla)
-        self.cp_cla = self.id_merge(self.cp, self.cla)
+        self.ref = self._data_clean(referrals, 'ref')
+        self.cp = self._data_clean(child_protection_plans, 'cp')
+        self.cla = self._data_clean(cla, 'cla')
+        
+        self.ref_cp = self._id_merge(self.ref, self.cp)
+        self.ref_cla = self._id_merge(self.ref, self.cla)
+        self.cp_cla = self._id_merge(self.cp, self.cla)
 
-    def data_clean(self, df, name):
+        self.ref_cp_wby = self._cases_per_year(self.ref_cp)
+        self.ref_cla_wby = self._cases_per_year(self.ref_cla)
+        self.cp_cla_wby = self._cases_per_year(self.cp_cla)
+
+        self.time_range = [int(max([self.ref.iloc[:,1].dt.year.max(), 
+                               self.cp.iloc[:,1].dt.year.max(), 
+                               self.cla.iloc[:,1].dt.year.max()])),
+                              int(min([self.ref.iloc[:,1].dt.year.min(), 
+                               self.cp.iloc[:,1].dt.year.min(), 
+                               self.cla.iloc[:,1].dt.year.min()]))]
+
+    def _data_clean(self, df, name):
         df.rename(columns={df.columns[0]:'person_id',
                            df.columns[1]:f'{name}_date'}, inplace=True)
-        df.iloc[:,1] = pd.to_datetime(df.iloc[:,1], dayfirst=True).dt.date
+        df.iloc[:,1] = pd.to_datetime(df.iloc[:,1], dayfirst=True)
 
         return df
 
 
-    def id_merge(self, df_1, df_2):
+    def _id_merge(self, df_1, df_2):
         df = pd.merge(df_1, df_2, how='inner', on='person_id')    
         df['delta'] = df.iloc[:,-1] - df.iloc[:,-2]
         df['delta'] = df['delta']/pd.Timedelta(days=1)
@@ -32,8 +45,27 @@ class Drift_Data():
         df.drop_duplicates(subset=df.columns[[0, 2]], keep='first', inplace=True)
         df.drop_duplicates(subset=df.columns[[0, 1]], keep='first', inplace=True)
 
-        st.dataframe(df)
         return df
+    
+    def _cases_per_year(self, df):
+        st.dataframe(df)
+        df['year'] = df.iloc[:,1].dt.year
+        wait_by_year = df.groupby(df['year'])['delta'].mean()
+        cases_by_year = df.value_counts('year').rename_axis('year').reset_index(name='cases_starting_that_year')
+        wait_cases_by_year = pd.merge(wait_by_year, cases_by_year, on='year')
+        wait_cases_by_year.columns = ['year', 'average_wait', 'cases_starting_that_year']
+
+        return wait_cases_by_year
+
+    def plot_wait_by_start_year_bar(self, years, df):
+        df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
+        fig = px.bar(df, x='year', y='average_wait')
+
+        return fig
+
+    def plot_wait_by_start_year_box(self, years, df):
+        
+
 
 uploaded_file = st.file_uploader('Upload historical referrals, CP plan, and CLA data', accept_multiple_files=True)
 
@@ -47,4 +79,14 @@ if uploaded_file:
             cla = pd.read_csv(file)
     
     data = Drift_Data(referrals=ref, child_protection_plans=cp, cla=cla)
+
     
+    with st.sidebar:
+        years = st.sidebar.slider('Year select',
+                        min_value=data.time_range[0],
+                        max_value=data.time_range[1],
+                        value=[data.time_range[0],data.time_range[1]])
+
+    fig = data.plot_wait_by_start_year_bar(years, data.ref_cla_wby)
+    st.plotly_chart(fig)
+        
