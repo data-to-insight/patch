@@ -73,13 +73,29 @@ class Drift_Data():
 
     def plot_wait_by_start_year_bar(self, years, df):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
-        fig = px.bar(df, x='year', y='average_wait')
+        # df['colour'] = 'grey'
+        # df.loc[-5:-1, 'colour'] = 'blue' 
+        colours = ['grey'] * (len(df) - 5)
+        blues = ['blue'] * 5
+        colours.extend(blues)
+        df['colours'] = colours
+        fig = px.bar(df,
+                    x='year', 
+                    y='average_wait',
+                    color_discrete_sequence=df['colours'],
+                    )
 
         return fig
 
     def plot_wait_by_start_year_box(self, years, df):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
-        fig = px.box(df, x='year', y='delta')
+        colours = ['grey'] * (len(df['year'].unique()) - 5)
+        blues = ['blue'] * 5
+        colours.extend(blues)
+        fig = px.box(df, 
+                     x='year', 
+                     y='delta',
+                     color_discrete_sequence=colours)
 
         return fig
 
