@@ -63,7 +63,7 @@ class Drift_Data():
         return df
     
     def _cases_per_year(self, df):
-        df['year'] = df.iloc[:,1].dt.year
+        df['year'] = df.iloc[:,2].dt.year.astype(int)
         wait_by_year = df.groupby(df['year'])['delta'].mean()
         cases_by_year = df.value_counts('year').rename_axis('year').reset_index(name='cases_starting_that_year')
         wait_cases_by_year = pd.merge(wait_by_year, cases_by_year, on='year')
@@ -73,29 +73,26 @@ class Drift_Data():
 
     def plot_wait_by_start_year_bar(self, years, df):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
-        # df['colour'] = 'grey'
-        # df.loc[-5:-1, 'colour'] = 'blue' 
-        colours = ['grey'] * (len(df) - 5)
-        blues = ['blue'] * 5
-        colours.extend(blues)
-        df['colours'] = colours
+        df['last_five_years'] = 'No'
+        df['last_five_years'].iloc[-5:] = 'Yes'
         fig = px.bar(df,
                     x='year', 
                     y='average_wait',
-                    color_discrete_sequence=df['colours'],
+                    color='last_five_years',
                     )
 
         return fig
 
     def plot_wait_by_start_year_box(self, years, df):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
-        colours = ['grey'] * (len(df['year'].unique()) - 5)
-        blues = ['blue'] * 5
-        colours.extend(blues)
+        year_max = df['year'].max() - 5
+        year_check = lambda x: 'Yes' if x > year_max else 'No'
+        df['last_five_years'] = df['year'].apply(year_check)
+
         fig = px.box(df, 
                      x='year', 
                      y='delta',
-                     color_discrete_sequence=colours)
+                     color='last_five_years')
 
         return fig
 
