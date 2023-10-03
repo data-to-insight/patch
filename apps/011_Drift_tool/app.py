@@ -71,19 +71,25 @@ class Drift_Data():
 
         return wait_cases_by_year
 
-    def plot_wait_by_start_year_bar(self, years, df):
+    def plot_wait_by_start_year_bar(self, years, df, title, end_point):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
         df['last_five_years'] = 'No'
         df['last_five_years'].iloc[-5:] = 'Yes'
         fig = px.bar(df,
                     x='year', 
                     y='average_wait',
+                    title=title,
                     color='last_five_years',
                     )
+        fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+0.5])
+        fig.update_layout(
+                        xaxis_title=f'Year of {end_point}', yaxis_title=f'Days from {title}'
+                    )
+        #fig.update_xaxes(range=[,])
 
         return fig
 
-    def plot_wait_by_start_year_box(self, years, df):
+    def plot_wait_by_start_year_box(self, years, df, title, end_point):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
         year_max = df['year'].max() - 5
         year_check = lambda x: 'Yes' if x > year_max else 'No'
@@ -93,12 +99,20 @@ class Drift_Data():
                      x='year', 
                      y='delta',
                      color='last_five_years')
-
+        fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+1])
+        fig.update_layout(
+                        xaxis_title=f'Year of {end_point}', yaxis_title=f'Days from {title}'
+                    )
         return fig
 
     def plot_wait_time_hist(self, years, df):
         df = df[(df['year'] >= years[0]) & (df['year'] <= years[1])]
-        fig = px.histogram(df, y='delta')
+        fig = px.histogram(df, 
+                           x='delta',
+                           title=f'Spread of time from {title} for years {years[0]} ato {years[1]}')
+        fig.update_layout(
+                xaxis_title=f'Time from {title}', yaxis_title=f'Number of children waiting this long between {years[0]} and {years[1]}'
+            )
 
         return fig
 
@@ -123,43 +137,57 @@ if uploaded_file:
                                 'CP Plan to CLA'])
     
     with st.sidebar:
-        years = st.sidebar.slider('Year select',
+        years = st.sidebar.slider('Years to calculate box and bar plots',
                         min_value=data.time_range[0],
                         max_value=data.time_range[1],
                         value=[data.time_range[0],data.time_range[1]])
+        years_showing = st.sidebar.slider('Years to display box and bar plots',
+                        min_value=data.time_range[0],
+                        max_value=data.time_range[1],
+                        value=[data.time_range[0],data.time_range[0]-5])
+        years_hist = st.sidebar.slider('Years for wait time histogram',
+                        min_value=data.time_range[0],
+                        max_value=data.time_range[1],
+                        value=[data.time_range[0],data.time_range[0]-5])
 
     with tab1:
-        fig = data.plot_wait_by_start_year_bar(years, data.ref_cp_wby)
+        title = 'Referral to Child Protection plan'
+        end_point = 'Child Protection Plan'
+        fig = data.plot_wait_by_start_year_bar(years, data.ref_cp_wby, title, end_point)
         st.plotly_chart(fig)
 
-        fig = data.plot_wait_by_start_year_box(years, data.ref_cp)
+        fig = data.plot_wait_by_start_year_box(years, data.ref_cp, title, end_point)
         st.plotly_chart(fig)
         
-        fig = data.plot_wait_time_hist(years, data.ref_cp)
+        fig = data.plot_wait_time_hist(years_hist, data.ref_cp)
         st.plotly_chart(fig)
 
         st.dataframe(data.ref_cp_clean)
 
     with tab2:
-        fig = data.plot_wait_by_start_year_bar(years, data.ref_cla_wby)
+        title= 'Referral to Child Looked After'
+        end_point = 'Child Looked After'
+        fig = data.plot_wait_by_start_year_bar(years, data.ref_cla_wby, title, end_point)
         st.plotly_chart(fig)
 
-        fig = data.plot_wait_by_start_year_box(years, data.ref_cla)
+        fig = data.plot_wait_by_start_year_box(years, data.ref_cla, title, end_point)
         st.plotly_chart(fig)
         
-        fig = data.plot_wait_time_hist(years, data.ref_cla)
+        fig = data.plot_wait_time_hist(years_hist, data.ref_cla)
         st.plotly_chart(fig)
 
         st.dataframe(data.ref_cla_clean)
    
     with tab3:
-        fig = data.plot_wait_by_start_year_bar(years, data.cp_cla_wby)
+        title = 'Child Protection plan to Child Looked After'
+        end_point = 'Child Looked After'
+        fig = data.plot_wait_by_start_year_bar(years, data.cp_cla_wby, title, end_point)
         st.plotly_chart(fig)
 
-        fig = data.plot_wait_by_start_year_box(years, data.cp_cla)
+        fig = data.plot_wait_by_start_year_box(years, data.cp_cla, title, end_point)
         st.plotly_chart(fig)
         
-        fig = data.plot_wait_time_hist(years, data.cp_cla)
+        fig = data.plot_wait_time_hist(years_hist, data.cp_cla)
         st.plotly_chart(fig)
 
         st.dataframe(data.cp_cla_clean)
