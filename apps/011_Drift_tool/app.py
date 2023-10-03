@@ -170,10 +170,15 @@ if uploaded_file:
 
         fig = data.plot_wait_by_start_year_box(years, data.ref_cp, title, end_point)
         st.plotly_chart(fig)
-        st.write(f"")
+        st.write(f"This plot shows the distribution of wait times from {title}, using data between{years[0]} to {years[1]}, \
+                 with the year being the year children's {end_point}s started. It is a good representation of wait times as \
+                it allows us to see outliers, and the general spread of wait times.")
 
         fig = data.plot_wait_time_hist(years_hist, data.ref_cp)
         st.plotly_chart(fig)
+        st.write(f"The histogram above shows how wait times were distributed from {title} between {years_hist[0]} and {years_hist[1]}. \
+                 It is a useful representation of how many children wait for different lengths of time for care htey need, and what the \
+                 spread of wait times is.")
 
         st.dataframe(data.ref_cp_clean)
 
