@@ -78,7 +78,7 @@ class Drift_Data():
         fig = px.bar(df,
                     x='year', 
                     y='average_wait',
-                    title=title,
+                    title=f'Average wait time from {title}',
                     color='last_five_years',
                     )
         fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+0.5])
