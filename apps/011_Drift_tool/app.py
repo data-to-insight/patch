@@ -5,6 +5,17 @@ import plotly.express as px
 st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/001_template/app.py)")
 
+st.markdown("This dashboard takes historical data about children's Referral, Child Protection plan and CLA status dates and uses it to visualise drift. \
+         Drift, in this case means how long it takes to provide children the level of care they need. The key assumption in these visualisations is that \
+         in general, if a child moves from one level of Children's Service provision to another, it is likely that they needed that higher level of provision. \
+         For instance, if a child recieves a Referral and becomes a CLA, it is likely that the level of provision they needed was a CLA status. \
+         By visualising how long it takes to move up stages of provision, we can see how long it takes to meet children's needs. \
+         \n \
+         \n This set of visualisations needs three CSVs to work, each with two columns, one of Child IDs, and  one of provision start date. \
+        The upload takes one CSV of this data for Referrals, one for CP plan, and one for CLA status.")
+
+        # TODO include example picture
+
 class Drift_Data():
     def __init__(self, referrals, child_protection_plans, cla):
         self.ref = self._data_clean(referrals, 'ref')
@@ -164,48 +175,82 @@ if uploaded_file:
         fig = data.plot_wait_by_start_year_bar(years, data.ref_cp_wby, title, end_point)
         st.plotly_chart(fig)
         st.write(f"This plot shows the average time children wait from {title}, using data from between {years[0]} to {years[1]}, \
-                 with the year being the year children's {end_point}s started. On the assumption that when a child has a {start_point} that \
+                 with the year being the year each child's {end_point}s started. On the assumption that when a child has a {start_point} that \
                     leads to a {end_point}, that child needed a {end_point}, it represents, yearly, how long on average it takes to \
-                meet childrens needs. ")
+                meet children's needs. ")
 
         fig = data.plot_wait_by_start_year_box(years, data.ref_cp, title, end_point)
         st.plotly_chart(fig)
-        st.write(f"This plot shows the distribution of wait times from {title}, using data between{years[0]} to {years[1]}, \
-                 with the year being the year children's {end_point}s started. It is a good representation of wait times as \
+        st.write(f"This plot shows the distribution of wait times from {title}, using data from between {years[0]} and {years[1]}, \
+                 with the year being the year each child's {end_point}s started. It is a good representation of the time it takes to meet children's needs as \
                 it allows us to see outliers, and the general spread of wait times.")
 
         fig = data.plot_wait_time_hist(years_hist, data.ref_cp)
         st.plotly_chart(fig)
         st.write(f"The histogram above shows how wait times were distributed from {title} between {years_hist[0]} and {years_hist[1]}. \
-                 It is a useful representation of how many children wait for different lengths of time for care htey need, and what the \
+                 It is a useful representation of how many children wait for different lengths of time for care they need, and what the \
                  spread of wait times is.")
 
         st.dataframe(data.ref_cp_clean)
 
     with tab2:
-        title= 'Referral to Child Looked After'
+        title = 'Referral to Child Looked After'
+        start_point = 'Referral'
         end_point = 'Child Looked After'
+        st.write(f"The bar and box plots below, as default, show only the five most recent year's outcomes. They can be zoomed out \
+                 by using the tool bar that appears when you hover over the plots to show more or fewer years worth of outcomes. \
+                 The maths behind the plots uses historical data to calculate the time from {title} status. This means that calculations for earlier years can \
+                show artifically low  wait time outcomes as there is no {start_point} data for children with referrals from before \
+                the data starts, meaning long wait times are not included, lowering the average. It is for this reason that the plots \
+                default to showing only recent data.")
         fig = data.plot_wait_by_start_year_bar(years, data.ref_cla_wby, title, end_point)
         st.plotly_chart(fig)
+        st.write(f"This plot shows the average time children wait from {title}, using data from between {years[0]} to {years[1]}, \
+                 with the year being the year each child's {end_point} status began. On the assumption that when a child has a {start_point} that \
+                leads to a {end_point} status, that child needed a {end_point} status, it represents, yearly, how long on average it takes to \
+                meet children's needs. ")
 
         fig = data.plot_wait_by_start_year_box(years, data.ref_cla, title, end_point)
         st.plotly_chart(fig)
-        
+        st.write(f"This plot shows the distribution of wait times from {title} status, using data from between {years[0]} and {years[1]}, \
+                 with the year being the year each child's {end_point} status began. It is a good representation of the time it takes to meet children's needs as \
+                it allows us to see outliers, and the general spread of wait times.")
+
         fig = data.plot_wait_time_hist(years_hist, data.ref_cla)
         st.plotly_chart(fig)
+        st.write(f"The histogram above shows how wait times were distributed from {title} status between {years_hist[0]} and {years_hist[1]}. \
+                 It is a useful representation of how many children wait for different lengths of time for care they need, and what the \
+                 spread of wait times is.")
 
         st.dataframe(data.ref_cla_clean)
    
     with tab3:
         title = 'Child Protection plan to Child Looked After'
+        start_point = 'Child Protection Plan'
         end_point = 'Child Looked After'
+        st.write(f"The bar and box plots below, as default, show only the five most recent year's outcomes. They can be zoomed out \
+                 by using the tool bar that appears when you hover over the plots to show more or fewer years worth of outcomes. \
+                 The maths behind the plots uses historical data to calculate the time from {title} status. This means that calculations for earlier years can \
+                show artifically low  wait time outcomes as there is no {start_point} data for children with Child Protection plans beginning before \
+                the data starts, meaning long wait times are not included, lowering the average. It is for this reason that the plots \
+                default to showing only recent data.")
         fig = data.plot_wait_by_start_year_bar(years, data.cp_cla_wby, title, end_point)
         st.plotly_chart(fig)
+        st.write(f"This plot shows the average time children wait from {title} status, using data from between {years[0]} to {years[1]}, \
+                 with the year being the year each child's {end_point} status began. On the assumption that when a child has a {start_point} that \
+                leads to a {end_point} status, that child needed a {end_point} status, it represents, yearly, how long on average it takes to \
+                meet children's needs. ")
 
         fig = data.plot_wait_by_start_year_box(years, data.cp_cla, title, end_point)
         st.plotly_chart(fig)
+        st.write(f"This plot shows the distribution of wait times from {title} status, using data from between {years[0]} and {years[1]}, \
+                 with the year being the year each child's {end_point} status began. It is a good representation of the time it takes to meet children's needs as \
+                it allows us to see outliers, and the general spread of wait times.")
         
         fig = data.plot_wait_time_hist(years_hist, data.cp_cla)
         st.plotly_chart(fig)
+        st.write(f"The histogram above shows how wait times were distributed from {title} status between {years_hist[0]} and {years_hist[1]}. \
+                 It is a useful representation of how many children wait for different lengths of time for care they need, and what the \
+                 spread of wait times is.")
 
         st.dataframe(data.cp_cla_clean)
