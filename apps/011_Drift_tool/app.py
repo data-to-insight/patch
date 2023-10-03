@@ -100,6 +100,7 @@ class Drift_Data():
                      y='delta',
                      color='last_five_years')
         fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+1])
+        fig.update_yaxes(range=[0, years_showing[1]+1])
         fig.update_layout(
                         xaxis_title=f'Year of {end_point}', yaxis_title=f'Days from {title}'
                     )
@@ -152,13 +153,25 @@ if uploaded_file:
 
     with tab1:
         title = 'Referral to Child Protection plan'
+        start_point = 'Referral'
         end_point = 'Child Protection Plan'
+        st.write(f"The bar and box plots below, as default, show only the five most recent year's outcomes. They can be zoomed out \
+                 by using the tool bar that appears when you hover over the plots to show more or fewer years worth of outcomes. \
+                 The maths behind the plots uses historical data to calculate the time from {title}. This means that calculations for earlier years can \
+                show artifically low  wait time outcomes as there is no {start_point} data for children with referrals from before \
+                the data starts, meaning long wait times are not included, lowering the average. It is for this reason that the plots \
+                default to showing only recent data.")
         fig = data.plot_wait_by_start_year_bar(years, data.ref_cp_wby, title, end_point)
         st.plotly_chart(fig)
+        st.write(f"This plot shows the average time children wait from {title}, using data from between {years[0]} to {years[1]}, \
+                 with the year being the year children's {end_point}s started. On the assumption that when a child has a {start_point} that \
+                    leads to a {end_point}, that child needed a {end_point}, it represents, yearly, how long on average it takes to \
+                meet childrens needs. ")
 
         fig = data.plot_wait_by_start_year_box(years, data.ref_cp, title, end_point)
         st.plotly_chart(fig)
-        
+        st.write(f"")
+
         fig = data.plot_wait_time_hist(years_hist, data.ref_cp)
         st.plotly_chart(fig)
 
