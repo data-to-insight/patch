@@ -54,4 +54,10 @@
   repo: 010_placement_distance/app.py
   reqs: [plotly]
   description: "Uses header and placement distance extended to explore how placement distance varies by characteristic."
-  image: distance picture.png
+  image: 011_distance picture.png
+
+- name: Drift Tool
+  repo: /workspaces/patch/apps/011_Drift_tool/Drift Tool.py
+  reqs: [plotly]
+  description: "Uses historic Referrals, Child Protection plan and CLA data to visualise drift."
+  image: 011_drift_pic.png
