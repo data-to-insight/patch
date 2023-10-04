@@ -94,14 +94,13 @@ class Drift_Data():
                     y='average_wait',
                     title=f'Average wait time from {title}',
                     color='last_five_years',
-                    labels={'last_five_years':'Data from 5 most<br>recent years of data?'}
+                    labels={'last_five_years':'Data from 5 most<br>recent years of data?'},
+                    color_discrete_sequence=['dimgrey', 'darkblue']
                     )
         fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+0.5])
         fig.update_layout(
                         xaxis_title=f'Year of {end_point}', yaxis_title=f'Days from {title}'
                     )
-        #fig.update_xaxes(range=[,])
-
         return fig
 
     def plot_wait_by_start_year_box(self, years, df, title, end_point):
@@ -113,8 +112,11 @@ class Drift_Data():
         fig = px.box(df, 
                      x='year', 
                      y='delta',
+                    title=f'Spread of wait times from {title}',
                      color='last_five_years',
-                    labels={'last_five_years':'Data from 5 most<br>recent years of data?'})
+                     labels={'last_five_years':'Data from 5 most<br>recent years of data?'},
+                     color_discrete_sequence=['dimgrey', 'darkblue']
+                     )
         fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+1])
         fig.update_yaxes(range=[0, years_showing[1]+1])
         fig.update_layout(
