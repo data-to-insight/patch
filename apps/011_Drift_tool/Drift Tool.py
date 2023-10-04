@@ -2,6 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+st.set_page_config(
+    page_title="Home",
+    page_icon="🏠",
+)
+
 st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/001_template/app.py)")
 
@@ -13,8 +18,6 @@ st.markdown("This dashboard takes historical data about children's Referral, Chi
          \n \
          \n This set of visualisations needs three CSVs to work, each with two columns, one of Child IDs, and  one of provision start date. \
         The upload takes one CSV of this data for Referrals, one for CP plan, and one for CLA status.")
-
-        # TODO include example picture
 
 class Drift_Data():
     def __init__(self, referrals, child_protection_plans, cla):
@@ -91,6 +94,7 @@ class Drift_Data():
                     y='average_wait',
                     title=f'Average wait time from {title}',
                     color='last_five_years',
+                    labels={'last_five_years':'Data from 5 most<br>recent years of data?'}
                     )
         fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+0.5])
         fig.update_layout(
@@ -109,7 +113,8 @@ class Drift_Data():
         fig = px.box(df, 
                      x='year', 
                      y='delta',
-                     color='last_five_years')
+                     color='last_five_years',
+                    labels={'last_five_years':'Data from 5 most<br>recent years of data?'})
         fig.update_xaxes(range=[years_showing[0]+0.5, years_showing[1]+1])
         fig.update_yaxes(range=[0, years_showing[1]+1])
         fig.update_layout(
@@ -136,9 +141,9 @@ if uploaded_file:
     for file in uploaded_file:
         if ('ref' in file.name.lower()):
             ref = pd.read_csv(file)
-        if 'cp' in file.name.lower():
+        if ('cp' in file.name.lower()) | ('child protection' in file.name.lower()):
             cp = pd.read_csv(file)
-        if 'cla' in file.name.lower() :
+        if ('cla' in file.name.lower()) | ('lac' in file.name.lower()) | ('looked after' in file.name.lower()):
             cla = pd.read_csv(file)
     
     data = Drift_Data(referrals=ref, child_protection_plans=cp, cla=cla)
