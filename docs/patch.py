@@ -7,7 +7,7 @@ from streamlit_javascript import st_javascript
 
 st.title("Share PATCh apps")
 
-BASE_URL = "https://patch.datatoinsight.org/app/"
+BASE_URL = "https://patch.datatoinsight.org/app"
 SAVED_APPS_KEY = "saved_apps"
 
 
