@@ -1,16 +1,15 @@
 - name: Intro
-  repo: 000_intro/app.py
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/000_intro/app.py
   description: "Introduction on how to work with PATCh and Streamlit."
   image: 000_intro.jpg
 
 - name: Template
-  repo: 001_template/app.py
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/001_template/app.py
   description: "Template app that asks for the user name and prints it in return."
   image: 001_template.jpg
 
 - name: How Early Help provision varies by Child Characteristics 
-  repo: 002_quality_data_usecase_EH/app.py
-  reqs: [plotly, openpyxl]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/002_quality_data_usecase_EH/app.py&req=plotly&req=openpyxl
   description: "Use case for quality data charts and analysis"
   image: 002_quality_data_usecase_EH.jpg
 
@@ -27,37 +26,31 @@
 #   image: 004_quality_data_build_sankey.jpg
 
 - name: Annex A Journeys Sankey 
-  repo: 006_Annex_A_Journey_Sankey/app.py
-  reqs: [plotly, openpyxl]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/006_Annex_A_Journey_Sankey/app.py&req=plotly&req=openpyxl
   description: "Use case for quality data sankey diagram."
   image: 006_sankey.jpg
 
 - name: Ofsted care provider market analysis tool 
-  repo: 007_ofsted_market_analysis/app.py
-  reqs: [plotly, openpyxl, matplotlib]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/007_ofsted_market_analysis/app.py&req=plotly&req=matplotlib&req=openpyxl
   description: "This tool analyses a list of social care providers as provided by Ofsted."
   image: 007_care_home_benchmarking.png
 
 - name: Disproportionality tool 
-  repo: 008_disproportionality_tool/app.py
-  reqs: [scipy, matplotlib, seaborn]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/008_disproportionality_tool/app.py&req=scipy&req=matplotlib&req=seaborn
   description: "Python deployment of the disproportionality tool to compare ethnic breakdowns between LAs or other settings."
   image: 008_disproportionality.jpg
 
 - name: PATCh Demo 
-  repo: 009_PATCh_demo/app.py
-  reqs: [plotly]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/009_PATCh_demo/app.py&req=plotly
   description: "A demo of the PATCh tool with a very simple example of the type of visualisaiton/dashboarding thats possible."
   image: 009_demo.jpg
   
 - name: Placement distance by child characteristic
-  repo: 010_placement_distance/app.py
-  reqs: [plotly]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/010_placement_distance/app.py&req=plotly
   description: "Uses header and placement distance extended to explore how placement distance varies by characteristic."
   image: 010_distance picture.png
 
 - name: Drift Tool
-  repo: 011_Drift_tool/Drift Tool.py
-  reqs: [plotly]
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/011_Drift_tool/Drift%20Tool.py&page=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/011_Drift_tool/pages/1_Drift%20Tool%20Instructions.py&req=plotly
   description: "Uses historic Referrals, Child Protection plan and CLA data to visualise drift."
   image: 011_drift_pic.png
