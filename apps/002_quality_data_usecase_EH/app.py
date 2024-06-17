@@ -3,8 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
-st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
-             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/002_quality_data_usecase_EH/app.py)")
+st.markdown(
+    "[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/002_quality_data_usecase_EH/app.py)"
+)
 
 
 def read_data(input_file):
@@ -61,7 +63,9 @@ def read_data(input_file):
 
 st.header("How Early Help provision varies by Child Characteristics")
 
-uploaded_file = st.file_uploader("Upload XLSX containing Annex A data with the Early Help table named Early Help")
+uploaded_file = st.file_uploader(
+    "Upload XLSX containing Annex A data with the Early Help table named Early Help"
+)
 if uploaded_file is not None:
     data = read_data(uploaded_file)
     option_to_col = {
