@@ -83,7 +83,7 @@ def build_annexarecord(
         # Loop over our dictionary to populate the log
         for event in events:
 
-            contents = events_named[event]
+            contents = events[event]
             list_number = list(contents.keys())[0]
             date_column = contents[list_number]
             # Load Annex A list
