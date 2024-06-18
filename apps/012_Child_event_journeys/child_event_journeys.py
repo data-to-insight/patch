@@ -22,6 +22,27 @@ journey_events = {
     "lac_end": {"List_8": "Date Ceased to be Looked After"},
 }
 
+journey_events_named = {
+    "contact": {"Contacts": "Date of Contact"},
+    "early_help_assessment_start": {"Early Help": "Assessment start date"},
+    "early_help_assessment_end": {"Early Help": "Assessment completion date"},
+    "referral": {"Referrals": "Date of referral"},
+    "assessment_start": {"Assessments": "Continuous Assessment Start Date"},
+    "assessment_authorised": {
+        "Assessments": "Continuous Assessment Date of Authorisation"
+    },
+    "s47": {
+        "Sec47 and ICPC": "Strategy discussion initiating Section 47 Enquiry Start Date"
+    },
+    "icpc": {"Sec47 and ICPC": "Date of Initial Child Protection Conference"},
+    "cin_start": {"Children in Need": "CIN Start Date"},
+    "cin_end": {"Children in Need": "CIN Closure Date"},
+    "cpp_start": {"Child Protection": "Child Protection Plan Start Date"},
+    "cpp_end": {"Child Protection": "Child Protection Plan End Date"},
+    "lac_start": {"Children in Care": "Date Started to be Looked After"},
+    "lac_end": {"Children in Care": "Date Ceased to be Looked After"},
+}
+
 # Abbreviations for events (for the "journeys reduced")
 events_map = {
     "contact": "C",
@@ -44,7 +65,9 @@ events_map = {
 # Functions
 
 
-def build_annexarecord(input_file, events=journey_events):
+def build_annexarecord(
+    input_file, events=journey_events, events_named=journey_events_named
+):
     """
     Creates a flat file with three columns:
     1) child unique id
@@ -56,27 +79,53 @@ def build_annexarecord(input_file, events=journey_events):
     # Create empty dataframe in which we'll drop our events
     df_list = []
 
-    # Loop over our dictionary to populate the log
-    for event in events:
-        contents = events[event]
-        list_number = list(contents.keys())[0]
-        date_column = contents[list_number]
+    try:
+        # Loop over our dictionary to populate the log
+        for event in events:
 
-        # Load Annex A list
-        df = pd.read_excel(input_file, sheet_name=list_number)
+            contents = events_named[event]
+            list_number = list(contents.keys())[0]
+            date_column = contents[list_number]
+            # Load Annex A list
+            df = pd.read_excel(input_file, sheet_name=list_number)
 
-        # Get date column information
-        df.columns = [col.lower().strip() for col in df.columns]
-        date_column_lower = date_column.lower()
-        if date_column_lower in df.columns:
-            df = df[df[date_column_lower].notnull()]
-            df["Type"] = event
-            df["Date"] = df[date_column_lower]
-            df_list.append(df)
-        else:
-            print(
-                ">>>>>  Could not find column {} in {}".format(date_column, list_number)
-            )
+            # Get date column information
+            df.columns = [col.lower().strip() for col in df.columns]
+            date_column_lower = date_column.lower()
+            if date_column_lower in df.columns:
+                df = df[df[date_column_lower].notnull()]
+                df["Type"] = event
+                df["Date"] = df[date_column_lower]
+                df_list.append(df)
+            else:
+                print(
+                    ">>>>>  Could not find column {} in {}".format(
+                        date_column, list_number
+                    )
+                )
+    except:
+        for event in events_named:
+
+            contents = events_named[event]
+            list_number = list(contents.keys())[0]
+            date_column = contents[list_number]
+            # Load Annex A list
+            df = pd.read_excel(input_file, sheet_name=list_number)
+
+            # Get date column information
+            df.columns = [col.lower().strip() for col in df.columns]
+            date_column_lower = date_column.lower()
+            if date_column_lower in df.columns:
+                df = df[df[date_column_lower].notnull()]
+                df["Type"] = event
+                df["Date"] = df[date_column_lower]
+                df_list.append(df)
+            else:
+                print(
+                    ">>>>>  Could not find column {} in {}".format(
+                        date_column, list_number
+                    )
+                )
 
     # Pull all events into a unique datafrane annexarecord
     annexarecord = pd.concat(df_list, sort=False)
