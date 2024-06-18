@@ -56,7 +56,7 @@
   image: 011_drift_pic.png
 
 - name: Child Event Journeys
-  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/apps/012_Child_event_journeys/child_event_journeys.py&req=xlrd&req=openpyxl&req=xlsxwriter
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/012_Child_event_journeys/child_event_journeys.py&req=xlrd&req=openpyxl&req=xlsxwriter
   description: "Uses the Annex A to trace children's journeys through the care system"
   image: 010_distance picture.png
 
