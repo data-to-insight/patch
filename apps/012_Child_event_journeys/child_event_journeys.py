@@ -362,7 +362,7 @@ with st.expander("Sheet names and column headers"):
 file = st.file_uploader("Upload annex A here")
 
 if file:
-    st.write("File up!")
+    st.write("File upload sucessful!")
 
     annexa = build_annexarecord(file)
     journeys = create_journeys(annexa)
