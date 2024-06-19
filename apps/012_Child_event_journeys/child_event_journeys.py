@@ -43,6 +43,23 @@ journey_events_named = {
     "lac_end": {"Children in Care": "Date Ceased to be Looked After"},
 }
 
+journey_events_by_index = {
+    "contact": {0: "Date of Contact"},
+    "early_help_assessment_start": {1: "Assessment start date"},
+    "early_help_assessment_end": {1: "Assessment completion date"},
+    "referral": {2: "Date of referral"},
+    "assessment_start": {3: "Continuous Assessment Start Date"},
+    "assessment_authorised": {3: "Continuous Assessment Date of Authorisation"},
+    "s47": {4: "Strategy discussion initiating Section 47 Enquiry Start Date"},
+    "icpc": {4: "Date of Initial Child Protection Conference"},
+    "cin_start": {5: "CIN Start Date"},
+    "cin_end": {5: "CIN Closure Date"},
+    "cpp_start": {6: "Child Protection Plan Start Date"},
+    "cpp_end": {6: "Child Protection Plan End Date"},
+    "lac_start": {7: "Date Started to be Looked After"},
+    "lac_end": {7: "Date Ceased to be Looked After"},
+}
+
 # Abbreviations for events (for the "journeys reduced")
 events_map = {
     "contact": "C",
@@ -104,28 +121,52 @@ def build_annexarecord(
                     )
                 )
     except:
-        for event in events_named:
+        try:
+            for event in events_named:
 
-            contents = events_named[event]
-            list_number = list(contents.keys())[0]
-            date_column = contents[list_number]
-            # Load Annex A list
-            df = pd.read_excel(input_file, sheet_name=list_number)
+                contents = events_named[event]
+                list_number = list(contents.keys())[0]
+                date_column = contents[list_number]
+                # Load Annex A list
+                df = pd.read_excel(input_file, sheet_name=list_number)
 
-            # Get date column information
-            df.columns = [col.lower().strip() for col in df.columns]
-            date_column_lower = date_column.lower()
-            if date_column_lower in df.columns:
-                df = df[df[date_column_lower].notnull()]
-                df["Type"] = event
-                df["Date"] = df[date_column_lower]
-                df_list.append(df)
-            else:
-                print(
-                    ">>>>>  Could not find column {} in {}".format(
-                        date_column, list_number
+                # Get date column information
+                df.columns = [col.lower().strip() for col in df.columns]
+                date_column_lower = date_column.lower()
+                if date_column_lower in df.columns:
+                    df = df[df[date_column_lower].notnull()]
+                    df["Type"] = event
+                    df["Date"] = df[date_column_lower]
+                    df_list.append(df)
+                else:
+                    print(
+                        ">>>>>  Could not find column {} in {}".format(
+                            date_column, list_number
+                        )
                     )
-                )
+        except:
+            for event in journey_events_by_index:
+
+                contents = journey_events_by_index[event]
+                list_number = list(contents.keys())[0]
+                date_column = contents[list_number]
+                # Load Annex A list
+                df = pd.read_excel(input_file, sheet_name=list_number)
+
+                # Get date column information
+                df.columns = [col.lower().strip() for col in df.columns]
+                date_column_lower = date_column.lower()
+                if date_column_lower in df.columns:
+                    df = df[df[date_column_lower].notnull()]
+                    df["Type"] = event
+                    df["Date"] = df[date_column_lower]
+                    df_list.append(df)
+                else:
+                    print(
+                        ">>>>>  Could not find column {} in {}".format(
+                            date_column, list_number
+                        )
+                    )
 
     # Pull all events into a unique datafrane annexarecord
     annexarecord = pd.concat(df_list, sort=False)
@@ -206,7 +247,118 @@ def to_excel(df):
     return processed_data
 
 
+# Main app
+st.markdown(
+    "[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/001_template/app.py)"
+)
+
 st.title("Child Event Journeys")
+
+with st.expander("Explanation and accreditation"):
+    st.markdown(
+        """
+    This code was originally developed by [Celine Gross](https://github.com/Cece78) and [Kaj Siebert](https://github.com/kws) 
+    at Social Finance as part of a grant funded programme to support Local Authorities to collaborate on data analysis (since 
+    this, Data to Insight have given the code a new home on the PATCh tool). The 
+    programme was called the ‘Front Door Data Collaboration’. It was supported financially by the Christie Foundation and Nesta 
+    (through the ‘What Works Centre for Children’s Social Care’). The LAs whose staff guided its development were Bracknell 
+    Forest, West Berkshire, Southampton, and Surrey. It also benefitted from advice from the National Performance and Information 
+    Managers Group and from the Ofsted Social Care Inspection Insight team.
+
+    ## What does this code do?
+
+    **What is the child's journey through social care?**
+
+    Getting a longitudinal view of the child's journey through social care is not easy with [Annex A](https://www.gov.uk/government/publications/inspecting-local-authority-childrens-services-from-2018). Annex A is a spreadsheet containing different tabs for different "types" of events: List 1 for Contacts, List 2 for Early Help assessments, etc. It contains useful data but it does not allow to get the whole picture of what happened to each child (unless you want to run from one tab to the next, frantically hitting Ctrl+F to find events related to a particular child...).
+
+    **That is a problem because understanding the child's experience is key to providing better support**. Analysing events in isolation (e.g. looking only at Contacts, or Referrals) is valuable, but not enough for a comprehensive view.
+
+    **This code creates a simple "journey" line showing the experience of the child from the Annex A data**. For each child, you'll be able to read a one-liner in the following format:
+    ```
+    [2025-03-01/contact] -> [2025-05-02/contact] -> [2025-05-05/referral] -> [2025-05-10/assessment_start]
+    ```
+    In this example, the child had a first contact on 1 March 2025, followed by a second contact on 2 May 2025. This second contact triggers a referral on 5 May 2025 and an assessment start on 10 May 2025.
+
+    We also included a "reduced" journey line to enable you to do quick searches on journey patterns. In its "reduced" form, the above example would be:
+    ```
+    C -> C -> R -> AS
+    ```
+    The reduced column allows for easy searches: if I wanted to see all the children who had at least 3 contacts one after the other, I could do a quick Ctrl+F on "C -> C -> C".
+
+    ## How to run this code
+
+    This code has been adapted from the original Python which required the user to have Python installed on their local machine. In this version one simply needs to drop their
+    Annex A xlsx into the upload box. There are, however, some slight requirements. Firstly, you need to have your entire Annex A
+    in one Excel file. Next, you must either name the sheets in the style of "List_1", through to "List_8" or capitalised and named, such as "Contacts" and "Children in Care".
+    Full tables of necessary sheet and column name spellings/syntax/grammar can be seen in the dropdown below.
+    """
+    )
+
+with st.expander("Sheet names and column headers"):
+    st.write(
+        """
+    Only lists 1-8 are needed, and they must be labelled according to one of the two following schema. 
+    We've tried to add some leeway into the code in case it doesn't match exactly, but if things are going wrong, 
+    these are good things to check!"""
+    )
+    st.table(
+        pd.DataFrame(
+            {
+                "Allowed sheet names (numbered)": [
+                    "List_1",
+                    "List_2",
+                    "List_3",
+                    "List_4",
+                    "List_5",
+                    "List_6",
+                    "List_7",
+                    "List_8",
+                ],
+                "Allowed sheet names (named)": [
+                    "Contacts",
+                    "Early Help",
+                    "Referrals",
+                    "Assessments",
+                    "Sec47 and ICPC",
+                    "Children in Need",
+                    "Child Protection",
+                    "Children in Care",
+                ],
+            }
+        )
+    )
+    st.write(
+        "Only some columns from each table are needed, and they must be formatted as below."
+    )
+    st.table(
+        pd.DataFrame(
+            {
+                "Contacts": ["Date of Contact", ""],
+                "Early Help": ["Assessment start date", "Assessment completion date"],
+                "Referrals": ["Date of referral", ""],
+                "Assessments": [
+                    "Continuous Assessment Start Date",
+                    "Continuous Assessment Date of Authorisation",
+                ],
+                "Sec47 and ICPC": [
+                    "Strategy discussion initiating Section 47 Enquiry Start Date",
+                    "Date of Initial Child Protection Conference",
+                ],
+                "Children in Need": ["CIN Start Date", "CIN Closure Date"],
+                "Child Protection": [
+                    "Child Protection Plan Start Date",
+                    "Child Protection Plan End Date",
+                ],
+                "Children in Care": [
+                    "Date Started to be Looked After",
+                    "Date Ceased to be Looked After",
+                ],
+            }
+        )
+    )
+
+
 file = st.file_uploader("Upload annex A here")
 
 if file:
