@@ -231,7 +231,7 @@ def create_journeys(df):
         index=journey_long.index,
     )
 
-    return journeys_df
+    return journeys_df.reset_index()
 
 
 def to_excel(df):
@@ -245,6 +245,82 @@ def to_excel(df):
     writer.save()
     processed_data = output.getvalue()
     return processed_data
+
+
+def gantt_data_generator(child_data, df):
+    data_string = df[df["child unique id"] == child_data]["Child journey"].iloc[0]
+    events_split = pd.DataFrame(data_string.split("->"), columns=["original_split"])
+
+    events_split[["Date", "Type"]] = events_split["original_split"].str.split(
+        "/", n=1, expand=True
+    )
+    events_split["Type"] = events_split["Type"].str.replace("]", "")
+    events_split["Date"] = events_split["Date"].str.replace("[", "")
+
+    events_split["Date"] = pd.to_datetime(
+        events_split["Date"], format="%Y-%m-%d"
+    ).dt.date
+    events_split.sort_values("Date", ascending=True)
+
+    events_split["Event order"] = events_split.groupby("Type").cumcount()
+
+    return events_split
+
+
+def empty_date_check(date_to_check):
+    if len(date_to_check) == 1:
+        return date_to_check.iloc[0]
+    else:
+        return pd.to_datetime("today").dt.date
+
+
+def finish_dates(type, date, event):
+    st.write(type, date)
+    if "contact" in type:
+        return date
+    elif "referral" in type:
+        return date
+    elif "s47" in type:
+        return date
+    elif "icpc" in type:
+        return date
+    elif "assessment_start" in type:
+        return_date = events_split[
+            (events_split["Type"].str.contains("assessment_authorised"))
+            & (events_split["Event order"] == event)
+        ]["Date"]
+        return_date = empty_date_check(return_date)
+        return return_date
+    elif "early_help_assessment_start" in type:
+        return_date = events_split[
+            (events_split["Type"].str.contains("early_help_assessment_end"))
+            & (events_split["Event order"] == event)
+        ]["Date"]
+        return_date = empty_date_check(return_date)
+        return return_date
+    elif "cin_start" in type:
+        return_date = events_split[
+            (events_split["Type"].str.contains("cin_end"))
+            & (events_split["Event order"] == event)
+        ]["Date"]
+        return_date = empty_date_check(return_date)
+        return return_date
+    elif "cpp_start" in type:
+        return_date = events_split[
+            (events_split["Type"].str.contains("cpp_end"))
+            & (events_split["Event order"] == event)
+        ]["Date"]
+        return_date = empty_date_check(return_date)
+        return return_date
+    elif "lac_start" in type:
+        return_date = events_split[
+            (events_split["Type"].str.contains("lac_end"))
+            & (events_split["Event order"] == event)
+        ]["Date"]
+        return_date = empty_date_check(return_date)
+        return return_date
+    else:
+        return pd.NA
 
 
 # Main app
@@ -371,4 +447,42 @@ if file:
 
     output = to_excel(journeys)
 
+    # st.write(annexa)
+
     st.download_button("Download output excel here", output, file_name="df_test.xlsx")
+
+    with st.sidebar:
+        chosen_child = st.sidebar.selectbox("Choose", journeys["child unique id"])
+
+    st.write(chosen_child)
+    st.write(
+        pd.DataFrame(
+            [
+                dict(
+                    Task="Job A",
+                    Start="2009-01-01",
+                    Finish="2009-02-28",
+                    Resource="Alex",
+                ),
+                dict(
+                    Task="Job B",
+                    Start="2009-03-05",
+                    Finish="2009-04-15",
+                    Resource="Alex",
+                ),
+                dict(
+                    Task="Job C",
+                    Start="2009-02-20",
+                    Finish="2009-05-30",
+                    Resource="Max",
+                ),
+            ]
+        )
+    )
+
+    # gannt chart
+    events_split = gantt_data_generator(chosen_child, journeys)
+    events_split["Finish Dates"] = events_split.apply(
+        lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]), axis=1
+    )
+    st.write(events_split)
