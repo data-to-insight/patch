@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
+import plotly.express as px
 
 # Useful dictionaries
 
@@ -271,19 +272,19 @@ def empty_date_check(date_to_check):
     if len(date_to_check) == 1:
         return date_to_check.iloc[0]
     else:
-        return pd.to_datetime("today").dt.date
+        # return pd.to_datetime("today")
+        return end_of_collection
 
 
 def finish_dates(type, date, event):
-    st.write(type, date)
     if "contact" in type:
-        return date
+        return date + pd.DateOffset(days=1)
     elif "referral" in type:
-        return date
+        return date + pd.DateOffset(days=1)
     elif "s47" in type:
-        return date
+        return date + pd.DateOffset(days=1)
     elif "icpc" in type:
-        return date
+        return date + pd.DateOffset(days=1)
     elif "assessment_start" in type:
         return_date = events_split[
             (events_split["Type"].str.contains("assessment_authorised"))
@@ -321,6 +322,22 @@ def finish_dates(type, date, event):
         return return_date
     else:
         return pd.NA
+
+
+def make_gantt_chart(df, chosen_child):
+    df = df[~(df["Type"].str.contains("end") | df["Type"].str.contains("authorised"))]
+    st.write(df)
+    fig = px.timeline(
+        df,
+        x_start="Date",
+        x_end="Finish Dates",
+        y="Type",
+        color="Type",
+        title=f"Journey for child: {chosen_child}",
+    )
+    fig.update_yaxes(autorange="reversed")
+
+    return fig
 
 
 # Main app
@@ -452,37 +469,18 @@ if file:
     st.download_button("Download output excel here", output, file_name="df_test.xlsx")
 
     with st.sidebar:
-        chosen_child = st.sidebar.selectbox("Choose", journeys["child unique id"])
-
-    st.write(chosen_child)
-    st.write(
-        pd.DataFrame(
-            [
-                dict(
-                    Task="Job A",
-                    Start="2009-01-01",
-                    Finish="2009-02-28",
-                    Resource="Alex",
-                ),
-                dict(
-                    Task="Job B",
-                    Start="2009-03-05",
-                    Finish="2009-04-15",
-                    Resource="Alex",
-                ),
-                dict(
-                    Task="Job C",
-                    Start="2009-02-20",
-                    Finish="2009-05-30",
-                    Resource="Max",
-                ),
-            ]
+        chosen_child = st.sidebar.selectbox(
+            "Select child for journey visualisation", journeys["child unique id"]
         )
-    )
+        end_of_collection = st.sidebar.date_input(
+            "Select end date for ongoing plans/assessments.",
+        )
 
     # gannt chart
     events_split = gantt_data_generator(chosen_child, journeys)
     events_split["Finish Dates"] = events_split.apply(
         lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]), axis=1
     )
-    st.write(events_split)
+
+    gantt = make_gantt_chart(events_split, chosen_child)
+    st.plotly_chart(gantt)
