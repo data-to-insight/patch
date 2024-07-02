@@ -285,7 +285,7 @@ def finish_dates(type, date, event):
         return date + pd.DateOffset(days=1)
     elif "icpc" in type:
         return date + pd.DateOffset(days=1)
-    elif "assessment_start" in type:
+    elif ("assessment_start" in type) & ("early_help" not in type):
         return_date = events_split[
             (events_split["Type"].str.contains("assessment_authorised"))
             & (events_split["Event order"] == event)
@@ -324,9 +324,33 @@ def finish_dates(type, date, event):
         return pd.NA
 
 
+def type_check(type):
+    if "contact" in type:
+        return "Contacts"
+    elif "referral" in type:
+        return "Referrals"
+    elif "s47" in type:
+        return "Section 47s"
+    elif "icpc" in type:
+        return "ICPCs"
+    elif ("assessment" in type) & ("early_help" not in type):
+        return "Assessments"
+    elif "early_help_assessment" in type:
+        return "Early Help Assessments"
+    elif "cin" in type:
+        return "CIN"
+    elif "cpp" in type:
+        return "CPP"
+    elif "lac" in type:
+        return "LAC"
+    else:
+        return pd.NA
+
+
 def make_gantt_chart(df, chosen_child):
     df = df[~(df["Type"].str.contains("end") | df["Type"].str.contains("authorised"))]
-    st.write(df)
+    df["Type"] = df["Type"].apply(type_check)
+    # st.write(df)
     fig = px.timeline(
         df,
         x_start="Date",
@@ -336,6 +360,26 @@ def make_gantt_chart(df, chosen_child):
         title=f"Journey for child: {chosen_child}",
     )
     fig.update_yaxes(autorange="reversed")
+
+    return fig
+
+
+def gantt_type_2(chosen_child, df):
+    df["Finish Dates"] = df["Date"] + pd.DateOffset(days=1)
+
+    df["Joined Types"] = df["Type"].apply(type_check)
+    st.write(df)
+
+    fig = px.timeline(
+        df,
+        x_start="Date",
+        x_end="Finish Dates",
+        y="Joined Types",
+        color="Type",
+        title=f"Journey for child: {chosen_child}",
+    )
+    fig.update_yaxes(autorange="reversed")
+    # st.write(df)
 
     return fig
 
@@ -476,7 +520,7 @@ if file:
             "Select end date for ongoing plans/assessments.",
         )
 
-    # gannt chart
+    # gannt chart type 1
     events_split = gantt_data_generator(chosen_child, journeys)
     events_split["Finish Dates"] = events_split.apply(
         lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]), axis=1
@@ -484,3 +528,7 @@ if file:
 
     gantt = make_gantt_chart(events_split, chosen_child)
     st.plotly_chart(gantt)
+
+    # gantt chart type 2
+    gantt_2 = gantt_type_2(chosen_child, events_split)
+    st.plotly_chart(gantt_2)
