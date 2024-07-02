@@ -24,20 +24,20 @@ journey_events = {
 }
 
 journey_events_stripped = {
-    "contact": {"List 1": "Date of Contact"},
-    "early_help_assessment_start": {"List 2": "Assessment start date"},
-    "early_help_assessment_end": {"List 2": "Assessment completion date"},
-    "referral": {"List 3": "Date of referral"},
-    "assessment_start": {"List 4": "Continuous Assessment Start Date"},
-    "assessment_authorised": {"List 4": "Continuous Assessment Date of Authorisation"},
-    "s47": {"List 5": "Strategy discussion initiating Section 47 Enquiry Start Date"},
-    "icpc": {"List 5": "Date of Initial Child Protection Conference"},
-    "cin_start": {"List 6": "CIN Start Date"},
-    "cin_end": {"List 6": "CIN Closure Date"},
-    "cpp_start": {"List 7": "Child Protection Plan Start Date"},
-    "cpp_end": {"List 7": "Child Protection Plan End Date"},
-    "lac_start": {"List 8": "Date Started to be Looked After"},
-    "lac_end": {"List 8": "Date Ceased to be Looked After"},
+    "contact": {"List 1": 5},
+    "early_help_assessment_start": {"List 2": 5},
+    "early_help_assessment_end": {"List 2": 6},
+    "referral": {"List 3": 5},
+    "assessment_start": {"List 4": 6},
+    "assessment_authorised": {"List 4": 8},
+    "s47": {"List 5": 6},
+    "icpc": {"List 5": 8},
+    "cin_start": {"List 6": 6},
+    "cin_end": {"List 6": 9},
+    "cpp_start": {"List 7": 6},
+    "cpp_end": {"List 7": 12},
+    "lac_start": {"List 8": 7},
+    "lac_end": {"List 8": 20},
 }
 
 journey_events_named = {
@@ -231,20 +231,23 @@ def csv_annex_a_record(input_file, events=journey_events_stripped):
         date_column = contents[list_number]
         # Load Annex A list
         df = input_file[list_number]
-        st.write(df)
+        # st.write(df)
 
-        # Get date column information
-        df.columns = [col.lower().strip() for col in df.columns]
-        date_column_lower = date_column.lower()
-        if date_column_lower in df.columns:
-            df = df[df[date_column_lower].notnull()]
-            df["Type"] = event
-            df["Date"] = df[date_column_lower]
-            df_list.append(df)
-        else:
-            print(
-                ">>>>>  Could not find column {} in {}".format(date_column, list_number)
-            )
+        df = df[df.iloc[:, date_column].notnull()]
+        df["Type"] = event
+        df["Date"] = df.iloc[:, date_column]
+        # st.write(df[['Type', 'Date']])
+        df_list.append(df)
+
+        # # Get date column information
+        # df.columns = [col.lower().strip() for col in df.columns]
+        # date_column_lower = date_column.lower()
+        # if date_column_lower in df.columns:
+        #     df = df[df[date_column_lower].notnull()]
+        #     df["Type"] = event
+        #     df["Date"] = df[date_column_lower]
+        #     df_list.append(df)
+
     annexarecord = pd.concat(df_list, sort=False)
 
     # Clean annexarecord
@@ -580,40 +583,6 @@ if file:
     if len(file) == 1:
         file = file[0]
         annexa = build_annexarecord(file)
-        journeys = create_journeys(annexa)
-
-        st.dataframe(journeys)
-
-        output = to_excel(journeys)
-
-        # st.write(annexa)
-
-        st.download_button(
-            "Download output excel here", output, file_name="df_test.xlsx"
-        )
-
-        with st.sidebar:
-            chosen_child = st.sidebar.selectbox(
-                "Select child for journey visualisation", journeys["child unique id"]
-            )
-            end_of_collection = st.sidebar.date_input(
-                "Select end date for ongoing plans/assessments.",
-            )
-
-        # gannt chart type 1
-        events_split = gantt_data_generator(chosen_child, journeys)
-        events_split["Finish Dates"] = events_split.apply(
-            lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
-            axis=1,
-        )
-
-        gantt = make_gantt_chart(events_split, chosen_child)
-        st.plotly_chart(gantt)
-
-        # gantt chart type 2
-        gantt_2 = gantt_type_2(chosen_child, events_split)
-        st.plotly_chart(gantt_2)
-
     if len(file) > 1:
         loaded_files = {
             uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in file
@@ -621,23 +590,82 @@ if file:
 
         renamed_files = {}
         for k, v in loaded_files.items():
-            if "1" in k:
+            if "List 1" in k:
                 renamed_files["List 1"] = v
-            if "2" in k:
+            if "List 2" in k:
                 renamed_files["List 2"] = v
-            if "3" in k:
+            if "List 3" in k:
                 renamed_files["List 3"] = v
-            if "4" in k:
+            if "List 4" in k:
                 renamed_files["List 4"] = v
-            if "5" in k:
+            if "List 5" in k:
                 renamed_files["List 5"] = v
-            if "6" in k:
+            if "List 6" in k:
                 renamed_files["List 6"] = v
-            if "7" in k:
+            if "List 7" in k:
                 renamed_files["List 7"] = v
-            if "8" in k:
+            if "List 8" in k:
                 renamed_files["List 8"] = v
-            if "9" in k:
+            if "List 9" in k:
                 renamed_files["List 9"] = v
 
         annexa = csv_annex_a_record(renamed_files)
+    journeys = create_journeys(annexa)
+
+    st.dataframe(journeys)
+
+    output = to_excel(journeys)
+
+    # st.write(annexa)
+
+    st.download_button("Download output excel here", output, file_name="df_test.xlsx")
+
+    with st.sidebar:
+        chosen_child = st.sidebar.selectbox(
+            "Select child for journey visualisation", journeys["child unique id"]
+        )
+        end_of_collection = st.sidebar.date_input(
+            "Select end date for ongoing plans/assessments.",
+        )
+
+    # gannt chart type 1
+    events_split = gantt_data_generator(chosen_child, journeys)
+    events_split["Finish Dates"] = events_split.apply(
+        lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
+        axis=1,
+    )
+
+    gantt = make_gantt_chart(events_split, chosen_child)
+    st.plotly_chart(gantt)
+
+    # gantt chart type 2
+    gantt_2 = gantt_type_2(chosen_child, events_split)
+    st.plotly_chart(gantt_2)
+
+    # if len(file) > 1:
+    #     loaded_files = {
+    #         uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in file
+    #     }
+
+    #     renamed_files = {}
+    #     for k, v in loaded_files.items():
+    #         if "List 1" in k:
+    #             renamed_files["List 1"] = v
+    #         if "List 2" in k:
+    #             renamed_files["List 2"] = v
+    #         if "List 3" in k:
+    #             renamed_files["List 3"] = v
+    #         if "List 4" in k:
+    #             renamed_files["List 4"] = v
+    #         if "List 5" in k:
+    #             renamed_files["List 5"] = v
+    #         if "List 6" in k:
+    #             renamed_files["List 6"] = v
+    #         if "List 7" in k:
+    #             renamed_files["List 7"] = v
+    #         if "List 8" in k:
+    #             renamed_files["List 8"] = v
+    #         if "List 9" in k:
+    #             renamed_files["List 9"] = v
+
+    #     annexa = csv_annex_a_record(renamed_files)
