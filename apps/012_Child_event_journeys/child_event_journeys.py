@@ -589,7 +589,7 @@ if file:
     if len(file) == 1:
         file = file[0]
         annexa = build_annexarecord(file)
-    if len(file) > 1:
+    elif len(file) > 1:
         loaded_files = {
             uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in file
         }
