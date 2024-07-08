@@ -3,6 +3,12 @@ import pandas as pd
 from io import BytesIO
 import plotly.express as px
 
+'''
+Things we may want to find:
+Multiples of things before step-ups
+
+'''
+
 # Useful dictionaries
 
 # Events we want to include in the child journeys
@@ -642,30 +648,4 @@ if file:
     gantt_2 = gantt_type_2(chosen_child, events_split)
     st.plotly_chart(gantt_2)
 
-    # if len(file) > 1:
-    #     loaded_files = {
-    #         uploaded_file.name: pd.read_csv(uploaded_file) for uploaded_file in file
-    #     }
 
-    #     renamed_files = {}
-    #     for k, v in loaded_files.items():
-    #         if "List 1" in k:
-    #             renamed_files["List 1"] = v
-    #         if "List 2" in k:
-    #             renamed_files["List 2"] = v
-    #         if "List 3" in k:
-    #             renamed_files["List 3"] = v
-    #         if "List 4" in k:
-    #             renamed_files["List 4"] = v
-    #         if "List 5" in k:
-    #             renamed_files["List 5"] = v
-    #         if "List 6" in k:
-    #             renamed_files["List 6"] = v
-    #         if "List 7" in k:
-    #             renamed_files["List 7"] = v
-    #         if "List 8" in k:
-    #             renamed_files["List 8"] = v
-    #         if "List 9" in k:
-    #             renamed_files["List 9"] = v
-
-    #     annexa = csv_annex_a_record(renamed_files)
