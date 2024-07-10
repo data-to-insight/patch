@@ -351,6 +351,38 @@ def gantt_data_generator(child_data, df):
 
     return events_split
 
+def concern_data_generator(df):
+    events_split = df[['child unique id', 'Child journey']].copy()
+    events_split['Child journey'] = events_split['Child journey'].str.split("->")
+    events_split = events_split.explode('Child journey')
+    events_split[["Date", "Type"]] = events_split["Child journey"].str.split(
+        "/", n=1, expand=True
+    )
+
+    events_split.drop('Child journey', axis=1, inplace=True)
+    events_split["Type"] = events_split["Type"].str.replace("]", "")
+    events_split["Date"] = events_split["Date"].str.replace("[", "")
+
+    count_events = events_split.groupby(['child unique id', 'Type'])['child unique id'].count().reset_index(name="count")
+    count_events = count_events[count_events['count'] > 1]
+    
+
+    count_events['type number'] = count_events["child unique id"].astype('str') + ' ' + count_events["count"].astype('str')
+    st.write(count_events)
+
+    # refs without contact, contact without ass/s47/icpc/, ass without cin/lac
+    ref_concern_list = count_events[(count_events['Type'] == 'referral') & count_events['count'] >= 3]['type number'].to_list()
+    contact_concern_list = count_events[(count_events['Type'] == 'referral') & count_events['count'] >= 2]['type number'].to_list()
+    ass_concern_list = count_events[(count_events['Type'] == 'assessment_start') & count_events['count'] >= 2]['type number'].to_list()
+    
+
+    concern_dict = {'Referrals':ref_concern_list,
+                    'Contacts':contact_concern_list,
+                    'Assessments':ass_concern_list,
+                    }
+
+    return events_split
+
 
 def empty_date_check(date_to_check):
     if len(date_to_check) == 1:
@@ -584,7 +616,7 @@ file = st.file_uploader("Upload annex A here", accept_multiple_files=True)
 
 if file:
     st.write("File upload sucessful!")
-    st.write(len(file))
+    # st.write(len(file))
 
     if len(file) == 1:
         file = file[0]
@@ -640,6 +672,9 @@ if file:
         lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
         axis=1,
     )
+
+    concern_split = concern_data_generator(journeys)
+    st.write(concern_split)
 
     gantt = make_gantt_chart(events_split, chosen_child)
     st.plotly_chart(gantt)
