@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 import plotly.express as px
+import re
 
 '''
 Things we may want to find:
@@ -340,6 +341,7 @@ def gantt_data_generator(child_data, df):
         "/", n=1, expand=True
     )
     events_split["Type"] = events_split["Type"].str.replace("]", "")
+    events_split['Type'] = events_split['Type'].str.strip()
     events_split["Date"] = events_split["Date"].str.replace("[", "")
 
     events_split["Date"] = pd.to_datetime(
@@ -351,6 +353,32 @@ def gantt_data_generator(child_data, df):
 
     return events_split
 
+def no_esc_function(df, concern_event, following_events):
+
+    ordered_categories = [
+        "referral",
+        "contact",
+        "early_help_assessment_start",
+        "early_help_assessment_end",
+        "assessment_start",
+        "assessment_authorised",
+        "s47",
+        "icpc",
+        "cin_start",
+        "cin_end",
+        "cpp_start",
+        "cpp_end",
+        "lac_start",
+        "lac_end",
+    ]
+    
+    concern_children = set(df[(df['Type'].str.contains(concern_event)) & (df['count'] >= 2)]['child unique id'].to_list())
+    not_referral = [event for event in ordered_categories if event not in (following_events)]
+    with_other_steps = set(df[df['Type'].isin(not_referral)]['child unique id'].to_list())
+    no_escalation = concern_children - with_other_steps
+
+    return no_escalation
+
 def concern_data_generator(df):
     events_split = df[['child unique id', 'Child journey']].copy()
     events_split['Child journey'] = events_split['Child journey'].str.split("->")
@@ -361,27 +389,72 @@ def concern_data_generator(df):
 
     events_split.drop('Child journey', axis=1, inplace=True)
     events_split["Type"] = events_split["Type"].str.replace("]", "")
+    events_split['Type'] = events_split['Type'].str.strip()
     events_split["Date"] = events_split["Date"].str.replace("[", "")
 
     count_events = events_split.groupby(['child unique id', 'Type'])['child unique id'].count().reset_index(name="count")
-    count_events = count_events[count_events['count'] > 1]
+    # count_events = count_events[count_events['count'] > 1]
     
 
     count_events['type number'] = count_events["child unique id"].astype('str') + ' ' + count_events["count"].astype('str')
-    st.write(count_events)
+    # st.write(count_events)
+
+    count_events['count'] = count_events['count'].astype('int')
 
     # refs without contact, contact without ass/s47/icpc/, ass without cin/lac
-    ref_concern_list = count_events[(count_events['Type'] == 'referral') & count_events['count'] >= 3]['type number'].to_list()
-    contact_concern_list = count_events[(count_events['Type'] == 'referral') & count_events['count'] >= 2]['type number'].to_list()
-    ass_concern_list = count_events[(count_events['Type'] == 'assessment_start') & count_events['count'] >= 2]['type number'].to_list()
+    ref_concern_list = count_events[(count_events['Type'].str.contains('referral')) & (count_events['count'] >= 3)]['type number'].to_list()
+    contact_concern_list = count_events[(count_events['Type'].str.contains('contact')) & (count_events['count'] >= 2)]['type number'].to_list()
+    ass_concern_list = count_events[(count_events['Type'].str.contains('assessment_start')) & (count_events['count'] >= 2)]['type number'].to_list()
+
+    # st.write(f'concern kids {ref_concern_list}')
+
+    
+    # ordered_categories = [
+    #     "referral",
+    #     "contact",
+    #     "early_help_assessment_start",
+    #     "early_help_assessment_end",
+    #     "assessment_start",
+    #     "assessment_authorised",
+    #     "s47",
+    #     "icpc",
+    #     "cin_start",
+    #     "cin_end",
+    #     "cpp_start",
+    #     "cpp_end",
+    #     "lac_start",
+    #     "lac_end",
+    # ]
+
+    # 2 + refs with no escalation
+    # ref_concern_children = set(count_events[(count_events['Type'].str.contains('referral')) & (count_events['count'] >= 2)]['child unique id'].to_list())
+    # not_referral = [event for event in ordered_categories if event not in ('referral')]
+    # with_other_steps = set(count_events[count_events['Type'].isin(not_referral)]['child unique id'].to_list())
+    # ref_no_escalation = ref_concern_children - with_other_steps
+
+    # # 2+ contacts no escalation
+    # contact_concern_children = set(count_events[(count_events['Type'].str.contains('contact')) & (count_events['count'] >= 2)]['child unique id'].to_list())
+    # nothing_after_contact = [event for event in ordered_categories if event not in ('referral', 'contact')]
+    # with_other_steps = set(count_events[count_events['Type'].isin(nothing_after_contact)]['child unique id'].to_list())
+    # contact_no_escalation = contact_concern_children - with_other_steps
+
+    # #2+ eh no esc
+    # eh_concern_children = set(count_events[(count_events['Type'].str.contains('early_help_assessment_start')) & (count_events['count'] >= 2)]['child unique id'].to_list())
+    # nothing_after_eh = [event for event in ordered_categories if event not in ('referral', 'contact')]
+    # with_other_steps = set(count_events[count_events['Type'].isin(nothing_after_eh)]['child unique id'].to_list())
+    # contact_no_escalation = eh_concern_children - with_other_steps
+
+
+    
     
 
     concern_dict = {'Referrals':ref_concern_list,
                     'Contacts':contact_concern_list,
                     'Assessments':ass_concern_list,
-                    }
+                    'Multiple referrals no escalation': ref_no_escalation,
+                    'Multiple contact no escalation':contact_no_escalation}
 
-    return events_split
+    return count_events, concern_dict
 
 
 def empty_date_check(date_to_check):
@@ -477,14 +550,14 @@ def make_gantt_chart(df, chosen_child):
     )
     fig.update_yaxes(autorange="reversed")
 
-    return fig
+    return fig, df
 
 
 def gantt_type_2(chosen_child, df):
     df["Finish Dates"] = df["Date"] + pd.DateOffset(days=1)
 
     df["Joined Types"] = df["Type"].apply(type_check)
-    st.write(df)
+    #st.write(df)
 
     fig = px.timeline(
         df,
@@ -618,6 +691,8 @@ if file:
     st.write("File upload sucessful!")
     # st.write(len(file))
 
+    excel, gantt, concern = st.tabs(['Annex A journeys table and download', 'Journeys timeline', 'Potentially concerning children'])
+
     if len(file) == 1:
         file = file[0]
         annexa = build_annexarecord(file)
@@ -650,13 +725,14 @@ if file:
         annexa = csv_annex_a_record(renamed_files)
     journeys = create_journeys(annexa)
 
-    st.dataframe(journeys)
+    with excel:
+        st.dataframe(journeys)
 
-    output = to_excel(journeys)
+        output = to_excel(journeys)
 
-    # st.write(annexa)
+        # st.write(annexa)
 
-    st.download_button("Download output excel here", output, file_name="df_test.xlsx")
+        st.download_button("Download output excel here", output, file_name="df_test.xlsx")
 
     with st.sidebar:
         chosen_child = st.sidebar.selectbox(
@@ -666,21 +742,27 @@ if file:
             "Select end date for ongoing plans/assessments.",
         )
 
-    # gannt chart type 1
-    events_split = gantt_data_generator(chosen_child, journeys)
-    events_split["Finish Dates"] = events_split.apply(
-        lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
-        axis=1,
-    )
+    with gantt: 
+        # gannt chart type 1
+        events_split = gantt_data_generator(chosen_child, journeys)
+        events_split["Finish Dates"] = events_split.apply(
+            lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
+            axis=1,
+        )
 
-    concern_split = concern_data_generator(journeys)
-    st.write(concern_split)
+        
 
-    gantt = make_gantt_chart(events_split, chosen_child)
-    st.plotly_chart(gantt)
+        gantt, gantt_data = make_gantt_chart(events_split, chosen_child)
+        st.dataframe(gantt_data[['Type', 'Date', 'Finish Dates']])
+        st.plotly_chart(gantt)
 
-    # gantt chart type 2
-    gantt_2 = gantt_type_2(chosen_child, events_split)
-    st.plotly_chart(gantt_2)
+        # gantt chart type 2
+        gantt_2 = gantt_type_2(chosen_child, events_split)
+        st.plotly_chart(gantt_2)
+
+    with concern:
+        concern_split, concern_dict = concern_data_generator(journeys)
+        st.write(concern_split)
+        st.write(concern_dict)
 
 
