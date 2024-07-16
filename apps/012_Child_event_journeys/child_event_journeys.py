@@ -515,43 +515,6 @@ def concern_data_generator(df):
         ),
     )
 
-    # st.write(f'concern kids {ref_concern_list}')
-
-    # ordered_categories = [
-    #     "referral",
-    #     "contact",
-    #     "early_help_assessment_start",
-    #     "early_help_assessment_end",
-    #     "assessment_start",
-    #     "assessment_authorised",
-    #     "s47",
-    #     "icpc",
-    #     "cin_start",
-    #     "cin_end",
-    #     "cpp_start",
-    #     "cpp_end",
-    #     "lac_start",
-    #     "lac_end",
-    # ]
-
-    # 2 + refs with no escalation
-    # ref_concern_children = set(count_events[(count_events['Type'].str.contains('referral')) & (count_events['count'] >= 2)]['child unique id'].to_list())
-    # not_referral = [event for event in ordered_categories if event not in ('referral')]
-    # with_other_steps = set(count_events[count_events['Type'].isin(not_referral)]['child unique id'].to_list())
-    # ref_no_escalation = ref_concern_children - with_other_steps
-
-    # # 2+ contacts no escalation
-    # contact_concern_children = set(count_events[(count_events['Type'].str.contains('contact')) & (count_events['count'] >= 2)]['child unique id'].to_list())
-    # nothing_after_contact = [event for event in ordered_categories if event not in ('referral', 'contact')]
-    # with_other_steps = set(count_events[count_events['Type'].isin(nothing_after_contact)]['child unique id'].to_list())
-    # contact_no_escalation = contact_concern_children - with_other_steps
-
-    # #2+ eh no esc
-    # eh_concern_children = set(count_events[(count_events['Type'].str.contains('early_help_assessment_start')) & (count_events['count'] >= 2)]['child unique id'].to_list())
-    # nothing_after_eh = [event for event in ordered_categories if event not in ('referral', 'contact')]
-    # with_other_steps = set(count_events[count_events['Type'].isin(nothing_after_eh)]['child unique id'].to_list())
-    # contact_no_escalation = eh_concern_children - with_other_steps
-
     concern_dict = {
         "Referrals": ref_concern_list,
         "Contacts": contact_concern_list,
@@ -683,6 +646,42 @@ def gantt_type_2(chosen_child, df):
 
     return fig
 
+def cohort_data_generator(df):
+    events_split = df[["child unique id", "Child journey"]].copy()
+    events_split["Child journey"] = events_split["Child journey"].str.split("->")
+    events_split = events_split.explode("Child journey")
+    events_split[["Date", "Type"]] = events_split["Child journey"].str.split(
+        "/", n=1, expand=True
+    )
+
+    events_split.drop("Child journey", axis=1, inplace=True)
+    events_split["Type"] = events_split["Type"].str.replace("]", "")
+    events_split["Type"] = events_split["Type"].str.strip()
+    events_split["Date"] = events_split["Date"].str.replace("[", "")
+    events_split["Date"] = events_split["Date"].str.strip()
+
+    events_split["Date"] = pd.to_datetime(
+        events_split["Date"], format="%Y-%m-%d"
+    )
+    events_split.sort_values("Date", ascending=True)
+
+    events_split["Event order"] = events_split.groupby(["child unique id", "Type"]).cumcount()
+
+    events_split["Finish Dates"] = events_split.apply(
+            lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
+            axis=1,
+        )
+    
+    events_split = events_split[events_split['Finish Dates'].notna()]
+
+    events_split["Finish Dates"] = pd.to_datetime(events_split["Finish Dates"], errors='coerce')
+    
+    events_split['Duration (days)'] = events_split['Finish Dates'] - events_split['Date']
+    events_split['Duration (days)'] = round(events_split['Duration'] / pd.Timedelta(1, 'd'))
+
+    # events_split = events_split[['child unique id', 'Type', 'Date', 'Finish Dates', 'Event order', 'Duration']]
+
+    return events_split
 
 # Main app
 st.markdown(
@@ -802,11 +801,12 @@ if file:
     st.write("File upload sucessful!")
     # st.write(len(file))
 
-    excel, gantt, concern = st.tabs(
+    excel, gantt, concern, cohort_analysis = st.tabs(
         [
             "Annex A journeys table and download",
             "Journeys timeline",
             "Potentially concerning children",
+            "Cohort analysis"
         ]
     )
 
@@ -881,3 +881,7 @@ if file:
         concern_split, concern_dict = concern_data_generator(journeys)
         st.write(concern_split)
         st.write(concern_dict)
+
+    with cohort_analysis:
+        resulting_df = cohort_data_generator(journeys)
+        st.write(resulting_df)
