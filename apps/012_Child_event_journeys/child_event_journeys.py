@@ -4,11 +4,11 @@ from io import BytesIO
 import plotly.express as px
 import re
 
-'''
+"""
 Things we may want to find:
 Multiples of things before step-ups
 
-'''
+"""
 
 # Useful dictionaries
 
@@ -341,7 +341,7 @@ def gantt_data_generator(child_data, df):
         "/", n=1, expand=True
     )
     events_split["Type"] = events_split["Type"].str.replace("]", "")
-    events_split['Type'] = events_split['Type'].str.strip()
+    events_split["Type"] = events_split["Type"].str.strip()
     events_split["Date"] = events_split["Date"].str.replace("[", "")
 
     events_split["Date"] = pd.to_datetime(
@@ -352,6 +352,7 @@ def gantt_data_generator(child_data, df):
     events_split["Event order"] = events_split.groupby("Type").cumcount()
 
     return events_split
+
 
 def no_esc_function(df, concern_event, following_events):
 
@@ -371,44 +372,151 @@ def no_esc_function(df, concern_event, following_events):
         "lac_start",
         "lac_end",
     ]
-    
-    concern_children = set(df[(df['Type'].str.contains(concern_event)) & (df['count'] >= 2)]['child unique id'].to_list())
-    not_referral = [event for event in ordered_categories if event not in (following_events)]
-    with_other_steps = set(df[df['Type'].isin(not_referral)]['child unique id'].to_list())
+
+    concern_children = set(
+        df[(df["Type"].str.contains(concern_event)) & (df["count"] >= 2)][
+            "child unique id"
+        ].to_list()
+    )
+    not_referral = [
+        event for event in ordered_categories if event not in (following_events)
+    ]
+    with_other_steps = set(
+        df[df["Type"].isin(not_referral)]["child unique id"].to_list()
+    )
     no_escalation = concern_children - with_other_steps
 
     return no_escalation
 
+
 def concern_data_generator(df):
-    events_split = df[['child unique id', 'Child journey']].copy()
-    events_split['Child journey'] = events_split['Child journey'].str.split("->")
-    events_split = events_split.explode('Child journey')
+    events_split = df[["child unique id", "Child journey"]].copy()
+    events_split["Child journey"] = events_split["Child journey"].str.split("->")
+    events_split = events_split.explode("Child journey")
     events_split[["Date", "Type"]] = events_split["Child journey"].str.split(
         "/", n=1, expand=True
     )
 
-    events_split.drop('Child journey', axis=1, inplace=True)
+    events_split.drop("Child journey", axis=1, inplace=True)
     events_split["Type"] = events_split["Type"].str.replace("]", "")
-    events_split['Type'] = events_split['Type'].str.strip()
+    events_split["Type"] = events_split["Type"].str.strip()
     events_split["Date"] = events_split["Date"].str.replace("[", "")
 
-    count_events = events_split.groupby(['child unique id', 'Type'])['child unique id'].count().reset_index(name="count")
+    count_events = (
+        events_split.groupby(["child unique id", "Type"])["child unique id"]
+        .count()
+        .reset_index(name="count")
+    )
     # count_events = count_events[count_events['count'] > 1]
-    
 
-    count_events['type number'] = count_events["child unique id"].astype('str') + ' ' + count_events["count"].astype('str')
+    count_events["type number"] = (
+        count_events["child unique id"].astype("str")
+        + " "
+        + count_events["count"].astype("str")
+    )
     # st.write(count_events)
 
-    count_events['count'] = count_events['count'].astype('int')
+    count_events["count"] = count_events["count"].astype("int")
 
     # refs without contact, contact without ass/s47/icpc/, ass without cin/lac
-    ref_concern_list = count_events[(count_events['Type'].str.contains('referral')) & (count_events['count'] >= 3)]['type number'].to_list()
-    contact_concern_list = count_events[(count_events['Type'].str.contains('contact')) & (count_events['count'] >= 2)]['type number'].to_list()
-    ass_concern_list = count_events[(count_events['Type'].str.contains('assessment_start')) & (count_events['count'] >= 2)]['type number'].to_list()
+    ref_concern_list = count_events[
+        (count_events["Type"].str.contains("referral")) & (count_events["count"] >= 3)
+    ]["type number"].to_list()
+    contact_concern_list = count_events[
+        (count_events["Type"].str.contains("contact")) & (count_events["count"] >= 2)
+    ]["type number"].to_list()
+    ass_concern_list = count_events[
+        (count_events["Type"].str.contains("assessment_start"))
+        & (count_events["count"] >= 2)
+    ]["type number"].to_list()
+
+    ref_no_escalation = no_esc_function(count_events, "referral", ("referral"))
+    contact_no_escalation = no_esc_function(
+        count_events, "contact", ("referral", "contact")
+    )
+    eh_no_escalation = no_esc_function(
+        count_events,
+        "early_help_assessment_start",
+        (
+            "referral",
+            "contact",
+            "early_help_assessment_start",
+            "early_help_assessment_end",
+        ),
+    )
+    ass_no_escalation = no_esc_function(
+        count_events,
+        "assessment_start",
+        (
+            "referral",
+            "contact",
+            "early_help_assessment_start",
+            "early_help_assessment_end",
+            "assessment_start",
+            "assessment_authorised",
+        ),
+    )
+    s47_no_escalation = no_esc_function(
+        count_events,
+        "s47",
+        (
+            "referral",
+            "contact",
+            "early_help_assessment_start",
+            "early_help_assessment_end",
+            "assessment_start",
+            "assessment_authorised",
+            "s47",
+        ),
+    )
+    icpc_no_escalation = no_esc_function(
+        count_events,
+        "icpc",
+        (
+            "referral",
+            "contact",
+            "early_help_assessment_start",
+            "early_help_assessment_end",
+            "assessment_start",
+            "assessment_authorised",
+            "icpc",
+        ),
+    )
+    cin_no_escalation = no_esc_function(
+        count_events,
+        "cin_start",
+        (
+            "referral",
+            "contact",
+            "early_help_assessment_start",
+            "early_help_assessment_end",
+            "assessment_start",
+            "assessment_authorised",
+            "icpc",
+            "cin_start",
+            "cin_end",
+        ),
+    )
+    cpp_no_escalation = no_esc_function(
+        count_events,
+        "cpp_start",
+        (
+            "referral",
+            "contact",
+            "early_help_assessment_start",
+            "early_help_assessment_end",
+            "assessment_start",
+            "assessment_authorised",
+            "icpc",
+            "cin_start",
+            "cin_end",
+            "cpp_start",
+            "cpp_end",
+        ),
+    )
 
     # st.write(f'concern kids {ref_concern_list}')
 
-    
     # ordered_categories = [
     #     "referral",
     #     "contact",
@@ -444,15 +552,18 @@ def concern_data_generator(df):
     # with_other_steps = set(count_events[count_events['Type'].isin(nothing_after_eh)]['child unique id'].to_list())
     # contact_no_escalation = eh_concern_children - with_other_steps
 
-
-    
-    
-
-    concern_dict = {'Referrals':ref_concern_list,
-                    'Contacts':contact_concern_list,
-                    'Assessments':ass_concern_list,
-                    'Multiple referrals no escalation': ref_no_escalation,
-                    'Multiple contact no escalation':contact_no_escalation}
+    concern_dict = {
+        "Referrals": ref_concern_list,
+        "Contacts": contact_concern_list,
+        "Assessments": ass_concern_list,
+        "Multiple referrals no escalation": ref_no_escalation,
+        "Multiple contact no escalation": contact_no_escalation,
+        "Multiple early help no escalation": eh_no_escalation,
+        "Multiple s47 no escalation": s47_no_escalation,
+        "Multiple ICPC no escalation": icpc_no_escalation,
+        "Multiple CIN no escalation": cin_no_escalation,
+        "Multiple CPP no escalation": cpp_no_escalation,
+    }
 
     return count_events, concern_dict
 
@@ -557,7 +668,7 @@ def gantt_type_2(chosen_child, df):
     df["Finish Dates"] = df["Date"] + pd.DateOffset(days=1)
 
     df["Joined Types"] = df["Type"].apply(type_check)
-    #st.write(df)
+    # st.write(df)
 
     fig = px.timeline(
         df,
@@ -691,7 +802,13 @@ if file:
     st.write("File upload sucessful!")
     # st.write(len(file))
 
-    excel, gantt, concern = st.tabs(['Annex A journeys table and download', 'Journeys timeline', 'Potentially concerning children'])
+    excel, gantt, concern = st.tabs(
+        [
+            "Annex A journeys table and download",
+            "Journeys timeline",
+            "Potentially concerning children",
+        ]
+    )
 
     if len(file) == 1:
         file = file[0]
@@ -732,7 +849,9 @@ if file:
 
         # st.write(annexa)
 
-        st.download_button("Download output excel here", output, file_name="df_test.xlsx")
+        st.download_button(
+            "Download output excel here", output, file_name="df_test.xlsx"
+        )
 
     with st.sidebar:
         chosen_child = st.sidebar.selectbox(
@@ -742,7 +861,7 @@ if file:
             "Select end date for ongoing plans/assessments.",
         )
 
-    with gantt: 
+    with gantt:
         # gannt chart type 1
         events_split = gantt_data_generator(chosen_child, journeys)
         events_split["Finish Dates"] = events_split.apply(
@@ -750,10 +869,8 @@ if file:
             axis=1,
         )
 
-        
-
         gantt, gantt_data = make_gantt_chart(events_split, chosen_child)
-        st.dataframe(gantt_data[['Type', 'Date', 'Finish Dates']])
+        st.dataframe(gantt_data[["Type", "Date", "Finish Dates"]])
         st.plotly_chart(gantt)
 
         # gantt chart type 2
@@ -764,5 +881,3 @@ if file:
         concern_split, concern_dict = concern_data_generator(journeys)
         st.write(concern_split)
         st.write(concern_dict)
-
-
