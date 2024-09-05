@@ -232,7 +232,7 @@ if uploaded_files:
     # Add column for number of settings per owner
     df['Total number of settings with this owner'] = df.groupby('Owner name')['Setting name'].transform('count')
 
-    # Create list of owners to widget
+    # Create list of owners to widgit
     owner_list = pd.DataFrame(df['Owner name'].unique())
     owner_list = owner_list.sort_values([0])
 
@@ -278,11 +278,23 @@ if uploaded_files:
         #st.dataframe(provider_types)
         with st.sidebar:
             provider_type_select = st.sidebar.multiselect( # something wrong here
-                'Select provider type',
+                'Select provider type(s)',
                 (provider_types),
-                default = (["Children's Home"])
+                default = ["Children's Home", "Residential Special School"]
             )
         df = df[df['Provider type'].isin(provider_type_select)]
+
+        # Widgit to select sector(s)
+        sectors = pd.DataFrame(df['Sector'].unique())
+        sectors = sectors.sort_values([0])
+        #st.dataframe(sectors)
+        with st.sidebar:
+            sector_select = st.sidebar.multiselect(
+                'Select sector(s)',
+                (sectors),
+                default = ["Private", "Local Authority"]
+            )
+        df = df[df['Sector'].isin(sector_select)]
 
     elif toggle == 'Owner name':
         # Widgit to select provider
@@ -365,12 +377,13 @@ if uploaded_files:
              'Physical disabilities']].reset_index()
     st.dataframe(df_display.iloc[:,1:])
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(['Setting & Beds',
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(['Settings & Beds',
                                             'Overall Effectiveness', 
                                             'CYP Safety', 
                                             'Leadership & Management',
                                             'Conditions Supported',
-                                            'Owners'])
+                                            'Owners',
+                                            'Beds'])
 
     with tab1:
         if toggle == 'Geographic area':
@@ -703,7 +716,7 @@ if uploaded_files:
             title_13 = f"Number of owners with settings in {geographic_area}<br>{', '.join(provider_type_select)}"
 
         else:
-            title_13 = f"SHowing owner: {owner_selected}"
+            title_13 = f"Showing owner: {owner_selected}"
         # settings_range = tab6.slider(
         #     'Enter range of values for settings per owner',
         #     min_value = 1,
@@ -768,6 +781,5 @@ if uploaded_files:
         fig.update_xaxes(visible=False)
         
         st.plotly_chart(fig)
-
 
     pass
