@@ -276,8 +276,9 @@ if uploaded_files:
         "Setting name"
     ].transform("count")
 
-    # Create list of owners to widget
-    owner_list = pd.DataFrame(df["Owner name"].unique())
+    # Create list of owners to widgit
+    owner_list = pd.DataFrame(df['Owner name'].unique())
+
     owner_list = owner_list.sort_values([0])
 
     # Widgit to toggle between geography and owner-level analysis
@@ -316,12 +317,26 @@ if uploaded_files:
         provider_types = provider_types.sort_values([0])
         # st.dataframe(provider_types)
         with st.sidebar:
-            provider_type_select = st.sidebar.multiselect(  # something wrong here
-                "Select provider type", (provider_types), default=(["Children's Home"])
+            provider_type_select = st.sidebar.multiselect( # something wrong here
+                'Select provider type(s)',
+                (provider_types),
+                default = ["Children's Home", "Residential Special School"]
             )
         df = df[df["Provider type"].isin(provider_type_select)]
 
-    elif toggle == "Owner name":
+        # Widgit to select sector(s)
+        sectors = pd.DataFrame(df['Sector'].unique())
+        sectors = sectors.sort_values([0])
+        #st.dataframe(sectors)
+        with st.sidebar:
+            sector_select = st.sidebar.multiselect(
+                'Select sector(s)',
+                (sectors),
+                default = ["Private", "Local Authority"]
+            )
+        df = df[df['Sector'].isin(sector_select)]
+
+    elif toggle == 'Owner name':
         # Widgit to select provider
         with st.sidebar:
             owner_selected = st.sidebar.selectbox("Select owner name", (owner_list))
@@ -380,45 +395,38 @@ if uploaded_files:
     owners = pd.merge(owners, owner_size, how="left", on="Owner name")
 
     # Display dataframe, reset index and don't display index column
-    df_display = df[
-        [
-            "Ofsted date",
-            "Local authority",
-            "Region",
-            "URN",
-            "Provider type",
-            "Provider subtype",
-            "Sector",
-            "Setting name",
-            "Registration status",
-            "Owner ID",
-            "Owner name",
-            "Total number of settings with this owner",
-            "Overall effectiveness",
-            "CYP safety",
-            "Leadership and management",
-            "Number of registered places",
-            "Emotional and behavioural difficulties",
-            "Mental disorders",
-            "Sensory impairment",
-            "Present alcohol problems",
-            "Present drug problems",
-            "Learning difficulty",
-            "Physical disabilities",
-        ]
-    ].reset_index()
-    st.dataframe(df_display.iloc[:, 1:])
+    df_display = df[['Ofsted date',
+             'Local authority',
+             'Region',
+             'URN',
+             'Provider type',
+             'Provider subtype',
+             'Sector',
+             'Setting name',
+             'Registration status',
+             'Owner ID',
+             'Owner name',
+             'Total number of settings with this owner',
+             'Overall effectiveness',
+             'CYP safety',
+             'Leadership and management',
+             'Number of registered places',
+             'Emotional and behavioural difficulties',
+             'Mental disorders',
+             'Sensory impairment',
+             'Present alcohol problems',
+             'Present drug problems',
+             'Learning difficulty',
+             'Physical disabilities']].reset_index()
+    st.dataframe(df_display.iloc[:,1:])
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-        [
-            "Setting & Beds",
-            "Overall Effectiveness",
-            "CYP Safety",
-            "Leadership & Management",
-            "Conditions Supported",
-            "Owners",
-        ]
-    )
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(['Settings & Beds',
+                                            'Overall Effectiveness', 
+                                            'CYP Safety', 
+                                            'Leadership & Management',
+                                            'Conditions Supported',
+                                            'Owners',
+                                            'Beds'])
 
     with tab1:
         if toggle == "Geographic area":
@@ -932,7 +940,7 @@ if uploaded_files:
             title_13 = f"Number of owners with settings in {geographic_area}<br>{', '.join(provider_type_select)}"
 
         else:
-            title_13 = f"SHowing owner: {owner_selected}"
+            title_13 = f"Showing owner: {owner_selected}"
         # settings_range = tab6.slider(
         #     'Enter range of values for settings per owner',
         #     min_value = 1,
