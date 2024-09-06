@@ -54,3 +54,10 @@
   url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/011_Drift_tool/Drift%20Tool.py&page=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/011_Drift_tool/pages/1_Drift%20Tool%20Instructions.py&req=plotly
   description: "Uses historic Referrals, Child Protection plan and CLA data to visualise drift."
   image: 011_drift_pic.png
+
+- name: Child Event Journeys
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/012_Child_event_journeys/child_event_journeys.py&req=xlrd&req=openpyxl&req=xlsxwriter&req=plotly
+  description: "Uses the Annex A to trace children's journeys through the care system"
+  image: 012_child_journey.png
+
+ 
