@@ -368,5 +368,5 @@ if file:
     output = to_excel(modules)
 
     st.download_button(
-        "Download output excel here", output, file_name="df_test.xlsx"
+        "Download output excel here", output, file_name="SEN2 output.xlsx"
     )
