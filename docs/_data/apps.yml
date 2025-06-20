@@ -61,7 +61,7 @@
   image: 012_child_journey.png
 
 - name: SEN2 XML to CSV
-  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/apps/013_SEND_to_csv/send_to_csv.py&req=xlrd&req=openpyxl&req=xlsxwriter&req=plotly
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/013_SEND_to_csv/send_to_csv.py&req=xlrd&req=openpyxl&req=xlsxwriter&req=plotly
   description: "Converts SEN2 XML to excel"
 
 
