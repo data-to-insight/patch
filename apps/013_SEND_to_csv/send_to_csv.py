@@ -35,6 +35,7 @@ class XMLtoCSV:
     requests = pd.DataFrame(
         columns=[
             "ReceivedDate",
+            "RequestSource",
             "RYA",
             "RequestOutcomeDate",
             "RequestOutcome",
@@ -308,7 +309,7 @@ def convert_data(root: ET.Element):
     return datafiles
 
 def convert_for_sen2_tool(m1, m2, m3, m4, m5):
-    output_dict = {"m1": m1, "m2": m2, "m3": m3, "m4": m4, "m5": m5}
+    output_dict = {"Persons": m1, "Requests": m2, "Assessments": m3, "Named Plan": m4, "Active Plans": m5}
 
     return output_dict
 
