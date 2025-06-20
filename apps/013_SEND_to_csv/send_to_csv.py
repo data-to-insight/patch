@@ -6,8 +6,6 @@ from io import BytesIO
 dfs = {}
 
 def get_values(xml_elements, table_dict: dict, xml_block):
-    # st.write(table_dict)
-    # st.write(xml_block)
     for element in xml_elements:
         try:
             table_dict[element] = xml_block.find(element).text
@@ -232,14 +230,31 @@ class XMLtoCSV:
         plan_detail_list = []
 
         if named_plan_locs:
-            for plan_detail in named_plan_locs.findall("PlanDetail"):
-                named_plan_dict = get_values(
-                    named_plan_elements, named_plan_dict, named_plan_locs
-                )
+            plan_detail_locs = named_plan_locs.findall("PlanDetail")
+            if plan_detail_locs:
+                for plan_detail in named_plan_locs.findall("PlanDetail"):
+                    named_plan_dict = get_values(
+                        named_plan_elements, named_plan_dict, named_plan_locs
+                    )
 
-                named_plan_dict = get_values(
-                    plan_detail_elements, named_plan_dict, plan_detail
+                    named_plan_dict = get_values(
+                        plan_detail_elements, named_plan_dict, plan_detail
+                    )
+                    named_plan_dict["name"] = self.name
+                    named_plan_dict["child_id"] = self.child_id
+                    named_plan_dict["requests_id"] = self.requests_id
+                    named_plan_dict["assessment_id"] = self.assessment_id
+
+                    plan_detail_list.append(named_plan_dict)
+
+                named_plan_df = pd.DataFrame(plan_detail_list)
+                self.named_plan = pd.concat(
+                    [self.named_plan, named_plan_df], ignore_index=True
                 )
+            else:
+                named_plan_dict = get_values(
+                        named_plan_elements, named_plan_dict, named_plan_locs
+                    )
                 named_plan_dict["name"] = self.name
                 named_plan_dict["child_id"] = self.child_id
                 named_plan_dict["requests_id"] = self.requests_id
@@ -247,10 +262,10 @@ class XMLtoCSV:
 
                 plan_detail_list.append(named_plan_dict)
 
-            named_plan_df = pd.DataFrame(plan_detail_list)
-            self.named_plan = pd.concat(
-                [self.named_plan, named_plan_df], ignore_index=True
-            )
+                named_plan_df = pd.DataFrame(plan_detail_list)
+                self.named_plan = pd.concat(
+                    [self.named_plan, named_plan_df], ignore_index=True
+                )
 
     def create_active_plans(self, request):
         active_plans_list = []
