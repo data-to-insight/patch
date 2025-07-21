@@ -698,7 +698,8 @@ uploaded_files = st.file_uploader(
 mid_year_estimates = st.file_uploader(
     "Upload mid year population esitmates Excel file here", accept_multiple_files=False
 )
-st.write("ONS mid year population esitmates can be found here: #####")
+st.write("ONS mid year population esitmates can be found here: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates")
+st.write("As of the time of writing, the most recent population estimate was in 2023.")
 st.write("They are not embedded in the site as they change very regularly.")
 
 if (uploaded_files != None) & (mid_year_estimates != None):
