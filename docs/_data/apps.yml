@@ -64,5 +64,9 @@
   url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/013_SEND_to_csv/send_to_csv.py&req=xlrd&req=openpyxl&req=xlsxwriter&req=plotly
   description: "Converts SEN2 XML to excel"
 
+- name: Annex A Dashboard Pre-Processing
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/014_Eastern_Region_Pre_processing/Eastern_region_pre_processing.py.py&req=xlrd&req=openpyxl&req=xlsxwriter&req=plotly
+  description: "Processes the Annex A as recieved from the Social Finance pipeline for the Annex A Power BI Dashboard"
+
 
  
