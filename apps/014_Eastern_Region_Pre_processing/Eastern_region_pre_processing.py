@@ -740,7 +740,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     )
 
     ons["Region"] = ons["All"][
-        (ons["All"]["Name"].isin(dfs["list_1"]["la"].unique()))
+        (ons["All"]["Name"].isin(dfs["list_1"]["LA"].unique()))
     ].copy()
 
     ons_pops = ons["Region"]
@@ -770,10 +770,10 @@ if (uploaded_files != None) & (mid_year_estimates != None):
 
     for df in dfs.values():
         # Creates the lA name/Time Period column for groupby calculations
-        df["name_period"] = df["la"] + "/" + df["Time Period"]
+        df["name_period"] = df["LA"] + "/" + df["Time Period"]
 
     la_names = list(df["name_period"].unique())
-    num_las = len(df["la"].unique())
+    num_las = len(df["LA"].unique())
     periods = list(df["Time Period"].unique())
     measures = {}
 
@@ -1631,10 +1631,10 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     }
 
     for key, table in tables.items():
-        table[["la", "Time Period"]] = table["name_period"].str.split("/", expand=True)
+        table[["LA", "Time Period"]] = table["name_period"].str.split("/", expand=True)
         table.drop("name_period", axis=1, inplace=True)
 
-        cols = ["la", "Time Period"]
+        cols = ["LA", "Time Period"]
         cols.extend(table.columns)
 
         table = table[cols]
@@ -1681,7 +1681,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
                 id_vars=cols_to_melt, var_name="Duration Type", value_name="Duration"
             )
             table = table[
-                ["la", "Time Period", "Measure", "Duration Type", "Duration", "Value"]
+                ["LA", "Time Period", "Measure", "Duration Type", "Duration", "Value"]
             ]
             table.drop("Duration Type", axis=1, inplace=True)
             table.rename(columns={"Duration": "Duration (Days)"}, inplace=True)
