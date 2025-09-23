@@ -707,11 +707,17 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     st.write("Files uploaded sucessfully.")
 
     # Read Annex A and ONS data in as dfs
-    dfs = {
-        uploaded_file.name[:-4]: pd.read_csv(uploaded_file)
-        for uploaded_file in uploaded_files
-    }
-    # TODO standardise names of dfs for different upload names/types
+    test_file = uploaded_files[0]
+    st.write(test_file.name[-4:])
+    if test_file.name[-4:] == ".csv":
+        dfs = {
+            uploaded_file.name[:-4]: pd.read_csv(uploaded_file)
+            for uploaded_file in uploaded_files
+        }
+    elif uploaded_files[0].name[-5:] == ".xlsx":
+        dfs = pd.read_excel(uploaded_files[0])
+    else:
+        st.write("Unexpected file type. Upload type expected .csv or .xsls")
 
     ons = pd.read_excel(
         mid_year_estimates,
