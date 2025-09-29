@@ -1611,6 +1611,8 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     categoricals_to_concat = []
     if 'list_1' in lists_uploaded:
         categoricals_to_concat.append([contact_sources])
+    if 'list_2' in lists_uploaded:
+        pass
     # categoricals_to_concat = [
     #     contact_sources,
     #     referral_sources,
