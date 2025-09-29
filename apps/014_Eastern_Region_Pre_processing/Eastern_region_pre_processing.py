@@ -1611,36 +1611,62 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     categoricals_to_concat = []
     if 'list_1' in lists_uploaded:
         categoricals_to_concat.append([contact_sources])
-    if 'list_2' in lists_uploaded:
-        pass
+    if 'list_3' in lists_uploaded:
+        categoricals_to_concat.append([referral_sources])
+    if 'list_4' in lists_uploaded:
+        categoricals_to_concat.append([assessment_durations_bins])
+    if 'list_5' in lists_uploaded:
+        categoricals_to_concat.append([icpc_durations_bins])
+    if 'list_6' in lists_uploaded:
+        categoricals_to_concat.append([ cin_ceased_reasons, cin_closed_bins, open_cin_bins])
+    if 'list_7' in lists_uploaded:
+        categoricals_to_concat.append([cpp_initial_category_of_abuse,
+        cpp_ended_bins,
+        cpp_open_bins,
+        cpp_open_last_seen_bins,
+        cpp_open_last_review_bins])
+    if 'list_8' in lists_uploaded:
+        categoricals_to_concat.append([ cla_open_legal_status,
+        cla_open_plan,
+        cla_type,
+        cla_provider,
+        cla_last_review_bins,
+        cla_last_seen_bins,
+        cla_over_30_months_bins])
+    if 'list_9' in lists_uploaded:
+        categoricals_to_concat.append([care_leavers_eligibility,
+        care_leavers_accomodation_19_21,
+        care_leavers_accomodation_17_18,
+        care_leavers_activity_17_18,
+        care_leavers_activity_19_21 ])
+    
+    
     # categoricals_to_concat = [
-    #     contact_sources,
-    #     referral_sources,
-    #     cin_ceased_reasons,
-    #     cin_closed_bins,
-    #     cla_open_legal_status,
-    #     cla_open_plan,
-    #     cla_type,
-    #     cla_provider,
-    #     cla_last_review_bins,
-    #     cla_last_seen_bins,
-    #     cla_over_30_months_bins,
-    #     care_leavers_eligibility,
-    #     care_leavers_accomodation_19_21,
-    #     care_leavers_accomodation_17_18,
-    #     care_leavers_activity_17_18,
-    #     care_leavers_activity_19_21,
-    #     assessment_durations_bins,
-    #     icpc_durations_bins,
-    #     open_cin_bins,
-    #     open_ccp_latest_abuse,
-    #     cpp_initial_category_of_abuse,
-    #     cpp_ended_bins,
-    #     cpp_open_bins,
-    #     cpp_open_last_seen_bins,
-    #     cpp_open_last_review_bins,
-
-
+    #     contact_sources, #
+    #     referral_sources, #
+    #     cin_ceased_reasons, #
+    #     cin_closed_bins, #
+    #     open_cin_bins, #
+    #     cla_open_legal_status, #
+    #     cla_open_plan, #
+    #     cla_type, #
+    #     cla_provider, #
+    #     cla_last_review_bins, #
+    #     cla_last_seen_bins, #
+    #     cla_over_30_months_bins, #
+    #     care_leavers_eligibility, #
+    #     care_leavers_accomodation_19_21, #
+    #     care_leavers_accomodation_17_18, #
+    #     care_leavers_activity_17_18, #
+    #     care_leavers_activity_19_21, #
+    #     assessment_durations_bins, #
+    #     icpc_durations_bins, #
+    #     open_ccp_latest_abuse, #
+    #     cpp_initial_category_of_abuse, #
+    #     cpp_ended_bins, #
+    #     cpp_open_bins, #
+    #     cpp_open_last_seen_bins, #
+    #     cpp_open_last_review_bins, #
     # ]
 
     # multiples_to_merge = [
