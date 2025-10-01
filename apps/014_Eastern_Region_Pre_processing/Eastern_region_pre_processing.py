@@ -811,7 +811,6 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         df["Reference Date"] = df.apply(reference_date, axis=1)
         df["Ethnicity Group"] = df["Ethnicity"]
         df["name_period"] = df["LA"] + "/" + df['Time Period']
-    st.write(dfs['list_1'])
         
 
     la_names = list(df["name_period"].unique())
@@ -1609,36 +1608,66 @@ if (uploaded_files != None) & (mid_year_estimates != None):
 
     # # Calculations end, organisation for outputs begins
     categoricals_to_concat = []
+    multiples_to_merge = []
+    age_gender_to_merge = []
+    ethnicities_to_merge = []
     if 'list_1' in lists_uploaded:
-        categoricals_to_concat.append([contact_sources])
+        categoricals_to_concat.extend([contact_sources])
+        multiples_to_merge.extend([multiple_contacts])
+        age_gender_to_merge.extend([contact_age_gender])
+        ethnicities_to_merge.extend([contact_ethnicity])
+    if 'list_2' in lists_uploaded:
+        multiples_to_merge.extend([multiple_assessments])
+        age_gender_to_merge.extend([eh_age_gender])
+        ethnicities_to_merge.extend([eh_ethnicity])
     if 'list_3' in lists_uploaded:
-        categoricals_to_concat.append([referral_sources])
+        categoricals_to_concat.extend([referral_sources])
+        multiples_to_merge.extend([multiple_referral])
+        age_gender_to_merge.extend([referral_age_gender])
+        ethnicities_to_merge.extend([referral_ethnicity])
     if 'list_4' in lists_uploaded:
-        categoricals_to_concat.append([assessment_durations_bins])
+        categoricals_to_concat.extend([assessment_durations_bins])
+        age_gender_to_merge.extend([assessments_age_gender])
+        ethnicities_to_merge.extend([assessments_ethnicity])
     if 'list_5' in lists_uploaded:
-        categoricals_to_concat.append([icpc_durations_bins])
+        categoricals_to_concat.extend([icpc_durations_bins])
+        multiples_to_merge.extend([multiple_s47, multiple_icpc])
+        age_gender_to_merge.extend([s47_age_gender])
+        ethnicities_to_merge.extend([s47_ethnicity])
     if 'list_6' in lists_uploaded:
-        categoricals_to_concat.append([ cin_ceased_reasons, cin_closed_bins, open_cin_bins])
+        categoricals_to_concat.extend([ cin_ceased_reasons, cin_closed_bins, open_cin_bins])
+        age_gender_to_merge.extend([open_cin_age_gender])
+        ethnicities_to_merge.extend([open_cin_ethnicity])
     if 'list_7' in lists_uploaded:
-        categoricals_to_concat.append([cpp_initial_category_of_abuse,
+        categoricals_to_concat.extend([cpp_initial_category_of_abuse,
         cpp_ended_bins,
         cpp_open_bins,
         cpp_open_last_seen_bins,
         cpp_open_last_review_bins])
+        multiples_to_merge.extend([multiple_cpp,
+                                   multiple_cpp_started_6mths])
+        age_gender_to_merge.extend([cpp_currently_open_age_gender])
+        ethnicities_to_merge.extend([open_cpp_ethnicity])
     if 'list_8' in lists_uploaded:
-        categoricals_to_concat.append([ cla_open_legal_status,
+        categoricals_to_concat.extend([ cla_open_legal_status,
         cla_open_plan,
         cla_type,
         cla_provider,
         cla_last_review_bins,
         cla_last_seen_bins,
         cla_over_30_months_bins])
+        multiples_to_merge.extend([multiple_cla,
+                                   multiple_cla_missing])
+        age_gender_to_merge.extend([cla_started_gender, cla_ended_gender, cla_open_gender])
+        ethnicities_to_merge.extend([open_cla_ethnicity])
     if 'list_9' in lists_uploaded:
-        categoricals_to_concat.append([care_leavers_eligibility,
+        categoricals_to_concat.extend([care_leavers_eligibility,
         care_leavers_accomodation_19_21,
         care_leavers_accomodation_17_18,
         care_leavers_activity_17_18,
         care_leavers_activity_19_21 ])
+        age_gender_to_merge.extend([care_leavers_gender])
+        ethnicities_to_merge.extend([care_leavers_ethnicity])
     
     
     # categoricals_to_concat = [
@@ -1670,11 +1699,11 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     # ]
 
     # multiples_to_merge = [
-    #     multiple_contacts,
-    #     multiple_assessments,
-    #     multiple_referral,
-    #     multiple_s47,
-    #     multiple_icpc,
+    #     multiple_contacts, #
+    #     multiple_assessments, #
+    #     multiple_referral, #
+    #     multiple_s47, #
+    #     multiple_icpc, #
     #     multiple_cpp,
     #     multiple_cpp_started_6mths,
     #     multiple_cla,
