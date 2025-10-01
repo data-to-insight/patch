@@ -1736,150 +1736,150 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     # ]
 
     # # Processing into categorical, multiple events, etc tables for slicing in Power BI
-    # categorical_table = pd.concat(categoricals_to_concat)
-    # multiple_events_table = pd.DataFrame(columns=["name_period", "Measure Category"])
-    # for table in multiples_to_merge:
-    #     multiple_events_table = multiple_events_table.merge(
-    #         table, how="outer", on=["name_period", "Measure Category"]
-    #     )
-    # age_gender_table = pd.DataFrame(columns=["name_period", "Age of Child (Years)"])
-    # for table in age_gender_to_merge:
-    #     age_gender_table = age_gender_table.merge(
-    #         table, how="outer", on=["name_period", "Age of Child (Years)"]
-    #     )
-    # age_gender_table = age_gender_table[age_gender_table["Age of Child (Years)"] <= 25]
-    # ethnicity_table = pd.DataFrame(columns=["name_period", "Ethnicity"])
-    # for table in ethnicities_to_merge:
-    #     ethnicity_table = ethnicity_table.merge(
-    #         table, how="outer", on=["name_period", "Ethnicity"]
-    #     )
+    categorical_table = pd.concat(categoricals_to_concat)
+    multiple_events_table = pd.DataFrame(columns=["name_period", "Measure Category"])
+    for table in multiples_to_merge:
+        multiple_events_table = multiple_events_table.merge(
+            table, how="outer", on=["name_period", "Measure Category"]
+        )
+    age_gender_table = pd.DataFrame(columns=["name_period", "Age of Child (Years)"])
+    for table in age_gender_to_merge:
+        age_gender_table = age_gender_table.merge(
+            table, how="outer", on=["name_period", "Age of Child (Years)"]
+        )
+    age_gender_table = age_gender_table[age_gender_table["Age of Child (Years)"] <= 25]
+    ethnicity_table = pd.DataFrame(columns=["name_period", "Ethnicity"])
+    for table in ethnicities_to_merge:
+        ethnicity_table = ethnicity_table.merge(
+            table, how="outer", on=["name_period", "Ethnicity"]
+        )
 
     # # Convert measures dict to df and order
-    # measures_table = pd.DataFrame({"name_period": la_names})
-    # for measure, dictionary in measures.items():
-    #     df = pd.DataFrame(
-    #         {"name_period": dictionary.keys(), measure: dictionary.values()}
-    #     )
-    #     measures_table = measures_table.merge(df, how="outer", on="name_period")
+    measures_table = pd.DataFrame({"name_period": la_names})
+    for measure, dictionary in measures.items():
+        df = pd.DataFrame(
+            {"name_period": dictionary.keys(), measure: dictionary.values()}
+        )
+        measures_table = measures_table.merge(df, how="outer", on="name_period")
 
-    # tables = {
-    #     "Count rate percentage measures": measures_table,
-    #     "Age Gender breakdowns": age_gender_table,
-    #     "Categorical measures": categorical_table,
-    #     "Ethnicity breakdowns": ethnicity_table,
-    #     "Multiple event measures": multiple_events_table,
-    # }
+    tables = {
+        "Count rate percentage measures": measures_table,
+        "Age Gender breakdowns": age_gender_table,
+        "Categorical measures": categorical_table,
+        "Ethnicity breakdowns": ethnicity_table,
+        "Multiple event measures": multiple_events_table,
+    }
 
-    # for key, table in tables.items():
-    #     table[["LA", "Time Period"]] = table["name_period"].str.split("/", expand=True)
-    #     table.drop("name_period", axis=1, inplace=True)
+    for key, table in tables.items():
+        table[["LA", "Time Period"]] = table["name_period"].str.split("/", expand=True)
+        table.drop("name_period", axis=1, inplace=True)
 
-    #     cols = ["LA", "Time Period"]
-    #     cols.extend(table.columns)
+        cols = ["LA", "Time Period"]
+        cols.extend(table.columns)
 
-    #     table = table[cols]
-    #     table = table.iloc[:, :-2]
+        table = table[cols]
+        table = table.iloc[:, :-2]
 
-    #     tables[key] = table
+        tables[key] = table
 
-    # for key, table in tables.items():
-    #     if key == "Count rate percentage measures":
-    #         cols_to_melt = list(table.columns)
-    #         cols_to_melt = cols_to_melt[:2]
+    for key, table in tables.items():
+        if key == "Count rate percentage measures":
+            cols_to_melt = list(table.columns)
+            cols_to_melt = cols_to_melt[:2]
 
-    #         table = table.melt(
-    #             id_vars=cols_to_melt, var_name="Measure", value_name="Value"
-    #         )
+            table = table.melt(
+                id_vars=cols_to_melt, var_name="Measure", value_name="Value"
+            )
 
-    #     elif key in [
-    #         "Age Gender breakdowns",
-    #         "Ethnicity breakdowns",
-    #         "Multiple event measures",
-    #         "Durations measures (days)",
-    #         "Durations table (short term)",
-    #         "Durations table (mid term)",
-    #     ]:
-    #         cols_to_melt = list(table.columns)
-    #         cols_to_melt = cols_to_melt[:3]
+        elif key in [
+            "Age Gender breakdowns",
+            "Ethnicity breakdowns",
+            "Multiple event measures",
+            "Durations measures (days)",
+            "Durations table (short term)",
+            "Durations table (mid term)",
+        ]:
+            cols_to_melt = list(table.columns)
+            cols_to_melt = cols_to_melt[:3]
 
-    #         table = table.melt(
-    #             id_vars=cols_to_melt, var_name="Measure", value_name="Value"
-    #         )
+            table = table.melt(
+                id_vars=cols_to_melt, var_name="Measure", value_name="Value"
+            )
 
-    #     if key == "Age Gender breakdowns":
-    #         table["Value"].fillna(0, inplace=True)
+        if key == "Age Gender breakdowns":
+            table["Value"].fillna(0, inplace=True)
 
-    #     if key in [
-    #         "Durations measures (days)",
-    #         "Durations table (short term)",
-    #         "Durations table (mid term)",
-    #     ]:
-    #         cols_to_melt = list(table.columns)
-    #         del cols_to_melt[2]
+        if key in [
+            "Durations measures (days)",
+            "Durations table (short term)",
+            "Durations table (mid term)",
+        ]:
+            cols_to_melt = list(table.columns)
+            del cols_to_melt[2]
 
-    #         table = table.melt(
-    #             id_vars=cols_to_melt, var_name="Duration Type", value_name="Duration"
-    #         )
-    #         table = table[
-    #             ["LA", "Time Period", "Measure", "Duration Type", "Duration", "Value"]
-    #         ]
-    #         table.drop("Duration Type", axis=1, inplace=True)
-    #         table.rename(columns={"Duration": "Duration (Days)"}, inplace=True)
+            table = table.melt(
+                id_vars=cols_to_melt, var_name="Duration Type", value_name="Duration"
+            )
+            table = table[
+                ["LA", "Time Period", "Measure", "Duration Type", "Duration", "Value"]
+            ]
+            table.drop("Duration Type", axis=1, inplace=True)
+            table.rename(columns={"Duration": "Duration (Days)"}, inplace=True)
 
-    #     if key != "Categorical measures":
-    #         table[["Category", "Measure", "Measure Type"]] = table["Measure"].str.split(
-    #             "-", expand=True
-    #         )
+        if key != "Categorical measures":
+            table[["Category", "Measure", "Measure Type"]] = table["Measure"].str.split(
+                "-", expand=True
+            )
 
-    #     if key == "Categorical measures":
-    #         cols_to_melt = list(table.columns)
-    #         cols_to_melt = cols_to_melt[:3]
-    #         cols_to_melt.append("Measure Category")
-    #         table = table.rename(columns={"Value": "Measure Category"})
-    #         table = table.melt(
-    #             id_vars=cols_to_melt, var_name="Measure Type", value_name="Value"
-    #         )
+        if key == "Categorical measures":
+            cols_to_melt = list(table.columns)
+            cols_to_melt = cols_to_melt[:3]
+            cols_to_melt.append("Measure Category")
+            table = table.rename(columns={"Value": "Measure Category"})
+            table = table.melt(
+                id_vars=cols_to_melt, var_name="Measure Type", value_name="Value"
+            )
 
-    #         table[["Category", "Measure"]] = table["Category"].str.split(
-    #             "-", expand=True
-    #         )
+            table[["Category", "Measure"]] = table["Category"].str.split(
+                "-", expand=True
+            )
 
-    #     if key == "Ethnicity breakdowns":
-    #         table = table.rename(columns={"Ethnicity": "Measure Category"})
+        if key == "Ethnicity breakdowns":
+            table = table.rename(columns={"Ethnicity": "Measure Category"})
 
-    #     tables[key] = table
+        tables[key] = table
 
-    # for k, df in tables.items():
-    #     print(k)
-    #     df_obj = df.select_dtypes("object")
-    #     df[df_obj.columns] = df_obj.apply(lambda x: x.str.strip())
-    #     df["Measure Type"] = df["Measure Type"].apply(lambda x: x.capitalize())
+    for k, df in tables.items():
+        print(k)
+        df_obj = df.select_dtypes("object")
+        df[df_obj.columns] = df_obj.apply(lambda x: x.str.strip())
+        df["Measure Type"] = df["Measure Type"].apply(lambda x: x.capitalize())
 
-    #     tables[k] = df
+        tables[k] = df
 
-    # final_tables = {}
-    # final_tables["Categorical Measures"] = pd.concat(
-    #     [
-    #         tables["Categorical measures"],
-    #         tables["Ethnicity breakdowns"],
-    #         tables["Multiple event measures"],
-    #     ]
-    # )
+    final_tables = {}
+    final_tables["Categorical Measures"] = pd.concat(
+        [
+            tables["Categorical measures"],
+            tables["Ethnicity breakdowns"],
+            tables["Multiple event measures"],
+        ]
+    )
 
-    # final_tables["Numerical measures"] = tables["Count rate percentage measures"]
+    final_tables["Numerical measures"] = tables["Count rate percentage measures"]
 
-    # final_tables["Age Gender breakdowns"] = tables["Age Gender breakdowns"]
+    final_tables["Age Gender breakdowns"] = tables["Age Gender breakdowns"]
 
-    # output = to_excel(final_tables)
+    output = to_excel(final_tables)
 
-    # if output != None:
-    #     st.download_button(
-    #         "Download output excel here", output, file_name="SEN2 output.xlsx"
-    #     )
-    # else:
-    #     st.download_button(
-    #         "Please wait for processing to finish.",
-    #         output,
-    #         file_name="SEN2 output.xlsx",
-    #         disabled=True,
-    #     )
+    if output != None:
+        st.download_button(
+            "Download output excel here", output, file_name="Annex A pre-processing output.xlsx"
+        )
+    else:
+        st.download_button(
+            "Please wait for processing to finish.",
+            output,
+            file_name="Annex A pre-processing output.xlsx",
+            disabled=True,
+        )
