@@ -6,6 +6,59 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import time
 
+from enum import Enum
+from dateutil.relativedelta import relativedelta
+
+###################
+# Config
+###################
+
+
+class EthnicSubcategories(Enum):
+    WBRI = "White"
+    WIRI = "White"
+    WIRT = "White"
+    WROM = "White"
+    WOTH = "White"
+    MWBC = "Mixed"
+    MWBA = "Mixed"
+    MWAS = "Mixed"
+    MOTH = "Mixed"
+    AIND = "Asian"
+    APKN = "Asian"
+    ABAN = "Asian"
+    AOTH = "Asian"
+    BCRB = "Black"
+    BAFR = "Black"
+    BOTH = "Black"
+    CHNE = "Chinese"
+    OOTH = "Other"
+    REFU = "Refused"
+    NOBT = "Not Obtained"
+
+
+###################
+# Util functions
+###################
+def calculate_age_buckets(age):
+    # Used to make age buckets matching published data
+    if age < 1:
+        return "a) Under 1 year"
+    elif age < 5:
+        return "b) 1 to 4 years"
+    elif age < 10:
+        return "c) 5 to 9 years"
+    elif age < 16:
+        return "d) 10 to 16 years"
+    elif age >= 16:
+        return "e) 16 years and over"
+    else:
+        return "f) Age error"
+
+
+###################
+# Ingress
+###################
 
 
 def get_values(xml_elements, table_dict: dict, xml_block):
@@ -16,8 +69,9 @@ def get_values(xml_elements, table_dict: dict, xml_block):
             table_dict[element] = pd.NA
     return table_dict
 
+
 class XMLtoDF:
-    header = pd.DataFrame(columns=["Collection", "Year", "Reference Date"])
+    header = pd.DataFrame(columns=["Collection", "Year", "ReferenceDate"])
 
     persons = pd.DataFrame(
         columns=[
@@ -98,7 +152,6 @@ class XMLtoDF:
         ]
     )
 
-    
     def __init__(self, root):
         self.child_id = 0
         header = root.find("Header")
@@ -107,12 +160,12 @@ class XMLtoDF:
 
         children = root.find("Persons")
         self.total_children = len(children)
-        
+
         for child in children.findall("Person"):
             self.create_child(child)
-            if self.child_id % 1000 == 0:
-                st.write(f'Read data for {self.child_id} children of {self.total_children} children.')
-            
+            # The progress info doesn't work on streamlit
+            # if self.child_id % 1000 == 0:
+            #     st.write(f'Read data for {self.child_id} children of {self.total_children} children.')
 
         self.named_plan = self.named_plan[self.named_plan["StartDate"].notna()].copy()
 
@@ -305,6 +358,7 @@ class XMLtoDF:
                 [self.active_plans, active_plan_df], ignore_index=True
             )
 
+
 @st.cache_data
 def convert_data(_root: ET.Element):
     datafiles = XMLtoDF(_root)
@@ -313,10 +367,53 @@ def convert_data(_root: ET.Element):
 
 
 ###########################
+# Datacontainer
+###########################
+class Datacontainer:
+    """
+    A container for SEN2 data. Indexes data by table type. Provides methods for
+    merging data to create a single, consistent dataset.
+    """
+
+    def __init__(self, data_dict: dict):
+        self.data = data_dict
+
+        self.reference_date = self._get_reference_date(self.data.header)
+
+        self.persons = self.data.persons
+
+    def _get_reference_date(self, df):
+        reference_date = df["ReferenceDate"].iloc[0]
+
+        reference_date = pd.to_datetime(reference_date, format="%Y/%m/%d")
+
+        return reference_date
+
+    @property
+    def clean_persons(self):
+        clean_df = self.data.persons.copy()
+        clean_df["Ethnicity_group"] = clean_df["Ethnicity"].apply(
+            lambda x: EthnicSubcategories[x].value
+        )
+
+        clean_df["PersonBirthDate_dt"] = pd.to_datetime(
+            clean_df["PersonBirthDate"], format="%Y/%m/%d"
+        )
+        clean_df["Age"] = clean_df["PersonBirthDate_dt"].apply(
+            lambda x: relativedelta(dt1=self.collection_end, dt2=self.reference_date)
+            .normalized()
+            .years
+        )
+        clean_df["AGE_BUCKETS"] = clean_df["AGE"].apply(calculate_age_buckets)
+
+        return clean_df
+
+
+###########################
 # Main App
 ###########################
 
-input_file = st.file_uploader('Upload SEN2 XML here')
+input_file = st.file_uploader("Upload SEN2 XML here")
 
 if input_file:
     # Get time to test ingress speed and caching
@@ -329,6 +426,7 @@ if input_file:
 
     after_ingress_time = time.time()
     total_ingress_time = after_ingress_time - start_time
-    st.write(f'Total ingress time: {int(total_ingress_time/60)} minutes.')
+    st.write(f"Total ingress time: {int(total_ingress_time/60)} minutes.")
 
-    # data_files.header
+    sen2 = Datacontainer(data_files)
+    st.table(sen2.clean_persons)
