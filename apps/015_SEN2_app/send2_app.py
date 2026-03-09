@@ -9,32 +9,126 @@ import time
 from enum import Enum
 from dateutil.relativedelta import relativedelta
 
+import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+
 ###################
 # Config
 ###################
 
+st.set_page_config(layout="wide")
+
 
 class EthnicSubcategories(Enum):
     WBRI = "White"
+    WCOR = "White"
+    WENG = "White"
+    WNIR = "White"
+    WSCO = "White"
+    WWEL = "White"
+    WOWB = "White"
     WIRI = "White"
     WIRT = "White"
-    WROM = "White"
     WOTH = "White"
+    WALB = "White"
+    WBOS = "White"
+    WCRO = "White"
+    WGRE = "White"
+    WGRK = "White"
+    WGRC = "White"
+    WITA = "White"
+    WKOS = "White"
+    WPOR = "White"
+    WSER = "White"
+    WTUR = "White"
+    WTUK = "White"
+    WTUC = "White"
+    WEUR = "White"
+    WEEU = "White"
+    WWEU = "White"
+    WOTW = "White"
+    WROM = "White"
+    WROG = "White"
+    WROR = "White"
+    WROO = "White"
     MWBC = "Mixed"
     MWBA = "Mixed"
     MWAS = "Mixed"
-    MOTH = "Mixed"
+    MWAP = "Mixed"
+    MWAI = "Mixed"
+    MWAO = "Mixed"
+    ABRI = "Asian"
+    AWEL = "Asian"
+    MOTH = "Asian"
+    MAOE = "Asian"
+    MABL = "Asian"
+    MACH = "Asian"
+    MBOE = "Asian"
+    MBCH = "Asian"
+    MCOE = "Asian"
+    MWOE = "Asian"
+    MWCH = "Asian"
+    MOTM = "Asian"
     AIND = "Asian"
     APKN = "Asian"
+    AMPK = "Asian"
+    AKPA = "Asian"
+    AOPK = "Asian"
     ABAN = "Asian"
     AOTH = "Asian"
+    AAFR = "Asian"
+    AKAO = "Asian"
+    ANEP = "Asian"
+    ASNL = "Asian"
+    ASLT = "Asian"
+    ASRO = "Asian"
+    AOTA = "Asian"
+    BBRI = "Black"
+    BWEL = "Black"
     BCRB = "Black"
     BAFR = "Black"
+    BANN = "Black"
+    BCON = "Black"
+    BGHA = "Black"
+    BNGN = "Black"
+    BSLN = "Black"
+    BSOM = "Black"
+    BSUD = "Black"
+    BAOF = "Black"
     BOTH = "Black"
-    CHNE = "Chinese"
+    BEUR = "Black"
+    BNAM = "Black"
+    BOTB = "Black"
+    CHNE = "Asian"
+    CHKC = "Asian"
+    CMAL = "Asian"
+    CSNG = "Asian"
+    CTWN = "Asian"
+    COCH = "Asian"
     OOTH = "Other"
-    REFU = "Refused"
-    NOBT = "Not Obtained"
+    OAFG = "Other"
+    ORAB = "Other"
+    OARA = "Other"
+    OEGY = "Other"
+    OFIL = "Other"
+    OIRN = "Other"
+    OIRQ = "Other"
+    OJPN = "Other"
+    OKOR = "Other"
+    OKRD = "Other"
+    OLAM = "Other"
+    OLEB = "Other"
+    OLIB = "Other"
+    OMAL = "Other"
+    OMRC = "Other"
+    OPOL = "Other"
+    OTHA = "Other"
+    OVIE = "Other"
+    OYEM = "Other"
+    OOEG = "Other"
+    NOBT = "Unclassified"
+    REFU = "Unclassified"
 
 
 ###################
@@ -73,6 +167,8 @@ def get_values(xml_elements, table_dict: dict, xml_block):
 class XMLtoDF:
     header = pd.DataFrame(columns=["Collection", "Year", "ReferenceDate"])
 
+    # columns and info can be found:
+    # https://assets.publishing.service.gov.uk/media/6937018aa6fc97b81e5743a7/Special_educational_needs_survey_guide_2026.pdf
     persons = pd.DataFrame(
         columns=[
             "Surname",
@@ -90,7 +186,7 @@ class XMLtoDF:
     requests = pd.DataFrame(
         columns=[
             "ReceivedDate",
-            "RYA",
+            "RequestSource" "RYA",
             "RequestOutcomeDate",
             "RequestOutcome",
             "RequestMediation",
@@ -390,23 +486,71 @@ class Datacontainer:
         return reference_date
 
     @property
-    def clean_persons(self):
-        clean_df = self.data.persons.copy()
-        clean_df["Ethnicity_group"] = clean_df["Ethnicity"].apply(
+    def enriched_persons(self):
+        enriched_df = self.data.persons.copy()
+        enriched_df["EthnicityGroup"] = enriched_df["Ethnicity"].apply(
             lambda x: EthnicSubcategories[x].value
         )
 
-        clean_df["PersonBirthDate_dt"] = pd.to_datetime(
-            clean_df["PersonBirthDate"], format="%Y/%m/%d"
+        enriched_df["PersonBirthDate_dt"] = pd.to_datetime(
+            enriched_df["PersonBirthDate"], format="%Y/%m/%d"
         )
-        clean_df["Age"] = clean_df["PersonBirthDate_dt"].apply(
-            lambda x: relativedelta(dt1=self.collection_end, dt2=self.reference_date)
-            .normalized()
-            .years
+        enriched_df["Age"] = enriched_df["PersonBirthDate_dt"].apply(
+            lambda x: relativedelta(dt1=self.reference_date, dt2=x).normalized().years
         )
-        clean_df["AGE_BUCKETS"] = clean_df["AGE"].apply(calculate_age_buckets)
+        enriched_df["AgeBuckets"] = enriched_df["Age"].apply(calculate_age_buckets)
 
-        return clean_df
+        return enriched_df
+
+    @property
+    def enriched_requests(self):
+        enriched_df = self.data.requests.copy()
+
+        enriched_df = enriched_df.merge(
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            how="left",
+            on="child_id",
+        )
+
+        # enrich requests sources (pg 20)
+
+        return enriched_df
+
+    @property
+    def enriched_assessments(self):
+        enriched_df = self.data.assessments.copy()
+
+        enriched_df = enriched_df.merge(
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            how="left",
+            on="child_id",
+        )
+
+        return enriched_df
+
+    @property
+    def enriched_named_plan(self):
+        enriched_df = self.data.names_plan.copy()
+
+        enriched_df = enriched_df.merge(
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            how="left",
+            on="child_id",
+        )
+
+        return enriched_df
+
+    @property
+    def enriched_active_plans(self):
+        enriched_df = self.data.active_plans.copy()
+
+        enriched_df = enriched_df.merge(
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            how="left",
+            on="child_id",
+        )
+
+        return enriched_df
 
 
 ###########################
@@ -429,4 +573,59 @@ if input_file:
     st.write(f"Total ingress time: {int(total_ingress_time/60)} minutes.")
 
     sen2 = Datacontainer(data_files)
-    st.table(sen2.clean_persons)
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        gender_pie = px.pie(sen2.enriched_persons, names="Sex")
+        st.plotly_chart(gender_pie, use_container_width=True)
+
+    with col2:
+        ethnicity_chart = px.histogram(sen2.enriched_persons, "EthnicityGroup")
+        st.plotly_chart(ethnicity_chart, use_container_width=True)
+
+    with col3:
+        age_chart = px.histogram(sen2.enriched_persons, "AgeBuckets")
+        st.plotly_chart(age_chart, use_container_width=True)
+
+    with col4:
+        sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
+        st.plotly_chart(sen_type_chart, use_container_width=True)
+
+# TODO Requests:
+#   requests in year
+#   request sources
+#   request lengths
+#   request outcomes
+#   RYA - relevant youth accomodation
+#   request mediatioons and tribunals?
+#   requests exported
+
+# TODO assessments:
+#   assessments in year
+#   assessment outcomes
+#   assessment lengths (20 weeks?)
+#   mediations/tribunals
+#   week20s - time limit exceptions apply?
+
+# TODO named plans:
+#   plans starting in year
+#   plans ending in year
+#   plans ceased in year reasons
+#   active plans on census day
+#   active plans open length
+#   sen settings
+#   plan res (residential setting)
+#   work based learning activities (plan wbp)
+#   personal budget taken up PB, peronal budget organised arrangements OA, direct payments DP
+#   plan detail  establishments
+#   sen settings
+
+# TODO active plans
+#   ehcs transferred in TransferLA
+#   residential settings
+#   work based learning activities
+#   date of lasr review meeting (time since?)
+#   annual review decisions
+#   phase transfer reviews
+#   placement details
