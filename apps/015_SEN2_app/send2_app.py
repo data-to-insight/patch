@@ -507,7 +507,7 @@ class Datacontainer:
         enriched_df = self.data.requests.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup", 'Sex', "child_id"]],
             how="left",
             on="child_id",
         )
@@ -521,7 +521,7 @@ class Datacontainer:
         enriched_df = self.data.assessments.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup",'Sex', "child_id"]],
             how="left",
             on="child_id",
         )
@@ -533,7 +533,7 @@ class Datacontainer:
         enriched_df = self.data.names_plan.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup",'Sex', "child_id"]],
             how="left",
             on="child_id",
         )
@@ -545,7 +545,7 @@ class Datacontainer:
         enriched_df = self.data.active_plans.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup",'Sex', "child_id"]],
             how="left",
             on="child_id",
         )
@@ -592,6 +592,59 @@ if input_file:
         sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
         st.plotly_chart(sen_type_chart, use_container_width=True)
 
+    with st.container():
+        req_col1, req_col2, req_col3, req_col4 = st.columns(4)
+
+        with req_col1:
+                        
+            # total_requests = go.Figure()
+
+            total_requests = make_subplots(
+                rows=3, cols=1,
+                specs=[[{"type": "indicator"}], 
+                       [{"type": "indicator"}],  
+                       [{"type": "indicator"}]])
+                    
+
+            total_requests.update_layout(paper_bgcolor = "lightgray", 
+                                        font=dict(
+                                        size=18,
+                                        color='black'
+                                    ))
+
+            total_requests.add_trace(go.Indicator(
+                    mode="number",
+                    value=len(sen2.enriched_requests),
+                    title={"text": "Total requests"},
+                    #domain = {'x': [0, 0], 'y': [0, 0.2]}
+                ), row=1, col=1)
+            
+            if len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'M']) > 0:
+                total_requests.add_trace(go.Indicator(
+                    mode="number",
+                    value=len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'M']),
+                    title={"text": "Total requests - Male"},
+                    #domain = {'x': [0, 0], 'y': [0.7, 0.]}
+                ), row=2, col=1)
+            if len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'F']) > 0:
+                total_requests.add_trace(go.Indicator(
+                    mode="number",
+                    value=len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'F']),
+                    title={"text": "Total requests - Female"},
+                    #domain = {'x': [0, 0], 'y': [0.75, 1]}
+                ), row=3, col=1)
+            st.plotly_chart(total_requests, use_container_width=True)
+
+        with req_col2:
+            pass
+
+        with req_col3:
+            pass
+
+        with req_col4:
+            pass
+
+        
 # TODO Requests:
 #   requests in year
 #   request sources
