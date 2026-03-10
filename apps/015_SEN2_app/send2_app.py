@@ -186,7 +186,8 @@ class XMLtoDF:
     requests = pd.DataFrame(
         columns=[
             "ReceivedDate",
-            "RequestSource" "RYA",
+            "RequestSource",
+            "RYA",
             "RequestOutcomeDate",
             "RequestOutcome",
             "RequestMediation",
@@ -504,12 +505,39 @@ class Datacontainer:
 
     @property
     def enriched_requests(self):
-        enriched_df = self.data.requests.copy()
+        enriched_df = self.data.requests[
+            self.data.requests["ReceivedDate"].notna()
+        ].copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup", 'Sex', "child_id"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup", "Sex", "child_id"]],
             how="left",
             on="child_id",
+        )
+
+        enriched_df[["RequestSource", "RequestMediation", "RequestTribunal"]] = (
+            enriched_df[
+                ["RequestSource", "RequestMediation", "RequestTribunal"]
+            ].astype("str")
+        )
+        enriched_df["RequestSource"] = enriched_df["RequestSource"].map(
+            {
+                "1": "Young person or parent",
+                "2": "School or other education setting",
+                "3": "Health care professionals",
+                "4": "Social care professionals",
+                "5": "Other",
+            }
+        )
+        enriched_df["RequestSource"] = enriched_df["RequestSource"].astype("str")
+
+        enriched_df["MediationOrTribunal"] = enriched_df.apply(
+            lambda x: (
+                "Yes"
+                if (x["RequestMediation"] == "1") | (x["RequestTribunal"] == "1")
+                else "No"
+            ),
+            axis=1,
         )
 
         # enrich requests sources (pg 20)
@@ -521,7 +549,7 @@ class Datacontainer:
         enriched_df = self.data.assessments.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup",'Sex', "child_id"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup", "Sex", "child_id"]],
             how="left",
             on="child_id",
         )
@@ -533,7 +561,7 @@ class Datacontainer:
         enriched_df = self.data.names_plan.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup",'Sex', "child_id"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup", "Sex", "child_id"]],
             how="left",
             on="child_id",
         )
@@ -545,7 +573,7 @@ class Datacontainer:
         enriched_df = self.data.active_plans.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup",'Sex', "child_id"]],
+            self.enriched_persons[["AgeBuckets", "EthnicityGroup", "Sex", "child_id"]],
             how="left",
             on="child_id",
         )
@@ -574,85 +602,109 @@ if input_file:
 
     sen2 = Datacontainer(data_files)
 
-    col1, col2, col3, col4 = st.columns(4)
+    with st.expander("Headline Figures"):
+        col1, col2, col3, col4 = st.columns(4)
 
-    with col1:
-        gender_pie = px.pie(sen2.enriched_persons, names="Sex")
-        st.plotly_chart(gender_pie, use_container_width=True)
+        with col1:
+            gender_pie = px.pie(sen2.enriched_persons, names="Sex")
+            st.plotly_chart(gender_pie, use_container_width=True)
 
-    with col2:
-        ethnicity_chart = px.histogram(sen2.enriched_persons, "EthnicityGroup")
-        st.plotly_chart(ethnicity_chart, use_container_width=True)
+        with col2:
+            ethnicity_chart = px.histogram(sen2.enriched_persons, "EthnicityGroup")
+            st.plotly_chart(ethnicity_chart, use_container_width=True)
 
-    with col3:
-        age_chart = px.histogram(sen2.enriched_persons, "AgeBuckets")
-        st.plotly_chart(age_chart, use_container_width=True)
+        with col3:
+            age_chart = px.histogram(sen2.enriched_persons, "AgeBuckets")
+            st.plotly_chart(age_chart, use_container_width=True)
 
-    with col4:
-        sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
-        st.plotly_chart(sen_type_chart, use_container_width=True)
+        with col4:
+            sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
+            st.plotly_chart(sen_type_chart, use_container_width=True)
 
-    with st.container():
+    with st.expander("Requests"):
         req_col1, req_col2, req_col3, req_col4 = st.columns(4)
 
         with req_col1:
-                        
-            # total_requests = go.Figure()
-
             total_requests = make_subplots(
-                rows=3, cols=1,
-                specs=[[{"type": "indicator"}], 
-                       [{"type": "indicator"}],  
-                       [{"type": "indicator"}]])
-                    
+                rows=3,
+                cols=1,
+                specs=[
+                    [{"type": "indicator"}],
+                    [{"type": "indicator"}],
+                    [{"type": "indicator"}],
+                ],
+            )
 
-            total_requests.update_layout(paper_bgcolor = "lightgray", 
-                                        font=dict(
-                                        size=18,
-                                        color='black'
-                                    ))
+            total_requests.update_layout(
+                paper_bgcolor="lightgray", font=dict(size=18, color="black")
+            )
 
-            total_requests.add_trace(go.Indicator(
+            total_requests.add_trace(
+                go.Indicator(
                     mode="number",
                     value=len(sen2.enriched_requests),
                     title={"text": "Total requests"},
-                    #domain = {'x': [0, 0], 'y': [0, 0.2]}
-                ), row=1, col=1)
-            
-            if len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'M']) > 0:
-                total_requests.add_trace(go.Indicator(
-                    mode="number",
-                    value=len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'M']),
-                    title={"text": "Total requests - Male"},
-                    #domain = {'x': [0, 0], 'y': [0.7, 0.]}
-                ), row=2, col=1)
-            if len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'F']) > 0:
-                total_requests.add_trace(go.Indicator(
-                    mode="number",
-                    value=len(sen2.enriched_requests[sen2.enriched_requests['Sex'] == 'F']),
-                    title={"text": "Total requests - Female"},
-                    #domain = {'x': [0, 0], 'y': [0.75, 1]}
-                ), row=3, col=1)
+                ),
+                row=1,
+                col=1,
+            )
+
+            if len(sen2.enriched_requests[sen2.enriched_requests["Sex"] == "M"]) > 0:
+                total_requests.add_trace(
+                    go.Indicator(
+                        mode="number",
+                        value=len(
+                            sen2.enriched_requests[sen2.enriched_requests["Sex"] == "M"]
+                        ),
+                        title={"text": "Total requests - Male"},
+                    ),
+                    row=2,
+                    col=1,
+                )
+            if len(sen2.enriched_requests[sen2.enriched_requests["Sex"] == "F"]) > 0:
+                total_requests.add_trace(
+                    go.Indicator(
+                        mode="number",
+                        value=len(
+                            sen2.enriched_requests[sen2.enriched_requests["Sex"] == "F"]
+                        ),
+                        title={"text": "Total requests - Female"},
+                    ),
+                    row=3,
+                    col=1,
+                )
             st.plotly_chart(total_requests, use_container_width=True)
 
         with req_col2:
-            pass
+            request_sources = px.histogram(
+                sen2.enriched_requests, "RequestSource", color="Sex"
+            )
+
+            st.plotly_chart(request_sources, use_container_width=True)
 
         with req_col3:
-            pass
+            request_outcomes = px.histogram(
+                sen2.enriched_requests, "RequestOutcome", color="Sex"
+            )
+
+            st.plotly_chart(request_outcomes, use_container_width=True)
 
         with req_col4:
-            pass
+            request_tribunal = px.histogram(
+                sen2.enriched_requests, "MediationOrTribunal", color="Sex"
+            )
+            st.plotly_chart(request_tribunal, use_container_width=True)
 
-        
+
 # TODO Requests:
-#   requests in year
-#   request sources
+#   requests in year DONE
+#   request sources DONE
 #   request lengths
-#   request outcomes
+#   request outcomes DONE
 #   RYA - relevant youth accomodation
 #   request mediatioons and tribunals?
 #   requests exported
+#   requests by age
 
 # TODO assessments:
 #   assessments in year
