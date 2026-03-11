@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import datetime as dt
 
 import streamlit as st
 
@@ -482,7 +483,7 @@ class Datacontainer:
     def _get_reference_date(self, df):
         reference_date = df["ReferenceDate"].iloc[0]
 
-        reference_date = pd.to_datetime(reference_date, format="%Y/%m/%d")
+        reference_date = pd.to_datetime(reference_date, format="%Y-%m-%d")
 
         return reference_date
 
@@ -494,7 +495,7 @@ class Datacontainer:
         )
 
         enriched_df["PersonBirthDate_dt"] = pd.to_datetime(
-            enriched_df["PersonBirthDate"], format="%Y/%m/%d"
+            enriched_df["PersonBirthDate"], format="%Y-%m-%d"
         )
         enriched_df["Age"] = enriched_df["PersonBirthDate_dt"].apply(
             lambda x: relativedelta(dt1=self.reference_date, dt2=x).normalized().years
@@ -540,7 +541,22 @@ class Datacontainer:
             axis=1,
         )
 
+        enriched_df["ReceivedDate"] = pd.to_datetime(
+            enriched_df["ReceivedDate"], format="%Y-%m-%d", errors="coerce"
+        )
+        enriched_df["RequestOutcomeDate"] = pd.to_datetime(
+            enriched_df["RequestOutcomeDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        enriched_df["RequestLength"] = (
+            enriched_df["RequestOutcomeDate"] - enriched_df["ReceivedDate"]
+        ).dt.days.to_list()
+        # [relativedelta(outcome, received).days if ~pd.isnull(received) else pd.NaT for outcome, received  in zip(enriched_df['RequestOutcomeDate'], enriched_df['ReceivedDate'])]
         # enrich requests sources (pg 20)
+
+        enriched_df["Exported"] = [
+            "No" if pd.isnull(col) else "Yes" for col in enriched_df["Exported"]
+        ]
 
         return enriched_df
 
@@ -675,12 +691,17 @@ if input_file:
                 )
             st.plotly_chart(total_requests, use_container_width=True)
 
+            request_lengths = px.histogram(sen2.enriched_requests, "RequestLength")
+            st.plotly_chart(request_lengths, use_container_width=True)
+
         with req_col2:
             request_sources = px.histogram(
                 sen2.enriched_requests, "RequestSource", color="Sex"
             )
 
             st.plotly_chart(request_sources, use_container_width=True)
+
+            sen2.enriched_requests
 
         with req_col3:
             request_outcomes = px.histogram(
@@ -689,17 +710,23 @@ if input_file:
 
             st.plotly_chart(request_outcomes, use_container_width=True)
 
+            requests_by_age = px.histogram(sen2.enriched_requests, "AgeBuckets")
+            st.plotly_chart(requests_by_age, use_container_width=True)
+
         with req_col4:
             request_tribunal = px.histogram(
                 sen2.enriched_requests, "MediationOrTribunal", color="Sex"
             )
             st.plotly_chart(request_tribunal, use_container_width=True)
 
+            requests_exported = px.pie(sen2.enriched_requests, names="Exported")
+            st.plotly_chart(requests_exported, use_container_width=True)
+
 
 # TODO Requests:
 #   requests in year DONE
 #   request sources DONE
-#   request lengths
+#   request lengths - does this need bucketing?
 #   request outcomes DONE
 #   RYA - relevant youth accomodation
 #   request mediatioons and tribunals?
