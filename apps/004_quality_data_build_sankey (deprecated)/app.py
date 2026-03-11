@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 
-
 uploaded_files = st.file_uploader(
     "Load both files ('sankey_input.xlsx' and 'sankey_labels.xlsx') here:",
     accept_multiple_files=True,

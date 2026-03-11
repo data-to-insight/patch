@@ -5,6 +5,7 @@ from io import BytesIO
 
 dfs = {}
 
+
 def get_values(xml_elements, table_dict: dict, xml_block):
     for element in xml_elements:
         try:
@@ -12,6 +13,7 @@ def get_values(xml_elements, table_dict: dict, xml_block):
         except:
             table_dict[element] = pd.NA
     return table_dict
+
 
 class XMLtoCSV:
     header = pd.DataFrame(columns=["Collection", "Year", "Reference Date"])
@@ -253,8 +255,8 @@ class XMLtoCSV:
                 )
             else:
                 named_plan_dict = get_values(
-                        named_plan_elements, named_plan_dict, named_plan_locs
-                    )
+                    named_plan_elements, named_plan_dict, named_plan_locs
+                )
                 named_plan_dict["name"] = self.name
                 named_plan_dict["child_id"] = self.child_id
                 named_plan_dict["requests_id"] = self.requests_id
@@ -323,35 +325,46 @@ def convert_data(root: ET.Element):
 
     return datafiles
 
+
 def convert_for_sen2_tool(m1, m2, m3, m4, m5):
-    output_dict = {"Persons": m1, "Requests": m2, "Assessments": m3, "Named Plan": m4, "Active Plans": m5}
+    output_dict = {
+        "Persons": m1,
+        "Requests": m2,
+        "Assessments": m3,
+        "Named Plan": m4,
+        "Active Plans": m5,
+    }
 
     return output_dict
+
 
 def to_excel(dfs):
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine="xlsxwriter")
     for name, frame in dfs.items():
-        frame.to_excel(writer, sheet_name = name, index=False)
+        frame.to_excel(writer, sheet_name=name, index=False)
     workbook = writer.book
     writer.save()
     processed_data = output.getvalue()
     return processed_data
-    
+
+
 def move_column_inplace(df, col, pos):
     col = df.pop(col)
     df.insert(pos, col.name, col)
+
 
 def move_to_front_inplace(df, col1, col2):
     move_column_inplace(df, col2, 0)
     move_column_inplace(df, col1, 0)
     return df
 
+
 #################
 # Streamlit Page
 #################
 
-st.title('SEN2 to CSV')
+st.title("SEN2 to CSV")
 
 file = st.file_uploader("Upload SEN2 XML here", accept_multiple_files=False)
 
@@ -361,7 +374,7 @@ if file:
     fulltree = ET.parse(file)
     root = fulltree.getroot()
 
-    st.write('Beginning conversion')
+    st.write("Beginning conversion")
     with st.spinner("Wait for it..."):
         data_files = convert_data(root)
 
@@ -373,11 +386,11 @@ if file:
         data_files.active_plans,
     )
 
-    st.write('Conversion done, processing to excel')
+    st.write("Conversion done, processing to excel")
 
     for key, module in modules.items():
-        if 'child_id' in module.columns:
-            modules[key] = move_to_front_inplace(module, 'name', "child_id")
+        if "child_id" in module.columns:
+            modules[key] = move_to_front_inplace(module, "name", "child_id")
         st.write(module)
 
     output = to_excel(modules)

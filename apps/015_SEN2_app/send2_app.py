@@ -152,15 +152,16 @@ def calculate_age_buckets(age):
 
 
 def make_bar(df, buckets, column):
-    values_df = pd.DataFrame({column:buckets})
-    df_counts = df.groupby(column).size().to_frame('Count').reset_index()
-    df_counts = df_counts.merge(values_df, how='outer', on='AgeBuckets')
-    df_counts['Count'] = df_counts['Count'].fillna(0)
+    values_df = pd.DataFrame({column: buckets})
+    df_counts = df.groupby(column).size().to_frame("Count").reset_index()
+    df_counts = df_counts.merge(values_df, how="outer", on="AgeBuckets")
+    df_counts["Count"] = df_counts["Count"].fillna(0)
     df_counts.sort_values(column, inplace=True)
-    
-    bar = px.bar(df_counts, x=column, y='Count')
+
+    bar = px.bar(df_counts, x=column, y="Count")
 
     return bar
+
 
 ###################
 # Ingress
@@ -631,12 +632,50 @@ if input_file:
 
     with st.sidebar:
         st.write("Slice here")
+        # SEN Type
+        # SEN Setting
+        # Open SEN plan lengths
+        # Exported
+        # Week 20
 
-        sex_selected = st.sidebar.multiselect("Select Sex", (sen2.enriched_requests['Sex'].unique()), default=(sen2.enriched_requests['Sex'].unique()))
-        age_selected = st.sidebar.multiselect("Select age buckets", (["a) Under 1 year","b) 1 to 4 years","c) 5 to 9 years","d) 10 to 16 years", "e) 16 years and over","f) Age error"]), default=(["a) Under 1 year","b) 1 to 4 years","c) 5 to 9 years","d) 10 to 16 years", "e) 16 years and over","f) Age error"]))
+        sex_selected = st.sidebar.multiselect(
+            "Select Sex",
+            (sen2.enriched_requests["Sex"].unique()),
+            default=(sen2.enriched_requests["Sex"].unique()),
+        )
+        age_selected = st.sidebar.multiselect(
+            "Select age buckets",
+            (
+                [
+                    "a) Under 1 year",
+                    "b) 1 to 4 years",
+                    "c) 5 to 9 years",
+                    "d) 10 to 16 years",
+                    "e) 16 years and over",
+                    "f) Age error",
+                ]
+            ),
+            default=(
+                [
+                    "a) Under 1 year",
+                    "b) 1 to 4 years",
+                    "c) 5 to 9 years",
+                    "d) 10 to 16 years",
+                    "e) 16 years and over",
+                    "f) Age error",
+                ]
+            ),
+        )
 
-    sliced_enriched_persons = sen2.enriched_persons[sen2.enriched_persons['Sex'].isin(sex_selected) &
-                                                    sen2.enriched_requests['AgeBuckets'].isin(age_selected)]
+    sliced_enriched_persons = sen2.enriched_persons[
+        sen2.enriched_persons["Sex"].isin(sex_selected)
+        & sen2.enriched_persons["AgeBuckets"].isin(age_selected)
+    ]
+
+    sliced_enriched_requests = sen2.enriched_requests[
+        sen2.enriched_requests["Sex"].isin(sex_selected)
+        & sen2.enriched_requests["AgeBuckets"].isin(age_selected)
+    ]
 
     with st.expander("Headline Figures"):
         col1, col2, col3, col4 = st.columns(4)
@@ -650,9 +689,19 @@ if input_file:
             st.plotly_chart(ethnicity_chart, use_container_width=True)
 
         with col3:
-            age_chart = make_bar(sliced_enriched_persons, ["a) Under 1 year","b) 1 to 4 years","c) 5 to 9 years","d) 10 to 16 years", "e) 16 years and over","f) Age error"], 'AgeBuckets')
+            age_chart = make_bar(
+                sliced_enriched_persons,
+                [
+                    "a) Under 1 year",
+                    "b) 1 to 4 years",
+                    "c) 5 to 9 years",
+                    "d) 10 to 16 years",
+                    "e) 16 years and over",
+                    "f) Age error",
+                ],
+                "AgeBuckets",
+            )
             st.plotly_chart(age_chart, use_container_width=True)
-
 
         with col4:
             sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
@@ -679,31 +728,41 @@ if input_file:
             total_requests.add_trace(
                 go.Indicator(
                     mode="number",
-                    value=len(sen2.enriched_requests),
+                    value=len(sliced_enriched_requests),
                     title={"text": "Total requests"},
                 ),
                 row=1,
                 col=1,
             )
 
-            if len(sen2.enriched_requests[sen2.enriched_requests["Sex"] == "M"]) > 0:
+            if (
+                len(sliced_enriched_requests[sliced_enriched_requests["Sex"] == "M"])
+                > 0
+            ):
                 total_requests.add_trace(
                     go.Indicator(
                         mode="number",
                         value=len(
-                            sen2.enriched_requests[sen2.enriched_requests["Sex"] == "M"]
+                            sliced_enriched_requests[
+                                sliced_enriched_requests["Sex"] == "M"
+                            ]
                         ),
                         title={"text": "Total requests - Male"},
                     ),
                     row=2,
                     col=1,
                 )
-            if len(sen2.enriched_requests[sen2.enriched_requests["Sex"] == "F"]) > 0:
+            if (
+                len(sliced_enriched_requests[sliced_enriched_requests["Sex"] == "F"])
+                > 0
+            ):
                 total_requests.add_trace(
                     go.Indicator(
                         mode="number",
                         value=len(
-                            sen2.enriched_requests[sen2.enriched_requests["Sex"] == "F"]
+                            sliced_enriched_requests[
+                                sliced_enriched_requests["Sex"] == "F"
+                            ]
                         ),
                         title={"text": "Total requests - Female"},
                     ),
@@ -712,39 +771,39 @@ if input_file:
                 )
             st.plotly_chart(total_requests, use_container_width=True)
 
-            request_lengths = px.histogram(sen2.enriched_requests, "RequestLength")
+            request_lengths = px.histogram(sliced_enriched_requests, "RequestLength")
             st.plotly_chart(request_lengths, use_container_width=True)
 
         with req_col2:
             request_sources = px.histogram(
-                sen2.enriched_requests, "RequestSource", color="Sex"
+                sliced_enriched_requests, "RequestSource", color="Sex"
             )
 
             st.plotly_chart(request_sources, use_container_width=True)
 
-            requests_rya = px.pie(sen2.enriched_requests, names="RYA")
+            requests_rya = px.pie(sliced_enriched_requests, names="RYA")
             st.plotly_chart(requests_rya, use_container_width=True)
 
         with req_col3:
             request_outcomes = px.histogram(
-                sen2.enriched_requests, "RequestOutcome", color="Sex"
+                sliced_enriched_requests, "RequestOutcome", color="Sex"
             )
 
             st.plotly_chart(request_outcomes, use_container_width=True)
 
-            requests_by_age = px.histogram(sen2.enriched_requests, "AgeBuckets")
+            requests_by_age = px.histogram(sliced_enriched_requests, "AgeBuckets")
             st.plotly_chart(requests_by_age, use_container_width=True)
 
         with req_col4:
             request_tribunal = px.histogram(
-                sen2.enriched_requests, "MediationOrTribunal", color="Sex"
+                sliced_enriched_requests, "MediationOrTribunal", color="Sex"
             )
             st.plotly_chart(request_tribunal, use_container_width=True)
 
-            requests_exported = px.pie(sen2.enriched_requests, names="Exported")
+            requests_exported = px.pie(sliced_enriched_requests, names="Exported")
             st.plotly_chart(requests_exported, use_container_width=True)
 
-    with st.expander('CYP in selected drilldown:'):
+    with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_persons)
 # TODO Requests:
 #   requests in year DONE
@@ -784,4 +843,3 @@ if input_file:
 #   annual review decisions
 #   phase transfer reviews
 #   placement details
-

@@ -37,13 +37,11 @@ if saved_apps:
 
 st.header("Search for your PATCh apps")
 
-st.write(
-    """
+st.write("""
 - paste the url to a github folder that contains your files ( for example `https://github.com/data-to-insight/patch/blob/main/apps/000_intro`). 
 - It can include both `python` and `requirements.txt` files.
 - You can also paste an url that points to just the app's python file (for example `https://github.com/data-to-insight/patch/blob/main/apps/000_intro/app.py`).
-"""
-)
+""")
 
 
 class Page:

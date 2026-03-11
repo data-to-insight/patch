@@ -5,7 +5,6 @@ from io import BytesIO
 
 import streamlit as st
 
-
 # Set variables
 # #TODO In the pipeline version this must be updated to take actual reference dates.
 # Ideally the data ought to be in every row already.
@@ -26,7 +25,8 @@ def quarter_reference_date(df):
         return reference_date_q3
     if "Q4" in df["Time Period"]:
         return reference_date_q4
-    
+
+
 def reference_date(df):
     date_string = f"01/{df['Month']}/{df['Year']}"
     ref_date = pd.to_datetime(date_string, format="%d/%m/%Y").date()
@@ -411,8 +411,10 @@ def time_diff_calc(df, start_col, end_col, working_days=False):
             df["end_col_dt"].values.astype("datetime64[D]"),
         )
     else:
-        df["time_diff"] = (pd.to_datetime(df["end_col_dt"]) - pd.to_datetime(df["start_col_dt"])).dt.days 
-        #df["time_diff"] = df["time_diff"] / pd.Timedelta(days=1)
+        df["time_diff"] = (
+            pd.to_datetime(df["end_col_dt"]) - pd.to_datetime(df["start_col_dt"])
+        ).dt.days
+        # df["time_diff"] = df["time_diff"] / pd.Timedelta(days=1)
         # df["time_diff"] = (df["end_col_dt"] - df["start_col_dt"]) / pd.Timedelta(days=1)
         # df["time_diff"] = df["time_diff"].round(decimals=0)
 
@@ -706,15 +708,15 @@ uploaded_files = st.file_uploader(
 mid_year_estimates = st.file_uploader(
     "Upload mid year population esitmates Excel file here", accept_multiple_files=False
 )
-st.write("ONS mid year population esitmates can be found here: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates")
+st.write(
+    "ONS mid year population esitmates can be found here: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates"
+)
 st.write("As of the time of writing, the most recent population estimate was in 2023.")
 st.write("They are not embedded in the site as they change very regularly.")
 
 if (uploaded_files != None) & (mid_year_estimates != None):
 
     st.write("Files uploaded sucessfully.")
-
-
 
     # Read Annex A and ONS data in as dfs
     test_file = uploaded_files[0]
@@ -731,37 +733,47 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     # Check which files are uploaded & standardize dict
     dfs = {}
     for k, v in upload_dfs.items():
-        if ('list_1' in k) & ('list_10' not in k) & ('list_11' not in k) & ('list_12' not in k):
-            dfs['list_1'] = v
-        if ('list_2' in k):
-            dfs['list_2'] = v
-        if ('list_3' in k):
-            dfs['list_3'] = v
-        if ('list_4' in k):
-            dfs['list_4'] = v
-        if ('list_5' in k):
-            dfs['list_5'] = v
-        if ('list_6' in k):
-            dfs['list_6'] = v
-        if ('list_7' in k):
-            dfs['list_7'] = v
-        if ('list_8' in k):
-            dfs['list_8'] = v
-        if ('list_9' in k):
-            dfs['list_9'] = v
+        if (
+            ("list_1" in k)
+            & ("list_10" not in k)
+            & ("list_11" not in k)
+            & ("list_12" not in k)
+        ):
+            dfs["list_1"] = v
+        if "list_2" in k:
+            dfs["list_2"] = v
+        if "list_3" in k:
+            dfs["list_3"] = v
+        if "list_4" in k:
+            dfs["list_4"] = v
+        if "list_5" in k:
+            dfs["list_5"] = v
+        if "list_6" in k:
+            dfs["list_6"] = v
+        if "list_7" in k:
+            dfs["list_7"] = v
+        if "list_8" in k:
+            dfs["list_8"] = v
+        if "list_9" in k:
+            dfs["list_9"] = v
 
     lists_uploaded = list(dfs.keys())
     st.write(f"Lists uploaded {lists_uploaded}")
 
     for k, df in dfs.items():
-        dfs[k]['Time Period'] = df['Month'].astype(str) +  '_' + df['Year'].astype(str)
-        dfs[k] = (df[(~df['Child Unique ID'].str.contains("None")) & (~df['Child Unique ID'].str.contains('filters'))]).copy()
+        dfs[k]["Time Period"] = df["Month"].astype(str) + "_" + df["Year"].astype(str)
+        dfs[k] = (
+            df[
+                (~df["Child Unique ID"].str.contains("None"))
+                & (~df["Child Unique ID"].str.contains("filters"))
+            ]
+        ).copy()
 
     ons = pd.read_excel(
         mid_year_estimates,
         sheet_name=["MYE2 - Persons", "MYE2 - Females", "MYE2 - Males"],
         skiprows=7,
-    ) 
+    )
 
     # Pre-process ONS data
     ons["Metadata"] = ons["MYE2 - Persons"].iloc[:, 0:4].copy()
@@ -810,8 +822,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         # df["Reference Date"] = df.apply(quarter_reference_date, axis=1)
         df["Reference Date"] = df.apply(reference_date, axis=1)
         df["Ethnicity Group"] = df["Ethnicity"]
-        df["name_period"] = df["LA"] + "/" + df['Time Period']
-        
+        df["name_period"] = df["LA"] + "/" + df["Time Period"]
 
     la_names = list(df["name_period"].unique())
     num_las = len(df["LA"].unique())
@@ -820,17 +831,20 @@ if (uploaded_files != None) & (mid_year_estimates != None):
 
     # Contacts
     # Unique Contacts
-    if ("list_1" in lists_uploaded):
-        measures["Contacts - Contacts - Count"], measures["Contacts - Contacts - Rate"] = (
-            cyp_count(dfs["list_1"])
-        )
+    if "list_1" in lists_uploaded:
+        (
+            measures["Contacts - Contacts - Count"],
+            measures["Contacts - Contacts - Rate"],
+        ) = cyp_count(dfs["list_1"])
         if "list_3" in lists_uploaded:
             # Percentage of contacts also appearing on referrals
             measures["Contacts - Appears on Referrals - Percent"] = appears_on_both(
                 dfs["list_1"], dfs["list_3"]
             )
         # Contacts by age and gender - percents given as percentage of given gender
-        contact_age_gender = age_gender_metric(dfs["list_1"], "Contacts - Age breakdown")
+        contact_age_gender = age_gender_metric(
+            dfs["list_1"], "Contacts - Age breakdown"
+        )
         # Sources of contacts
         contact_sources = category_metrics(
             dfs["list_1"], "Contact Source", "Contacts - Contact Source"
@@ -844,7 +858,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             dfs["list_1"], "Contacts - Ethnicities"
         )
 
-        st.write('Completed calculations for Contacts')
+        st.write("Completed calculations for Contacts")
 
     # Early help assessments
     # Unique Eh
@@ -870,7 +884,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         eh_ethnicity = ethnic_background_metric(
             dfs["list_2"], "Early Help Assessments - Ethnicities"
         )
-        st.write('Completed calculations for Early Help Assessments')
+        st.write("Completed calculations for Early Help Assessments")
 
     # Referrals
     # Unique referrals
@@ -884,7 +898,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             dfs["list_3"], "Referral Source", "Referrals - Referral Source"
         )
         # Referrals by age and gender count
-        referral_age_gender = age_gender_metric(dfs["list_3"], "Referrals - Age breakdown")
+        referral_age_gender = age_gender_metric(
+            dfs["list_3"], "Referrals - Age breakdown"
+        )
         # Ethnic backgrounds
         referral_ethnicity = ethnic_background_metric(
             dfs["list_3"], "Referrals - Ethnicities"
@@ -897,7 +913,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         measures["Referrals - Referral NFA - Percent"] = percent_of_col_with_value(
             dfs["list_3"], col="Referral NFA?"
         )
-        st.write('Completed calculations for Referrals')
+        st.write("Completed calculations for Referrals")
 
     # Assessments
     # Unique assessments
@@ -913,9 +929,10 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         closed_assessments = dfs["list_4"][
             dfs["list_4"]["Continuous Assessment Date of Authorisation"].notna()
         ]
-        measures["Assessments - Open - Count"], measures["Assessments - Open - Rate"] = (
-            cyp_count(open_assessments)
-        )
+        (
+            measures["Assessments - Open - Count"],
+            measures["Assessments - Open - Rate"],
+        ) = cyp_count(open_assessments)
         (
             measures["Assessments - Closed - Count"],
             measures["Assessments - Closed - Rate"],
@@ -933,9 +950,11 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             dfs["list_4"], "Assessments - Ethnicities"
         )
         # Child assessed as needing CSC support?
-        measures["Assessments - Needs CSC support? - Percent"] = percent_of_col_with_value(
-            dfs["list_4"],
-            col="Was the child assessed as requiring LA children's social care support?",
+        measures["Assessments - Needs CSC support? - Percent"] = (
+            percent_of_col_with_value(
+                dfs["list_4"],
+                col="Was the child assessed as requiring LA children's social care support?",
+            )
         )
         # Duration for all completed and open assessments
         assessment_durations, assessments_with_days = timelines_metric(
@@ -946,17 +965,17 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             working_days=True,
         )
         # Assessments completed in 45 working days
-        measures["Assessments - Assessments in 45 working days - Percent"] = event_in_time(
-            assessments_with_days, "time_diff", 45
+        measures["Assessments - Assessments in 45 working days - Percent"] = (
+            event_in_time(assessments_with_days, "time_diff", 45)
         )
         # assessment durations by bin
         assessment_durations_bins = timelines_with_bins(
             assessments_with_days, "Assessments - Assessments Durations", day_bins
         )
-        st.write('Completed calculations for Assessments')
+        st.write("Completed calculations for Assessments")
 
     # Section 47s
-    if "list_5" in lists_uploaded:    
+    if "list_5" in lists_uploaded:
         # S47 count and rp10k
         (
             measures["Section 47 - Section 47 - Count"],
@@ -975,15 +994,19 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             "Number of Section 47 Enquiries in the last 12 months",
         )
         # S47 ethnicity
-        s47_ethnicity = ethnic_background_metric(dfs["list_5"], "Section 47 - Ethnicities")
-        st.write('Completed calculations for Section 47s')
+        s47_ethnicity = ethnic_background_metric(
+            dfs["list_5"], "Section 47 - Ethnicities"
+        )
+        st.write("Completed calculations for Section 47s")
 
     # ICPCs
     if "list_5" in lists_uploaded:
         icpc = dfs["list_5"][
             dfs["list_5"]["Date of Initial Child Protection Conference"].notna()
         ]
-        measures["ICPC - ICPC - Count"], measures["ICPC - ICPC - Rate"] = cyp_count(icpc)
+        measures["ICPC - ICPC - Count"], measures["ICPC - ICPC - Rate"] = cyp_count(
+            icpc
+        )
         # S47 not requiring an ICPC
         measures["Section 47 - Section 47 Not requiring ICPC - Percent"] = (
             percent_of_col_with_value(
@@ -1019,7 +1042,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         icpc_durations_bins = timelines_with_bins(
             icpcs_with_days, "ICPC - ICPC Durations", icpc_bins
         )
-        st.write('Completed calculations for ICPCs')
+        st.write("Completed calculations for ICPCs")
 
     # # CINs
     # # CIN plans
@@ -1059,7 +1082,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             "Reason for Closure",
             "CIN plans - Reason for closure",
         )
-        st.write('Completed calculations for CIN Plans.')
+        st.write("Completed calculations for CIN Plans.")
 
     # # Open CIN
     if "list_6" in lists_uploaded:
@@ -1103,7 +1126,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         open_cin_need = category_metrics(
             open_cin, "Primary Need Code", "CIN - Primary need code (open plans)"
         )
-        st.write('Completed calculations for Open CINs.')
+        st.write("Completed calculations for Open CINs.")
 
     # # CPPs
     if "list_7" in lists_uploaded:
@@ -1144,7 +1167,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         ) = event_in_period(dfs["list_7"], "Child Protection Plan End Date", 0, 6)
         # # CPP re-registrations
         multiple_cpp = multiple_same_event(
-            dfs["list_7"], "CPP - Multiple CPP", "Number of Previous Child Protection Plans"
+            dfs["list_7"],
+            "CPP - Multiple CPP",
+            "Number of Previous Child Protection Plans",
         )
         multiple_cpp_started_6mths = multiple_same_event(
             cpp_started_6mths,
@@ -1194,7 +1219,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         measures["CPP - CPP longer than 2 years closed within 6 months - Percent"] = (
             percent_of_col_with_value(cpp_ended_6mths, col="Longer than 2 years")
         )
-        st.write('Completed calculations for CPPs - general')
+        st.write("Completed calculations for CPPs - general")
 
     # # CPPs currently open
     if "list_7" in lists_uploaded:
@@ -1249,12 +1274,16 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             "CPP - Last review (open plans)",
         )
         cpp_open_last_seen_bins = timelines_with_bins(
-            cpp_open_time_last_seen_days, "CPP - Last visit (open plans)", last_seen_bins
+            cpp_open_time_last_seen_days,
+            "CPP - Last visit (open plans)",
+            last_seen_bins,
         )
         cpp_open_last_review_bins = timelines_with_bins(
-            cpp_open_time_last_review_days, "CPP - Last review (open plans)", review_bins
+            cpp_open_time_last_review_days,
+            "CPP - Last review (open plans)",
+            review_bins,
         )
-        st.write('Calculations completed for CPPs Currently Open.')
+        st.write("Calculations completed for CPPs Currently Open.")
 
     # # CLA started ceased 6 months
     if "list_8" in lists_uploaded:
@@ -1320,7 +1349,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             "Reason Ceased to be Looked After",
             "CLA - Reason (Started within 6 months)",
         )
-        st.write('Calculations completed for CLA Started and Ceased within 6 months.')
+        st.write("Calculations completed for CLA Started and Ceased within 6 months.")
 
     # # CLA with open episode
     if "list_8" in lists_uploaded:
@@ -1331,7 +1360,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             measures["CLA - CLA (open plans) - Count"],
             measures["CLA - CLA (open plans) - Rate"],
         ) = cyp_count(open_cla)
-        cla_open_gender = age_gender_metric(open_cla, "CLA - Age breakdown (open plans)")
+        cla_open_gender = age_gender_metric(
+            open_cla, "CLA - Age breakdown (open plans)"
+        )
         measures["CLA - UASC (open plans) - Percent"] = percent_of_col_with_value(
             open_cla,
             col="Unaccompanied Asylum Seeking Child (UASC) within the Last 12 Months (Y/N)",
@@ -1372,11 +1403,13 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             "CLA - Time since last seen (open plans)",
             last_seen_bins,
         )
-        st.write('Completed calculations for CLA with open episode.')
+        st.write("Completed calculations for CLA with open episode.")
 
     # # CLA Placements
     if "list_8" in lists_uploaded:
-        cla_type = category_metrics(dfs["list_8"], "Placement Type", "CLA - Placement type")
+        cla_type = category_metrics(
+            dfs["list_8"], "Placement Type", "CLA - Placement type"
+        )
         cla_provider = category_metrics(
             dfs["list_8"], "Placement Provider", "CLA - Placement provider"
         )
@@ -1388,7 +1421,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         measures["CLA - Short term stability - Percent"] = short_term_stability(
             dfs["list_8"], col="Number of Placements in the Last 12 months"
         )
-        measures["CLA - Long term stability - Percent"] = long_term_stability(dfs["list_8"])
+        measures["CLA - Long term stability - Percent"] = long_term_stability(
+            dfs["list_8"]
+        )
         cla_over_30_months = dfs["list_8"][
             pd.to_datetime(
                 dfs["list_8"]["Date Started to be Looked After"],
@@ -1399,18 +1434,20 @@ if (uploaded_files != None) & (mid_year_estimates != None):
                 dfs["list_8"]["Reference Date"] - pd.DateOffset(years=2, months=6)
             )
         ]
-        cla_over_30_months_duration, cla_over_30_months_duration_days = timelines_metric(
-            cla_over_30_months,
-            "Start Date of Most Recent Placement",
-            "Reference Date",
-            "CLA - CLA Duration (CLA over 30 months)",
+        cla_over_30_months_duration, cla_over_30_months_duration_days = (
+            timelines_metric(
+                cla_over_30_months,
+                "Start Date of Most Recent Placement",
+                "Reference Date",
+                "CLA - CLA Duration (CLA over 30 months)",
+            )
         )
         cla_over_30_months_bins = timelines_with_bins(
             cla_over_30_months_duration_days,
             "CLA - CLA Duration (CLA over 30 months)",
             month_year_bins,
         )
-        st.write('Completed calculations for CLA Placements.')
+        st.write("Completed calculations for CLA Placements.")
 
     # # CLA health and missing/absent
     if "list_8" in lists_uploaded:
@@ -1423,7 +1460,7 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         measures["CLA - CLA open over 12 months - Percent"] = percent_of_col_with_value(
             open_cla, col="Open over 12 months"
         )
-        st.write('Completed calculations for CLA missing/absent.')
+        st.write("Completed calculations for CLA missing/absent.")
 
     # # open cla with health assessment in six months if under 5 and 12 months if 5 plus
     if "list_8" in lists_uploaded:
@@ -1434,7 +1471,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
                 errors="coerce",
             )
             >= pd.to_datetime(
-                cla_open_over_12_months["Reference Date"], dayfirst=True, errors="coerce"
+                cla_open_over_12_months["Reference Date"],
+                dayfirst=True,
+                errors="coerce",
             )
             - pd.DateOffset(months=6)
         ) & (cla_open_over_12_months["Age of Child (Years)"] >= 5)
@@ -1445,7 +1484,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
                 errors="coerce",
             )
             >= pd.to_datetime(
-                cla_open_over_12_months["Reference Date"], dayfirst=True, errors="coerce"
+                cla_open_over_12_months["Reference Date"],
+                dayfirst=True,
+                errors="coerce",
             )
             - pd.DateOffset(months=6)
         ) & (cla_open_over_12_months["Age of Child (Years)"] < 5)
@@ -1459,16 +1500,18 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             left_index=True,
             right_index=True,
         )
-        cla_open_over_12_months["Health assessment up to date"] = cla_open_over_12_months[
-            "Health assessment up to date"
-        ].fillna("No")
+        cla_open_over_12_months["Health assessment up to date"] = (
+            cla_open_over_12_months["Health assessment up to date"].fillna("No")
+        )
         measures["CLA - Health assessment up to date (open 12 months) - Percent"] = (
             percent_of_col_with_value(
                 cla_open_over_12_months, col="Health assessment up to date"
             )
         )
-        measures["CLA - Dental timeliness (open 12 months) - Percent"] = event_timeliness(
-            cla_open_over_12_months, "Date of Last Dental Check", days=0, months=12
+        measures["CLA - Dental timeliness (open 12 months) - Percent"] = (
+            event_timeliness(
+                cla_open_over_12_months, "Date of Last Dental Check", days=0, months=12
+            )
         )
         multiple_cla_missing = multiple_same_event(
             dfs["list_8"],
@@ -1478,7 +1521,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         dfs["list_8"]["At least one missing"] = dfs["list_8"][
             "Number of Episodes the Child has been 'Missing' from their Placement in the last 12 months"
         ].apply(
-            lambda x: "No" if (x == "0") | (x == 0) | (pd.isnull(x)) | (x == " ") else "Yes"
+            lambda x: (
+                "No" if (x == "0") | (x == 0) | (pd.isnull(x)) | (x == " ") else "Yes"
+            )
         )
         measures["CLA - At least one missing - Percent"] = percent_of_col_with_value(
             dfs["list_8"], col="At least one missing"
@@ -1501,7 +1546,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         measures["CLA - With absent incident - Percent"] = percent_of_col_with_value(
             dfs["list_8"], col="Has absent episode?"
         )
-        st.write('Calculations completed for open cla with health assessment in six months if under 5 and 12 months if 5 plus.')
+        st.write(
+            "Calculations completed for open cla with health assessment in six months if under 5 and 12 months if 5 plus."
+        )
 
     # # Care leavers
     if "list_9" in lists_uploaded:
@@ -1525,15 +1572,15 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             (dfs["list_9"]["Age of Child (Years)"] == 18)
             | (dfs["list_9"]["Age of Child (Years)"] == 17)
         ]
-        measures["Care leavers - In touch 17 to 18 - Percent"] = percent_of_col_with_value(
-            leavers_17_18, col="LA in Touch"
+        measures["Care leavers - In touch 17 to 18 - Percent"] = (
+            percent_of_col_with_value(leavers_17_18, col="LA in Touch")
         )
         leavers_19_21 = dfs["list_9"][
             (dfs["list_9"]["Age of Child (Years)"] >= 19)
             | (dfs["list_9"]["Age of Child (Years)"] <= 21)
         ]
-        measures["Care leavers - In touch 19 to 21 - Percent"] = percent_of_col_with_value(
-            leavers_19_21, col="LA in Touch"
+        measures["Care leavers - In touch 19 to 21 - Percent"] = (
+            percent_of_col_with_value(leavers_19_21, col="LA in Touch")
         )
         metrics_by_age = groupby_age(
             dfs["list_9"], "Age of Child (Years)", "Care leavers - By age", "Age"
@@ -1550,9 +1597,8 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             / metrics_by_age["Care leavers - By age - Count"]
             * 100
         )
-        
 
-    # # Care leavers accomodation and suitability type
+        # # Care leavers accomodation and suitability type
         measures["Care leavers - Accomodation suitability - Percent"] = (
             percent_of_col_with_value(dfs["list_9"], col="Suitability of Accommodation")
         )
@@ -1566,16 +1612,22 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             "Age",
         )
         metrics_by_age = metrics_by_age.merge(
-            suitable_accomodation, how="outer", on=["name_period", "Age of Child (Years)"]
+            suitable_accomodation,
+            how="outer",
+            on=["name_period", "Age of Child (Years)"],
         )
         care_leavers_accomodation_17_18 = category_metrics(
-            leavers_17_18, "Type of Accommodation", "Care leavers - type of accomodation"
+            leavers_17_18,
+            "Type of Accommodation",
+            "Care leavers - type of accomodation",
         )
         care_leavers_accomodation_19_21 = category_metrics(
-            leavers_19_21, "Type of Accommodation", "Care leavers - type of accomodation"
+            leavers_19_21,
+            "Type of Accommodation",
+            "Care leavers - type of accomodation",
         )
 
-    # # Care leavers EET
+        # # Care leavers EET
         care_leavers_eet = dfs["list_9"][
             ~(
                 dfs["list_9"]["Activity Status"]
@@ -1596,80 +1648,99 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             care_leavers_eet, "Age of Child (Years)", "Care leavers - In EET", "Age"
         )
         metrics_by_age = metrics_by_age.merge(
-            care_leavers_eet_age, how="outer", on=["name_period", "Age of Child (Years)"]
+            care_leavers_eet_age,
+            how="outer",
+            on=["name_period", "Age of Child (Years)"],
         )
         care_leavers_activity_17_18 = category_metrics(
-            leavers_17_18, "Activity Status", "Care leavers - Activity status (17 to 18)"
+            leavers_17_18,
+            "Activity Status",
+            "Care leavers - Activity status (17 to 18)",
         )
         care_leavers_activity_19_21 = category_metrics(
-            leavers_19_21, "Activity Status", "Care leavers - Activity status (19 to 21)"
+            leavers_19_21,
+            "Activity Status",
+            "Care leavers - Activity status (19 to 21)",
         )
-        st.write('Completed calculations for Care Leavers.')
+        st.write("Completed calculations for Care Leavers.")
 
     # # Calculations end, organisation for outputs begins
     categoricals_to_concat = []
     multiples_to_merge = []
     age_gender_to_merge = []
     ethnicities_to_merge = []
-    if 'list_1' in lists_uploaded:
+    if "list_1" in lists_uploaded:
         categoricals_to_concat.extend([contact_sources])
         multiples_to_merge.extend([multiple_contacts])
         age_gender_to_merge.extend([contact_age_gender])
         ethnicities_to_merge.extend([contact_ethnicity])
-    if 'list_2' in lists_uploaded:
+    if "list_2" in lists_uploaded:
         multiples_to_merge.extend([multiple_assessments])
         age_gender_to_merge.extend([eh_age_gender])
         ethnicities_to_merge.extend([eh_ethnicity])
-    if 'list_3' in lists_uploaded:
+    if "list_3" in lists_uploaded:
         categoricals_to_concat.extend([referral_sources])
         multiples_to_merge.extend([multiple_referral])
         age_gender_to_merge.extend([referral_age_gender])
         ethnicities_to_merge.extend([referral_ethnicity])
-    if 'list_4' in lists_uploaded:
+    if "list_4" in lists_uploaded:
         categoricals_to_concat.extend([assessment_durations_bins])
         age_gender_to_merge.extend([assessments_age_gender])
         ethnicities_to_merge.extend([assessments_ethnicity])
-    if 'list_5' in lists_uploaded:
+    if "list_5" in lists_uploaded:
         categoricals_to_concat.extend([icpc_durations_bins])
         multiples_to_merge.extend([multiple_s47, multiple_icpc])
         age_gender_to_merge.extend([s47_age_gender])
         ethnicities_to_merge.extend([s47_ethnicity])
-    if 'list_6' in lists_uploaded:
-        categoricals_to_concat.extend([ cin_ceased_reasons, cin_closed_bins, open_cin_bins])
+    if "list_6" in lists_uploaded:
+        categoricals_to_concat.extend(
+            [cin_ceased_reasons, cin_closed_bins, open_cin_bins]
+        )
         age_gender_to_merge.extend([open_cin_age_gender])
         ethnicities_to_merge.extend([open_cin_ethnicity])
-    if 'list_7' in lists_uploaded:
-        categoricals_to_concat.extend([cpp_initial_category_of_abuse,
-        cpp_ended_bins,
-        cpp_open_bins,
-        cpp_open_last_seen_bins,
-        cpp_open_last_review_bins])
-        multiples_to_merge.extend([multiple_cpp,
-                                   multiple_cpp_started_6mths])
+    if "list_7" in lists_uploaded:
+        categoricals_to_concat.extend(
+            [
+                cpp_initial_category_of_abuse,
+                cpp_ended_bins,
+                cpp_open_bins,
+                cpp_open_last_seen_bins,
+                cpp_open_last_review_bins,
+            ]
+        )
+        multiples_to_merge.extend([multiple_cpp, multiple_cpp_started_6mths])
         age_gender_to_merge.extend([cpp_currently_open_age_gender])
         ethnicities_to_merge.extend([open_cpp_ethnicity])
-    if 'list_8' in lists_uploaded:
-        categoricals_to_concat.extend([ cla_open_legal_status,
-        cla_open_plan,
-        cla_type,
-        cla_provider,
-        cla_last_review_bins,
-        cla_last_seen_bins,
-        cla_over_30_months_bins])
-        multiples_to_merge.extend([multiple_cla,
-                                   multiple_cla_missing])
-        age_gender_to_merge.extend([cla_started_gender, cla_ended_gender, cla_open_gender])
+    if "list_8" in lists_uploaded:
+        categoricals_to_concat.extend(
+            [
+                cla_open_legal_status,
+                cla_open_plan,
+                cla_type,
+                cla_provider,
+                cla_last_review_bins,
+                cla_last_seen_bins,
+                cla_over_30_months_bins,
+            ]
+        )
+        multiples_to_merge.extend([multiple_cla, multiple_cla_missing])
+        age_gender_to_merge.extend(
+            [cla_started_gender, cla_ended_gender, cla_open_gender]
+        )
         ethnicities_to_merge.extend([open_cla_ethnicity])
-    if 'list_9' in lists_uploaded:
-        categoricals_to_concat.extend([care_leavers_eligibility,
-        care_leavers_accomodation_19_21,
-        care_leavers_accomodation_17_18,
-        care_leavers_activity_17_18,
-        care_leavers_activity_19_21 ])
+    if "list_9" in lists_uploaded:
+        categoricals_to_concat.extend(
+            [
+                care_leavers_eligibility,
+                care_leavers_accomodation_19_21,
+                care_leavers_accomodation_17_18,
+                care_leavers_activity_17_18,
+                care_leavers_activity_19_21,
+            ]
+        )
         age_gender_to_merge.extend([care_leavers_gender])
         ethnicities_to_merge.extend([care_leavers_ethnicity])
-    
-    
+
     # categoricals_to_concat = [
     #     contact_sources, #
     #     referral_sources, #
@@ -1874,7 +1945,9 @@ if (uploaded_files != None) & (mid_year_estimates != None):
 
     if output != None:
         st.download_button(
-            "Download output excel here", output, file_name="Annex A pre-processing output.xlsx"
+            "Download output excel here",
+            output,
+            file_name="Annex A pre-processing output.xlsx",
         )
     else:
         st.download_button(

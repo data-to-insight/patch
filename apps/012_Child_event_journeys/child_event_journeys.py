@@ -646,6 +646,7 @@ def gantt_type_2(chosen_child, df):
 
     return fig
 
+
 def cohort_data_generator(df):
     events_split = df[["child unique id", "Child journey"]].copy()
     events_split["Child journey"] = events_split["Child journey"].str.split("->")
@@ -660,28 +661,35 @@ def cohort_data_generator(df):
     events_split["Date"] = events_split["Date"].str.replace("[", "")
     events_split["Date"] = events_split["Date"].str.strip()
 
-    events_split["Date"] = pd.to_datetime(
-        events_split["Date"], format="%Y-%m-%d"
-    )
+    events_split["Date"] = pd.to_datetime(events_split["Date"], format="%Y-%m-%d")
     events_split.sort_values("Date", ascending=True)
 
-    events_split["Event order"] = events_split.groupby(["child unique id", "Type"]).cumcount()
+    events_split["Event order"] = events_split.groupby(
+        ["child unique id", "Type"]
+    ).cumcount()
 
     events_split["Finish Dates"] = events_split.apply(
-            lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
-            axis=1,
-        )
-    
-    events_split = events_split[events_split['Finish Dates'].notna()]
+        lambda row: finish_dates(row["Type"], row["Date"], row["Event order"]),
+        axis=1,
+    )
 
-    events_split["Finish Dates"] = pd.to_datetime(events_split["Finish Dates"], errors='coerce')
-    
-    events_split['Duration (days)'] = events_split['Finish Dates'] - events_split['Date']
-    events_split['Duration (days)'] = round(events_split['Duration'] / pd.Timedelta(1, 'd'))
+    events_split = events_split[events_split["Finish Dates"].notna()]
+
+    events_split["Finish Dates"] = pd.to_datetime(
+        events_split["Finish Dates"], errors="coerce"
+    )
+
+    events_split["Duration (days)"] = (
+        events_split["Finish Dates"] - events_split["Date"]
+    )
+    events_split["Duration (days)"] = round(
+        events_split["Duration"] / pd.Timedelta(1, "d")
+    )
 
     # events_split = events_split[['child unique id', 'Type', 'Date', 'Finish Dates', 'Event order', 'Duration']]
 
     return events_split
+
 
 # Main app
 st.markdown(
@@ -692,8 +700,7 @@ st.markdown(
 st.title("Child Event Journeys")
 
 with st.expander("Explanation and accreditation"):
-    st.markdown(
-        """
+    st.markdown("""
     This code was originally developed by [Celine Gross](https://github.com/Cece78) and [Kaj Siebert](https://github.com/kws) 
     at Social Finance as part of a grant funded programme to support Local Authorities to collaborate on data analysis (since 
     this, Data to Insight have given the code a new home on the PATCh tool). The 
@@ -728,16 +735,13 @@ with st.expander("Explanation and accreditation"):
     Annex A xlsx into the upload box. There are, however, some slight requirements. Firstly, you need to have your entire Annex A
     in one Excel file. Next, you must either name the sheets in the style of "List_1", through to "List_8" or capitalised and named, such as "Contacts" and "Children in Care".
     Full tables of necessary sheet and column name spellings/syntax/grammar can be seen in the dropdown below.
-    """
-    )
+    """)
 
 with st.expander("Sheet names and column headers"):
-    st.write(
-        """
+    st.write("""
     Only lists 1-8 are needed, and they must be labelled according to one of the two following schema. 
     We've tried to add some leeway into the code in case it doesn't match exactly, but if things are going wrong, 
-    these are good things to check!"""
-    )
+    these are good things to check!""")
     st.table(
         pd.DataFrame(
             {
@@ -806,7 +810,7 @@ if file:
             "Annex A journeys table and download",
             "Journeys timeline",
             "Potentially concerning children",
-            "Cohort analysis"
+            "Cohort analysis",
         ]
     )
 
