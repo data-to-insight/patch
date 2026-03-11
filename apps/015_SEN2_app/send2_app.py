@@ -151,6 +151,17 @@ def calculate_age_buckets(age):
         return "f) Age error"
 
 
+def make_bar(df, buckets, column):
+    values_df = pd.DataFrame({column:buckets})
+    df_counts = df.groupby(column).size().to_frame('Count').reset_index()
+    df_counts = df_counts.merge(values_df, how='outer', on='AgeBuckets')
+    df_counts['Count'] = df_counts['Count'].fillna(0)
+    df_counts.sort_values(column, inplace=True)
+    
+    bar = px.bar(df_counts, x=column, y='Count')
+
+    return bar
+
 ###################
 # Ingress
 ###################
@@ -618,20 +629,30 @@ if input_file:
 
     sen2 = Datacontainer(data_files)
 
+    with st.sidebar:
+        st.write("Slice here")
+
+        sex_selected = st.sidebar.multiselect("Select Sex", (sen2.enriched_requests['Sex'].unique()), default=(sen2.enriched_requests['Sex'].unique()))
+        age_selected = st.sidebar.multiselect("Select age buckets", (["a) Under 1 year","b) 1 to 4 years","c) 5 to 9 years","d) 10 to 16 years", "e) 16 years and over","f) Age error"]), default=(["a) Under 1 year","b) 1 to 4 years","c) 5 to 9 years","d) 10 to 16 years", "e) 16 years and over","f) Age error"]))
+
+    sliced_enriched_persons = sen2.enriched_persons[sen2.enriched_persons['Sex'].isin(sex_selected) &
+                                                    sen2.enriched_requests['AgeBuckets'].isin(age_selected)]
+
     with st.expander("Headline Figures"):
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            gender_pie = px.pie(sen2.enriched_persons, names="Sex")
+            gender_pie = px.pie(sliced_enriched_persons, names="Sex")
             st.plotly_chart(gender_pie, use_container_width=True)
 
         with col2:
-            ethnicity_chart = px.histogram(sen2.enriched_persons, "EthnicityGroup")
+            ethnicity_chart = px.histogram(sliced_enriched_persons, "EthnicityGroup")
             st.plotly_chart(ethnicity_chart, use_container_width=True)
 
         with col3:
-            age_chart = px.histogram(sen2.enriched_persons, "AgeBuckets")
+            age_chart = make_bar(sliced_enriched_persons, ["a) Under 1 year","b) 1 to 4 years","c) 5 to 9 years","d) 10 to 16 years", "e) 16 years and over","f) Age error"], 'AgeBuckets')
             st.plotly_chart(age_chart, use_container_width=True)
+
 
         with col4:
             sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
@@ -701,7 +722,8 @@ if input_file:
 
             st.plotly_chart(request_sources, use_container_width=True)
 
-            sen2.enriched_requests
+            requests_rya = px.pie(sen2.enriched_requests, names="RYA")
+            st.plotly_chart(requests_rya, use_container_width=True)
 
         with req_col3:
             request_outcomes = px.histogram(
@@ -722,16 +744,17 @@ if input_file:
             requests_exported = px.pie(sen2.enriched_requests, names="Exported")
             st.plotly_chart(requests_exported, use_container_width=True)
 
-
+    with st.expander('CYP in selected drilldown:'):
+        st.table(sliced_enriched_persons)
 # TODO Requests:
 #   requests in year DONE
 #   request sources DONE
-#   request lengths - does this need bucketing?
+#   request lengths - DONE does this need bucketing?
 #   request outcomes DONE
 #   RYA - relevant youth accomodation
-#   request mediatioons and tribunals?
-#   requests exported
-#   requests by age
+#   request mediatioons and tribunals DONE
+#   requests exported DONE
+#   requests by age DONE
 
 # TODO assessments:
 #   assessments in year
@@ -761,3 +784,4 @@ if input_file:
 #   annual review decisions
 #   phase transfer reviews
 #   placement details
+
