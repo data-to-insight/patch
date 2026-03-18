@@ -163,6 +163,55 @@ def make_bar(df, buckets, column):
     return bar
 
 
+def make_indicator(df, title):
+    indicator = make_subplots(
+        rows=3,
+        cols=1,
+        specs=[
+            [{"type": "indicator"}],
+            [{"type": "indicator"}],
+            [{"type": "indicator"}],
+        ],
+    )
+
+    indicator.update_layout(
+        paper_bgcolor="lightgray", font=dict(size=18, color="black")
+    )
+
+    indicator.add_trace(
+        go.Indicator(
+            mode="number",
+            value=len(df),
+            title={"text": title},
+        ),
+        row=1,
+        col=1,
+    )
+
+    if len(df[df["Sex"] == "M"]) > 0:
+        indicator.add_trace(
+            go.Indicator(
+                mode="number",
+                value=len(df[df["Sex"] == "M"]),
+                title={"text": f"{title} - Male"},
+            ),
+            row=2,
+            col=1,
+        )
+    if len(df[df["Sex"] == "F"]) > 0:
+        indicator.add_trace(
+            go.Indicator(
+                mode="number",
+                value=len(df[df["Sex"] == "F"]),
+                title={"text": f"{title} - Female"},
+            ),
+            row=3,
+            col=1,
+        )
+
+    return indicator
+
+
 ###################
 # Ingress
 ###################
@@ -582,6 +631,34 @@ class Datacontainer:
             on="child_id",
         )
 
+        enriched_df["AssessmentOutcomeDate"] = pd.to_datetime(
+            enriched_df["AssessmentOutcomeDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        enriched_df["MediationOrTribunal"] = enriched_df.apply(
+            lambda x: (
+                "Yes"
+                if (x["AssessmentOutcome"] != "H")
+                & (
+                    (x["AssessmentMediation"] == "1")
+                    | (x["AssessmentTribunal"] == "1")
+                    | (x["OtherMediation"] == "1")
+                    | (x["OtherTribunal"] == "1")
+                )
+                else "No"
+            ),
+            axis=1,
+        )
+
+        enriched_df["Week20"] = enriched_df.apply(
+            lambda x: (
+                "Yes"
+                if (x["AssessmentOutcome"] != "H") & (x["Week20"] == "1")
+                else "No"
+            ),
+            axis=1,
+        )
+
         return enriched_df
 
     @property
@@ -637,6 +714,9 @@ if input_file:
         # Open SEN plan lengths
         # Exported
         # Week 20
+        # TODO SLICERS
+        # display charts by age/male-female
+        # output measures and ingress to excel?
 
         sex_selected = st.sidebar.multiselect(
             "Select Sex",
@@ -677,6 +757,12 @@ if input_file:
         & sen2.enriched_requests["AgeBuckets"].isin(age_selected)
     ]
 
+    sliced_enriched_assessments = sen2.enriched_assessments[
+        (sen2.enriched_assessments["Sex"].isin(sex_selected))
+        & (sen2.enriched_assessments["AgeBuckets"].isin(age_selected))
+        & (sen2.enriched_assessments["AssessmentOutcome"] != "H")
+    ]
+
     with st.expander("Headline Figures"):
         col1, col2, col3, col4 = st.columns(4)
 
@@ -711,64 +797,7 @@ if input_file:
         req_col1, req_col2, req_col3, req_col4 = st.columns(4)
 
         with req_col1:
-            total_requests = make_subplots(
-                rows=3,
-                cols=1,
-                specs=[
-                    [{"type": "indicator"}],
-                    [{"type": "indicator"}],
-                    [{"type": "indicator"}],
-                ],
-            )
-
-            total_requests.update_layout(
-                paper_bgcolor="lightgray", font=dict(size=18, color="black")
-            )
-
-            total_requests.add_trace(
-                go.Indicator(
-                    mode="number",
-                    value=len(sliced_enriched_requests),
-                    title={"text": "Total requests"},
-                ),
-                row=1,
-                col=1,
-            )
-
-            if (
-                len(sliced_enriched_requests[sliced_enriched_requests["Sex"] == "M"])
-                > 0
-            ):
-                total_requests.add_trace(
-                    go.Indicator(
-                        mode="number",
-                        value=len(
-                            sliced_enriched_requests[
-                                sliced_enriched_requests["Sex"] == "M"
-                            ]
-                        ),
-                        title={"text": "Total requests - Male"},
-                    ),
-                    row=2,
-                    col=1,
-                )
-            if (
-                len(sliced_enriched_requests[sliced_enriched_requests["Sex"] == "F"])
-                > 0
-            ):
-                total_requests.add_trace(
-                    go.Indicator(
-                        mode="number",
-                        value=len(
-                            sliced_enriched_requests[
-                                sliced_enriched_requests["Sex"] == "F"
-                            ]
-                        ),
-                        title={"text": "Total requests - Female"},
-                    ),
-                    row=3,
-                    col=1,
-                )
+            total_requests = make_indicator(sliced_enriched_requests, "Total Requests")
             st.plotly_chart(total_requests, use_container_width=True)
 
             request_lengths = px.histogram(sliced_enriched_requests, "RequestLength")
@@ -803,43 +832,63 @@ if input_file:
             requests_exported = px.pie(sliced_enriched_requests, names="Exported")
             st.plotly_chart(requests_exported, use_container_width=True)
 
+    with st.expander("Assessments"):
+        ass_col1, ass_col2, ass_col3, ass_col4 = st.columns(4)
+
+        with ass_col1:
+            total_assessments = make_indicator(
+                sliced_enriched_assessments, "Total Assessments"
+            )
+            st.plotly_chart(total_assessments, use_container_width=True)
+
+            st.write(
+                "TODO assessment timeliness - how many in 20 weeks, how many over 20 weeks without extension"
+            )
+
+        with ass_col2:
+            assessment_outcomes = px.histogram(
+                sliced_enriched_assessments, "AssessmentOutcome", color="Sex"
+            )
+            st.plotly_chart(assessment_outcomes, use_container_width=True)
+
+        with ass_col3:
+            assessment_tribunal = px.histogram(
+                sliced_enriched_assessments, "MediationOrTribunal", color="Sex"
+            )
+            st.plotly_chart(assessment_tribunal, use_container_width=True)
+
+        with ass_col4:
+            week20s = px.histogram(sliced_enriched_assessments, "Week20", color="Sex")
+            st.plotly_chart(week20s, use_container_width=True)
+
+    with st.expander("Named Plans"):
+        np_col1, np_col2, np_col3, np_col4 = st.columns(4)
+        # TODO named plans:
+        #   plans starting in year
+        #   plans ending in year
+        #   plans ceased in year reasons
+        #   active plans on census day
+        #   active plans open length
+        #   sen settings
+        #   plan res (residential setting)
+        #   work based learning activities (plan wbp)
+        #   personal budget taken up PB, peronal budget organised arrangements OA, direct payments DP
+        #   plan detail  establishments
+        #   sen settings
+
+        pass
+
+    with st.expander("Active Plans"):
+        ap_col1, ap_col2, ap_col3, ap_col4 = st.columns(4)
+        # TODO active plans
+        #   ehcs transferred in TransferLA
+        #   residential settings
+        #   work based learning activities
+        #   date of lasr review meeting (time since?)
+        #   annual review decisions
+        #   phase transfer reviews
+        #   placement details
+        pass
+
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_persons)
-# TODO Requests:
-#   requests in year DONE
-#   request sources DONE
-#   request lengths - DONE does this need bucketing?
-#   request outcomes DONE
-#   RYA - relevant youth accomodation
-#   request mediatioons and tribunals DONE
-#   requests exported DONE
-#   requests by age DONE
-
-# TODO assessments:
-#   assessments in year
-#   assessment outcomes
-#   assessment lengths (20 weeks?)
-#   mediations/tribunals
-#   week20s - time limit exceptions apply?
-
-# TODO named plans:
-#   plans starting in year
-#   plans ending in year
-#   plans ceased in year reasons
-#   active plans on census day
-#   active plans open length
-#   sen settings
-#   plan res (residential setting)
-#   work based learning activities (plan wbp)
-#   personal budget taken up PB, peronal budget organised arrangements OA, direct payments DP
-#   plan detail  establishments
-#   sen settings
-
-# TODO active plans
-#   ehcs transferred in TransferLA
-#   residential settings
-#   work based learning activities
-#   date of lasr review meeting (time since?)
-#   annual review decisions
-#   phase transfer reviews
-#   placement details
