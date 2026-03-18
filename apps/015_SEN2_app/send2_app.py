@@ -537,16 +537,19 @@ class Datacontainer:
     def __init__(self, data_dict: dict):
         self.data = data_dict
 
-        self.reference_date = self._get_reference_date(self.data.header)
+        self.reference_period = self._get_reference_period(self.data.header)
 
         self.persons = self.data.persons
 
-    def _get_reference_date(self, df):
-        reference_date = df["ReferenceDate"].iloc[0]
+    def _get_reference_period(self, df):
+        year = int(df["Year"].iloc[0])
 
-        reference_date = pd.to_datetime(reference_date, format="%Y-%m-%d")
+        start = pd.to_datetime(f"{str(year-1)}-01-01", format=f"%Y-%m-%d")
+        end = pd.to_datetime(f"{str(year-1)}-12-31", format=f"%Y-%m-%d")
 
-        return reference_date
+        reference_period = {"start": start, "end": end}
+
+        return reference_period
 
     @property
     def enriched_persons(self):
@@ -559,7 +562,9 @@ class Datacontainer:
             enriched_df["PersonBirthDate"], format="%Y-%m-%d"
         )
         enriched_df["Age"] = enriched_df["PersonBirthDate_dt"].apply(
-            lambda x: relativedelta(dt1=self.reference_date, dt2=x).normalized().years
+            lambda x: relativedelta(dt1=self.reference_period["end"], dt2=x)
+            .normalized()
+            .years
         )
         enriched_df["AgeBuckets"] = enriched_df["Age"].apply(calculate_age_buckets)
 
@@ -663,12 +668,47 @@ class Datacontainer:
 
     @property
     def enriched_named_plan(self):
-        enriched_df = self.data.names_plan.copy()
+        enriched_df = self.data.named_plan.copy()
 
         enriched_df = enriched_df.merge(
             self.enriched_persons[["AgeBuckets", "EthnicityGroup", "Sex", "child_id"]],
             how="left",
             on="child_id",
+        )
+
+        enriched_df["CeaseReason"] = enriched_df["CeaseReason"].astype("str")
+        enriched_df["CeaseReason"] = enriched_df["CeaseReason"].map(
+            {
+                "1": "1) Reached maximum age",
+                "2": "2) Need met w/o EHC",
+                "3": "3) Moved to HE",
+                "4": "4) Moved to paid employment/apprenticeships",
+                "5": "5) Transferred",
+                "6": "6) No longer wishes to engage",
+                "7": "7) Moved outside of England",
+                "8": "8) Deceased",
+                "9": "9) Other",
+            }
+        )
+
+        enriched_df["StartDate"] = pd.to_datetime(
+            enriched_df["StartDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        enriched_df["StartDate_year"] = enriched_df["StartDate"].dt.year
+
+        enriched_df["CeaseDate"] = pd.to_datetime(
+            enriched_df["CeaseDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        enriched_df["CeaseDate_year"] = enriched_df["CeaseDate"].dt.year
+
+        enriched_df["NamedPlanLength (days)"] = (
+            self.reference_period["end"] - enriched_df["StartDate"]
+        ) / pd.Timedelta(days=1)
+
+        enriched_df["PlanRes"] = enriched_df["PlanRes"].map(
+            {"A": "38 to 51 weeks", "B": "52 weeks"}
         )
 
         return enriched_df
@@ -755,12 +795,23 @@ if input_file:
     sliced_enriched_requests = sen2.enriched_requests[
         sen2.enriched_requests["Sex"].isin(sex_selected)
         & sen2.enriched_requests["AgeBuckets"].isin(age_selected)
+        & (sen2.enriched_requests["RequestOutcome"] != "H")
     ]
 
     sliced_enriched_assessments = sen2.enriched_assessments[
         (sen2.enriched_assessments["Sex"].isin(sex_selected))
         & (sen2.enriched_assessments["AgeBuckets"].isin(age_selected))
         & (sen2.enriched_assessments["AssessmentOutcome"] != "H")
+    ]
+
+    sliced_enriched_np = sen2.enriched_named_plan[
+        (sen2.enriched_named_plan["Sex"].isin(sex_selected))
+        & (sen2.enriched_named_plan["AgeBuckets"].isin(age_selected))
+    ]
+
+    sliced_enriched_ap = sen2.enriched_active_plans[
+        (sen2.enriched_active_plans["Sex"].isin(sex_selected))
+        & (sen2.enriched_active_plans["AgeBuckets"].isin(age_selected))
     ]
 
     with st.expander("Headline Figures"):
@@ -851,6 +902,8 @@ if input_file:
             )
             st.plotly_chart(assessment_outcomes, use_container_width=True)
 
+            st.table(sliced_enriched_assessments.head())
+
         with ass_col3:
             assessment_tribunal = px.histogram(
                 sliced_enriched_assessments, "MediationOrTribunal", color="Sex"
@@ -858,25 +911,144 @@ if input_file:
             st.plotly_chart(assessment_tribunal, use_container_width=True)
 
         with ass_col4:
-            week20s = px.histogram(sliced_enriched_assessments, "Week20", color="Sex")
-            st.plotly_chart(week20s, use_container_width=True)
+            pass
 
     with st.expander("Named Plans"):
         np_col1, np_col2, np_col3, np_col4 = st.columns(4)
+
+        with np_col1:
+            plans_starting = make_indicator(
+                sliced_enriched_np[
+                    (sliced_enriched_np["StartDate"] > sen2.reference_period["start"])
+                ],
+                "Plans starting (year)",
+            )
+            st.plotly_chart(plans_starting, use_container_width=True)
+
+            open_plan_lengths = px.histogram(
+                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                "NamedPlanLength (days)",
+                color="Sex",
+                title="Plans active on census day - Length",
+            )
+            st.plotly_chart(open_plan_lengths, use_container_width=True)
+
+        with np_col2:
+            plans_starting = make_indicator(
+                sliced_enriched_np[
+                    (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
+                ],
+                "Plans ending (year)",
+            )
+            st.plotly_chart(plans_starting, use_container_width=True)
+
+            sen_setting = px.histogram(
+                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                "SENSetting",
+                color="Sex",
+                title="Plans active on census day - SEN Setting",
+            )
+            st.plotly_chart(sen_setting, use_container_width=True)
+
+        with np_col3:
+            ceased_reasons = px.histogram(
+                sliced_enriched_np,
+                "CeaseReason",
+                color="Sex",
+                title="Plans ceasing this year - Reason",
+            )
+            st.plotly_chart(ceased_reasons, use_container_width=True)
+
+            sen_setting = px.histogram(
+                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                "SENSetting",
+                color="Sex",
+                title="Plans active on census day - SEN Setting",
+            )
+            st.plotly_chart(sen_setting, use_container_width=True)
+
+        with np_col4:
+            active_census_day = make_indicator(
+                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                "Plans active on census day",
+            )
+            st.plotly_chart(active_census_day, use_container_width=True)
+
+            residential_setting = px.pie(
+                sliced_enriched_np[
+                    sliced_enriched_np["CeaseDate"].isna()
+                    & sliced_enriched_np["PlanRes"].notna()
+                ],
+                names="PlanRes",
+                title="Residential Setting",
+            )
+            st.plotly_chart(residential_setting, use_container_width=True)
+
+            st.write(sliced_enriched_np.head())
+
         # TODO named plans:
-        #   plans starting in year
-        #   plans ending in year
-        #   plans ceased in year reasons
-        #   active plans on census day
-        #   active plans open length
-        #   sen settings
-        #   plan res (residential setting)
+        # timeliness is 140 calendar days excluding med/trib from request recieved to named plan start date
+
         #   work based learning activities (plan wbp)
         #   personal budget taken up PB, peronal budget organised arrangements OA, direct payments DP
         #   plan detail  establishments
-        #   sen settings
 
-        pass
+    with st.expander("Timeliness"):
+        st.write(
+            "Timeliness is only considered for CYP with: a Named Plan start date and no kinds of mediation or tribunal. "
+            "Timeliness is achieved if Request received date to Named Plan start "
+            "date is under 140 calendar days."
+        )
+        timeliness_df = sliced_enriched_np[sliced_enriched_np["StartDate"].notna()]
+
+        assessments_sub_df = sliced_enriched_assessments[
+            sliced_enriched_assessments["MediationOrTribunal"] == "No"
+        ]
+
+        requests_sub_df = sliced_enriched_requests[
+            sliced_enriched_requests["MediationOrTribunal"] == "No"
+        ]
+
+        timeliness_df = timeliness_df.merge(
+            assessments_sub_df[["child_id", "Week20"]], how="left", on="child_id"
+        )
+
+        timeliness_df = timeliness_df.merge(
+            requests_sub_df[["child_id", "ReceivedDate"]], how="inner", on="child_id"
+        )
+
+        timeliness_df["Timeliness"] = (
+            timeliness_df["StartDate"] - timeliness_df["ReceivedDate"]
+        ) / pd.Timedelta(days=1)
+
+        timeliness_df["Timeliness - week 20 exceptions not considered"] = timeliness_df[
+            "Timeliness"
+        ].apply(lambda x: "Not timely" if x > 140 else "Timely")
+        timeliness_df["Timeliness - week 20 exceptions considered"] = (
+            timeliness_df.apply(
+                lambda x: (
+                    "Not timely"
+                    if ((x["Timeliness"] > 140) & (x["Week20"] == "No"))
+                    else ("Exception granted" if x["Week20"] == "Yes" else "Timely")
+                ),
+                axis=1,
+            )
+        )
+
+        timeliness_unconsidered = px.histogram(
+            timeliness_df, "Timeliness - week 20 exceptions not considered", color="Sex"
+        )
+
+        timeliness_considered = px.histogram(
+            timeliness_df, "Timeliness - week 20 exceptions considered", color="Sex"
+        )
+        time_col1, time_col2 = st.columns(2)
+
+        with time_col1:
+            st.plotly_chart(timeliness_unconsidered, use_container_width=True)
+
+        with time_col2:
+            st.plotly_chart(timeliness_considered, use_container_width=True)
 
     with st.expander("Active Plans"):
         ap_col1, ap_col2, ap_col3, ap_col4 = st.columns(4)
