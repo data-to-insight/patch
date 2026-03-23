@@ -162,12 +162,12 @@ def calculate_age_buckets(age):
 
 def make_bar(df, buckets, column, title):
     values_df = pd.DataFrame({column: buckets})
-    df_counts = df.groupby(column).size().to_frame("Count").reset_index()
+    df_counts = df.groupby(column).size().to_frame("Number of children").reset_index()
     df_counts = df_counts.merge(values_df, how="outer", on="AgeBuckets")
-    df_counts["Count"] = df_counts["Count"].fillna(0)
+    df_counts["Number of children"] = df_counts["Number of children"].fillna(0)
     df_counts.sort_values(column, inplace=True)
 
-    bar = px.bar(df_counts, x=column, y="Count", title=title)
+    bar = px.bar(df_counts, x=column, y="Number of children", title=title)
 
     return bar
 
@@ -869,7 +869,9 @@ if input_file:
                 "EthnicityGroup",
                 color="Sex",
                 title="Ethnicity - all children",
+                labels={"EthnicityGroup":"Ethnicity"}
             )
+            ethnicity_chart.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ethnicity_chart, use_container_width=True)
 
         with col3:
@@ -895,6 +897,7 @@ if input_file:
                 color="Sex",
                 title="Sen Type - all children",
             )
+            sen_type_chart.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(sen_type_chart, use_container_width=True)
 
     with st.expander("Requests"):
@@ -910,6 +913,7 @@ if input_file:
                 color="Sex",
                 title="Request timeframe",
             )
+            request_lengths.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(request_lengths, use_container_width=True)
 
         with req_col2:
@@ -926,6 +930,7 @@ if input_file:
                 "AgeBuckets",
                 title="Requests by age",
             )
+            requests_by_age.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(requests_by_age, use_container_width=True)
 
             requests_rya = px.pie(
@@ -933,6 +938,7 @@ if input_file:
                 names="RYA",
                 title="Registered youth accomodation",
             )
+            requests_rya.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(requests_rya, use_container_width=True)
 
         with req_col3:
@@ -942,7 +948,7 @@ if input_file:
                 color="Sex",
                 title="Request outcomes",
             )
-
+            request_outcomes.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(request_outcomes, use_container_width=True)
 
             request_sources = px.histogram(
@@ -951,7 +957,7 @@ if input_file:
                 color="Sex",
                 title="Request sources",
             )
-
+            request_sources.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(request_sources, use_container_width=True)
 
         with req_col4:
@@ -961,11 +967,13 @@ if input_file:
                 color="Sex",
                 title="Requests - mediation or tribunal",
             )
+            request_tribunal.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(request_tribunal, use_container_width=True)
 
             requests_exported = px.pie(
                 sliced_enriched_requests, names="Exported", title="Requests exported"
             )
+            requests_exported.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(requests_exported, use_container_width=True)
 
     with st.expander("Assessments"):
@@ -1000,6 +1008,7 @@ if input_file:
                 color="Sex",
                 title="Assessments - mediation or tribunal",
             )
+            assessment_tribunal.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(assessment_tribunal, use_container_width=True)
 
         with ass_col4:
@@ -1009,6 +1018,7 @@ if input_file:
                 color="Sex",
                 title="Assessment outcomes",
             )
+            assessment_outcomes.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(assessment_outcomes, use_container_width=True)
 
     with st.expander("Named Plans"):
@@ -1029,16 +1039,17 @@ if input_file:
                 color="Sex",
                 title="Plans active on census day - Length",
             )
+            open_plan_lengths.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(open_plan_lengths, use_container_width=True)
 
         with np_col2:
-            plans_starting = make_indicator(
+            plans_ending = make_indicator(
                 sliced_enriched_np[
                     (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
                 ],
                 "Plans ending (year)",
             )
-            st.plotly_chart(plans_starting, use_container_width=True)
+            st.plotly_chart(plans_ending, use_container_width=True)
 
             # Children with multiple placements
             placements_df = (
@@ -1052,6 +1063,7 @@ if input_file:
                 names="Number of placements",
                 title="Number of placements per child",
             )
+            multiple_placements.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(multiple_placements, use_container_width=True)
 
         with np_col3:
@@ -1061,6 +1073,7 @@ if input_file:
                 color="Sex",
                 title="Plans ceasing this year - Reason",
             )
+            ceased_reasons.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ceased_reasons, use_container_width=True)
 
             sen_setting = px.histogram(
@@ -1069,6 +1082,7 @@ if input_file:
                 color="Sex",
                 title="Plans active on census day - SEN Setting",
             )
+            sen_setting.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(sen_setting, use_container_width=True)
 
         with np_col4:
@@ -1076,6 +1090,7 @@ if input_file:
                 sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
                 "Plans active on census day",
             )
+            active_census_day.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(active_census_day, use_container_width=True)
 
             residential_setting = px.pie(
@@ -1086,6 +1101,7 @@ if input_file:
                 names="PlanRes",
                 title="Residential Setting",
             )
+            residential_setting.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(residential_setting, use_container_width=True)
 
         # TODO named plans:
@@ -1142,6 +1158,7 @@ if input_file:
             color="Sex",
             title="Timeliness - week 20 exceptions not considered",
         )
+        timeliness_unconsidered.update_layout(yaxis_title="Number of children") 
 
         timeliness_considered = px.histogram(
             timeliness_df,
@@ -1149,6 +1166,8 @@ if input_file:
             color="Sex",
             title="Timeliness - week 20 exceptions considered",
         )
+        timeliness_considered.update_layout(yaxis_title="Number of children") 
+
         time_col1, time_col2 = st.columns(2)
 
         with time_col1:
@@ -1165,6 +1184,7 @@ if input_file:
             open_closed_ap = px.pie(
                 sliced_enriched_ap, names="PlanOpen", title="Active plans open/closed"
             )
+            open_closed_ap.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(open_closed_ap, use_container_width=True)
 
             ehcs_transferred = px.histogram(
@@ -1173,6 +1193,7 @@ if input_file:
                 color="Sex",
                 title="Open active plans - EHCs transferred ",
             )
+            ehcs_transferred.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ehcs_transferred, use_container_width=True)
 
         with ap_col2:
@@ -1182,6 +1203,7 @@ if input_file:
                 color="Sex",
                 title="Open active plans - residential setting",
             )
+            ap_residential.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ap_residential, use_container_width=True)
 
             # Children with multiple placements
@@ -1196,6 +1218,7 @@ if input_file:
                 names="Number of plans",
                 title="Number of plans per child",
             )
+            multiple_placements_ap.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(multiple_placements_ap, use_container_width=True)
 
         with ap_col3:
@@ -1205,6 +1228,7 @@ if input_file:
                 color="Sex",
                 title="Open active plans - work based learning ",
             )
+            ap_wpb.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ap_wpb, use_container_width=True)
 
             placements_df_ap_open = (
@@ -1219,6 +1243,7 @@ if input_file:
                 names="Number of plans",
                 title="Number of open plans per child",
             )
+            multiple_placements_ap_open.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(multiple_placements_ap_open, use_container_width=True)
 
         with ap_col4:
@@ -1228,6 +1253,7 @@ if input_file:
                 color="Sex",
                 title="Open active plans - review outcomes",
             )
+            ap_review_outcomes.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ap_review_outcomes, use_container_width=True)
 
             # st.table(sliced_enriched_ap.head(20))
