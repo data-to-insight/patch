@@ -1,3 +1,12 @@
+# Questions:
+# What extra measures do we want
+# Are there any measures we'd rather view in a different way
+# Are there colour scheme adjustments to make
+# How do we want to look at active plans
+# WHat slicers would we like
+# WHat buckets would we like on different timeframe calculations
+
+
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -151,14 +160,14 @@ def calculate_age_buckets(age):
         return "f) Age error"
 
 
-def make_bar(df, buckets, column):
+def make_bar(df, buckets, column, title):
     values_df = pd.DataFrame({column: buckets})
     df_counts = df.groupby(column).size().to_frame("Count").reset_index()
     df_counts = df_counts.merge(values_df, how="outer", on="AgeBuckets")
     df_counts["Count"] = df_counts["Count"].fillna(0)
     df_counts.sort_values(column, inplace=True)
 
-    bar = px.bar(df_counts, x=column, y="Count")
+    bar = px.bar(df_counts, x=column, y="Count", title=title)
 
     return bar
 
@@ -617,8 +626,8 @@ class Datacontainer:
         enriched_df["RequestLength"] = (
             enriched_df["RequestOutcomeDate"] - enriched_df["ReceivedDate"]
         ).dt.days.to_list()
-        # [relativedelta(outcome, received).days if ~pd.isnull(received) else pd.NaT for outcome, received  in zip(enriched_df['RequestOutcomeDate'], enriched_df['ReceivedDate'])]
-        # enrich requests sources (pg 20)
+        
+        enriched_df['RYA'] = enriched_df['RYA'].astype("str").map({"0":"No", "1":"Yes"})
 
         enriched_df["Exported"] = [
             "No" if pd.isnull(col) else "Yes" for col in enriched_df["Exported"]
@@ -711,6 +720,8 @@ class Datacontainer:
             {"A": "38 to 51 weeks", "B": "52 weeks"}
         )
 
+        enriched_df["PlacementRank"] = enriched_df["PlacementRank"].astype("str")
+
         return enriched_df
 
     @property
@@ -722,6 +733,19 @@ class Datacontainer:
             how="left",
             on="child_id",
         )
+
+        enriched_df["PlanOpen"] = enriched_df["LeavingDate"].apply(lambda x: "Closed" if pd.isnull(x) else "Open")
+
+        enriched_df["RES"].fillna("Not applicable", inplace=True)
+        enriched_df["WPB"].fillna("Not applicable", inplace=True)
+        enriched_df["ReviewOutcome"].fillna("Not applicable", inplace=True)
+        
+        
+        enriched_df["LastReview"].fillna("Not applicable", inplace=True)
+        
+
+        enriched_df["TransferLA"] = enriched_df["TransferLA"].apply(lambda x: f"LA Code: {x}" if pd.notnull(x) else "Not transferred")
+        enriched_df["TransferLA"].fillna("Not transferred", inplace=True)
 
         return enriched_df
 
@@ -760,8 +784,8 @@ if input_file:
 
         sex_selected = st.sidebar.multiselect(
             "Select Sex",
-            (sen2.enriched_requests["Sex"].unique()),
-            default=(sen2.enriched_requests["Sex"].unique()),
+            (sen2.enriched_persons["Sex"].unique()),
+            default=(sen2.enriched_persons["Sex"].unique()),
         )
         age_selected = st.sidebar.multiselect(
             "Select age buckets",
@@ -787,42 +811,54 @@ if input_file:
             ),
         )
 
+        ethnicity_selected = st.sidebar.multiselect(
+            "Select ethnicities",
+            (sen2.enriched_persons["EthnicityGroup"].unique()),
+            default=(sen2.enriched_persons["EthnicityGroup"].unique()),
+        )
+
     sliced_enriched_persons = sen2.enriched_persons[
         sen2.enriched_persons["Sex"].isin(sex_selected)
         & sen2.enriched_persons["AgeBuckets"].isin(age_selected)
+        & (sen2.enriched_persons["EthnicityGroup"].isin(ethnicity_selected))
     ]
 
     sliced_enriched_requests = sen2.enriched_requests[
         sen2.enriched_requests["Sex"].isin(sex_selected)
         & sen2.enriched_requests["AgeBuckets"].isin(age_selected)
         & (sen2.enriched_requests["RequestOutcome"] != "H")
+        & (sen2.enriched_requests["EthnicityGroup"].isin(ethnicity_selected))
     ]
 
     sliced_enriched_assessments = sen2.enriched_assessments[
         (sen2.enriched_assessments["Sex"].isin(sex_selected))
         & (sen2.enriched_assessments["AgeBuckets"].isin(age_selected))
         & (sen2.enriched_assessments["AssessmentOutcome"] != "H")
+        & (sen2.enriched_assessments["EthnicityGroup"].isin(ethnicity_selected))
     ]
 
     sliced_enriched_np = sen2.enriched_named_plan[
         (sen2.enriched_named_plan["Sex"].isin(sex_selected))
-        & (sen2.enriched_named_plan["AgeBuckets"].isin(age_selected))
+        & (sen2.enriched_named_plan["AgeBuckets"].isin(age_selected)
+        & (sen2.enriched_named_plan["EthnicityGroup"].isin(ethnicity_selected))
+        )
     ]
 
     sliced_enriched_ap = sen2.enriched_active_plans[
         (sen2.enriched_active_plans["Sex"].isin(sex_selected))
         & (sen2.enriched_active_plans["AgeBuckets"].isin(age_selected))
+        & (sen2.enriched_active_plans["EthnicityGroup"].isin(ethnicity_selected))
     ]
 
     with st.expander("Headline Figures"):
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            gender_pie = px.pie(sliced_enriched_persons, names="Sex")
-            st.plotly_chart(gender_pie, use_container_width=True)
+            gender_all = make_indicator(sliced_enriched_persons, "Total children")
+            st.plotly_chart(gender_all, use_container_width=True)
 
         with col2:
-            ethnicity_chart = px.histogram(sliced_enriched_persons, "EthnicityGroup")
+            ethnicity_chart = px.histogram(sliced_enriched_persons, "EthnicityGroup", color="Sex", title="Ethnicity - all children")
             st.plotly_chart(ethnicity_chart, use_container_width=True)
 
         with col3:
@@ -837,11 +873,12 @@ if input_file:
                     "f) Age error",
                 ],
                 "AgeBuckets",
+                title="Age group - all children"
             )
             st.plotly_chart(age_chart, use_container_width=True)
 
         with col4:
-            sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype")
+            sen_type_chart = px.histogram(sen2.enriched_active_plans, "SENtype", color="Sex", title="Sen Type - all children")
             st.plotly_chart(sen_type_chart, use_container_width=True)
 
     with st.expander("Requests"):
@@ -851,36 +888,50 @@ if input_file:
             total_requests = make_indicator(sliced_enriched_requests, "Total Requests")
             st.plotly_chart(total_requests, use_container_width=True)
 
-            request_lengths = px.histogram(sliced_enriched_requests, "RequestLength")
+            request_lengths = px.histogram(sliced_enriched_requests, "RequestLength", color="Sex", title="Request timeframe")
             st.plotly_chart(request_lengths, use_container_width=True)
 
         with req_col2:
             request_sources = px.histogram(
-                sliced_enriched_requests, "RequestSource", color="Sex"
+                sliced_enriched_requests, "RequestSource", color="Sex", title="Request sources"
             )
 
             st.plotly_chart(request_sources, use_container_width=True)
 
-            requests_rya = px.pie(sliced_enriched_requests, names="RYA")
+            requests_rya = px.pie(sliced_enriched_requests, names="RYA", title="Registered youth accomodation")
             st.plotly_chart(requests_rya, use_container_width=True)
 
         with req_col3:
             request_outcomes = px.histogram(
-                sliced_enriched_requests, "RequestOutcome", color="Sex"
+                sliced_enriched_requests, "RequestOutcome", color="Sex", title="Request outcomes"
             )
 
             st.plotly_chart(request_outcomes, use_container_width=True)
 
-            requests_by_age = px.histogram(sliced_enriched_requests, "AgeBuckets")
+            requests_by_age = make_bar(
+                sliced_enriched_requests,
+                [
+                    "a) Under 1 year",
+                    "b) 1 to 4 years",
+                    "c) 5 to 9 years",
+                    "d) 10 to 16 years",
+                    "e) 16 years and over",
+                    "f) Age error",
+                ],
+                "AgeBuckets",
+                title="Requests by age"
+            )
             st.plotly_chart(requests_by_age, use_container_width=True)
+
+            
 
         with req_col4:
             request_tribunal = px.histogram(
-                sliced_enriched_requests, "MediationOrTribunal", color="Sex"
+                sliced_enriched_requests, "MediationOrTribunal", color="Sex", title="Requests - mediation or tribunal"
             )
             st.plotly_chart(request_tribunal, use_container_width=True)
 
-            requests_exported = px.pie(sliced_enriched_requests, names="Exported")
+            requests_exported = px.pie(sliced_enriched_requests, names="Exported", title="Requests exported")
             st.plotly_chart(requests_exported, use_container_width=True)
 
     with st.expander("Assessments"):
@@ -888,30 +939,36 @@ if input_file:
 
         with ass_col1:
             total_assessments = make_indicator(
-                sliced_enriched_assessments, "Total Assessments"
+                sliced_enriched_assessments, "Total assessments"
             )
             st.plotly_chart(total_assessments, use_container_width=True)
 
-            st.write(
-                "TODO assessment timeliness - how many in 20 weeks, how many over 20 weeks without extension"
-            )
 
         with ass_col2:
             assessment_outcomes = px.histogram(
-                sliced_enriched_assessments, "AssessmentOutcome", color="Sex"
+                sliced_enriched_assessments, "AssessmentOutcome", color="Sex", title="Assessment outcomes"
             )
             st.plotly_chart(assessment_outcomes, use_container_width=True)
 
-            st.table(sliced_enriched_assessments.head())
-
         with ass_col3:
             assessment_tribunal = px.histogram(
-                sliced_enriched_assessments, "MediationOrTribunal", color="Sex"
+                sliced_enriched_assessments, "MediationOrTribunal", color="Sex", title="Assessments - mediation or tribunal"
             )
             st.plotly_chart(assessment_tribunal, use_container_width=True)
 
         with ass_col4:
-            pass
+            assessments_by_age = make_bar(sliced_enriched_assessments,
+                [
+                    "a) Under 1 year",
+                    "b) 1 to 4 years",
+                    "c) 5 to 9 years",
+                    "d) 10 to 16 years",
+                    "e) 16 years and over",
+                    "f) Age error",
+                ],
+                "AgeBuckets",
+                title="Assessments by age")
+            st.plotly_chart(assessments_by_age, use_container_width=True)
 
     with st.expander("Named Plans"):
         np_col1, np_col2, np_col3, np_col4 = st.columns(4)
@@ -942,13 +999,10 @@ if input_file:
             )
             st.plotly_chart(plans_starting, use_container_width=True)
 
-            sen_setting = px.histogram(
-                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
-                "SENSetting",
-                color="Sex",
-                title="Plans active on census day - SEN Setting",
-            )
-            st.plotly_chart(sen_setting, use_container_width=True)
+            # Children with multiple placements
+            placements_df = sliced_enriched_np.groupby(['child_id']).size().to_frame('Number of placements').reset_index()
+            multiple_placements = px.pie(placements_df, names="Number of placements", title="Number of placements per child")
+            st.plotly_chart(multiple_placements, use_container_width=True)
 
         with np_col3:
             ceased_reasons = px.histogram(
@@ -984,10 +1038,8 @@ if input_file:
             )
             st.plotly_chart(residential_setting, use_container_width=True)
 
-            st.write(sliced_enriched_np.head())
 
         # TODO named plans:
-        # timeliness is 140 calendar days excluding med/trib from request recieved to named plan start date
 
         #   work based learning activities (plan wbp)
         #   personal budget taken up PB, peronal budget organised arrangements OA, direct payments DP
@@ -1036,11 +1088,11 @@ if input_file:
         )
 
         timeliness_unconsidered = px.histogram(
-            timeliness_df, "Timeliness - week 20 exceptions not considered", color="Sex"
+            timeliness_df, "Timeliness - week 20 exceptions not considered", color="Sex", title="Timeliness - week 20 exceptions not considered"
         )
 
         timeliness_considered = px.histogram(
-            timeliness_df, "Timeliness - week 20 exceptions considered", color="Sex"
+            timeliness_df, "Timeliness - week 20 exceptions considered", color="Sex", title="Timeliness - week 20 exceptions considered"
         )
         time_col1, time_col2 = st.columns(2)
 
@@ -1052,15 +1104,44 @@ if input_file:
 
     with st.expander("Active Plans"):
         ap_col1, ap_col2, ap_col3, ap_col4 = st.columns(4)
+
+        with ap_col1:
+
+            open_closed_ap = px.pie(sliced_enriched_ap, names="PlanOpen", title="Active plans open/closed")
+            st.plotly_chart(open_closed_ap, use_container_width=True)
+
+            ehcs_transferred = px.histogram(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()], "TransferLA", color="Sex", title="Open active plans - EHCs transferred ")
+            st.plotly_chart(ehcs_transferred, use_container_width=True)
+        
+        with ap_col2:
+            ap_residential = px.histogram(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()], "RES", color="Sex", title="Open active plans - residential setting")
+            st.plotly_chart(ap_residential, use_container_width=True)
+
+            # Children with multiple placements
+            placements_df_ap = sliced_enriched_ap.groupby(['child_id']).size().to_frame('Number of plans').reset_index()
+            multiple_placements_ap = px.pie(placements_df_ap, names="Number of plans", title="Number of plans per child")
+            st.plotly_chart(multiple_placements_ap, use_container_width=True)
+
+        with ap_col3:
+            ap_wpb = px.histogram(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()], "WPB", color="Sex", title="Open active plans - work based learning ")
+            st.plotly_chart(ap_wpb, use_container_width=True)
+
+            placements_df_ap_open = sliced_enriched_ap[sliced_enriched_ap['LeavingDate'].isna()].groupby(['child_id']).size().to_frame('Number of plans').reset_index()
+            multiple_placements_ap_open = px.pie(placements_df_ap_open, names="Number of plans", title="Number of open plans per child")
+            st.plotly_chart(multiple_placements_ap_open, use_container_width=True)
+
+        with ap_col4:
+            ap_review_outcomes = px.histogram(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()], "ReviewOutcome", color="Sex", title="Open active plans - review outcomes")
+            st.plotly_chart(ap_review_outcomes, use_container_width=True)
+
+            # st.table(sliced_enriched_ap.head(20))
         # TODO active plans
-        #   ehcs transferred in TransferLA
-        #   residential settings
-        #   work based learning activities
-        #   date of lasr review meeting (time since?)
+        #   date of last review meeting (time since?)
         #   annual review decisions
         #   phase transfer reviews
         #   placement details
-        pass
+
+
 
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_persons)
