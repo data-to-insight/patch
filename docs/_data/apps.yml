@@ -70,7 +70,7 @@
 
 
 - name: SEN2 Drill DOwn
-  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/015_SEN2_app/send2_app.py&req=plotly==5.0.0&req=pyarrow
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/015_SEN2_app/send2_app.py&req=plotly==5.5.0&req=pyarrow
   description: "Dashboard and drilldown for sen2"
 
  
