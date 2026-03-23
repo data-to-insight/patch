@@ -36,6 +36,22 @@ import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 
+
+class SENTypes(Enum):
+    SPLD = "Specific learning difficulty"
+    MLD = "Moderate learning difficulty"
+    SLD = "Severe learning difficulty"
+    PMLD = "Profound and multiple learning difficulty"
+    SEMH = "Social, emotional and mental health"
+    SLCN = "Speech, language and communication needs"
+    HI = "Hearing impairment"
+    VI = "Vision impairment"
+    MSI = "Multi-sensory impairment"
+    PD = "Physical disability"
+    ASD = "Autistic spectrum disorder"
+    DS = "Down Syndrome"
+    OTH = "Other difficulty"
+
 class SENSettings(Enum):
     OLA = "Other (OLA)"
     OPA = "Other (OPA)"
@@ -209,8 +225,14 @@ def make_year_buckets(years):
         return "h) 7-8 years"
     elif years < 9:
         return "i) 8-9 years"
+    elif years < 10:
+        return "j) 9-10 years"
+    elif years < 11:
+        return "k) 10-11 years"
+    elif years < 12:
+        return "l) 11-12 years"
     else: 
-        return "j) 9+ years"
+        return "m) 12+ years"
 
 def make_bar(df, column, title, color_column="Sex",  buckets=None):
     if buckets:
@@ -235,6 +257,13 @@ def make_bar(df, column, title, color_column="Sex",  buckets=None):
                         textposition='top center',
                         showlegend=False
                         ))
+    elif not color_column:
+        df_counts = df.groupby([column]).size().to_frame("Number of children").reset_index()
+
+        # Needed to add total stacked bar heights where we are using sex to split bars
+        # Makes a scatter using text lined up with the top of the bar chart above
+        bar = px.bar(df_counts, x=column, y="Number of children", title=title, color=color_column, text="Number of children")
+
     else:
         df_counts = df.groupby([column, color_column]).size().to_frame("Number of children").reset_index()
 
@@ -846,6 +875,10 @@ class Datacontainer:
         )
         enriched_df["TransferLA"].fillna("Not transferred", inplace=True)
 
+        enriched_df['SENtype'] = enriched_df['SENtype'].apply(
+            lambda x: SENTypes[x].value if pd.notnull(x) else "Not found"
+        )
+
         return enriched_df
 
 
@@ -943,17 +976,13 @@ if input_file:
     ]
 
     with st.expander("All children in data (every child with a persons block)"):
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             gender_all = make_indicator(sliced_enriched_persons, "Total children")
             st.plotly_chart(gender_all, use_container_width=True)
 
         with col2:
-            ethnicity_chart = make_bar(sliced_enriched_persons, "EthnicityGroup", title="Ethnicity - all children")
-            st.plotly_chart(ethnicity_chart, use_container_width=True)
-
-        with col3:
             age_chart = make_bar(
                 sliced_enriched_persons,
                 "AgeBuckets",
@@ -968,29 +997,38 @@ if input_file:
             )
             st.plotly_chart(age_chart, use_container_width=True)
 
-        with col4:
-            sen_type_chart = make_bar(sliced_enriched_ap,"SENtype", title="Sen Type - all children")
-            st.plotly_chart(sen_type_chart, use_container_width=True)
+        with col3:
+            ethnicity_chart = make_bar(sliced_enriched_persons, "EthnicityGroup", title="Ethnicity - all children")
+            st.plotly_chart(ethnicity_chart, use_container_width=True)
+
+
+        sen_type_chart = make_bar(sliced_enriched_ap,"SENtype", title="Sen Type - all children", buckets=["Specific learning difficulty",
+        "Moderate learning difficulty",
+        "Severe learning difficulty",
+        "Profound and multiple learning difficulty",
+        "Social, emotional and mental health",
+        "Speech, language and communication needs",
+        "Hearing impairment",
+        "Vision impairment",
+        "Multi-sensory impairment",
+        "Physical disability",
+        "Autistic spectrum disorder",
+        "Down Syndrome",
+        "Other difficulty",])
+        st.plotly_chart(sen_type_chart, use_container_width=True)
 
     with st.expander("Requests"):
-        req_col1, req_col2, req_col3, req_col4 = st.columns(4)
+        req_col1, req_col2, req_col3 = st.columns(3)
 
         with req_col1:
             total_requests = make_indicator(sliced_enriched_requests, "Total Requests")
             st.plotly_chart(total_requests, use_container_width=True)
 
-            request_lengths = make_bar(sliced_enriched_requests,
-                                        "RequestLengthBucket",
-                                        "Request timeframe (received to outcome)",
-                                        buckets=["a) Under 10 days",
-                                        "b) 10 to 20 days",
-                                        "c) 21 to 30 days",
-                                        "d) 31 to 40 days",
-                                        "e) 41 to 50 days",
-                                        "f) 51 to 60 days",
-                                        "g) 61+ days",
-                                        "x) Request incomplete"],)
-            st.plotly_chart(request_lengths, use_container_width=True)
+            requests_exported = px.pie(
+                sliced_enriched_requests, names="Exported", title="Requests exported"
+            )
+            requests_exported.update_traces(textinfo='value+percent')
+            st.plotly_chart(requests_exported, use_container_width=True)
 
         with req_col2:
             requests_by_age = make_bar(
@@ -1020,18 +1058,27 @@ if input_file:
             request_outcomes = make_bar(sliced_enriched_requests, "RequestOutcome", "Request outcomes")
             st.plotly_chart(request_outcomes, use_container_width=True)
 
-            request_sources = make_bar(sliced_enriched_requests, "RequestSource", "Request sources", buckets=["Young person or parent", "School or other education setting", "Health care professionals", "Social care professionals", "Other"])
-            st.plotly_chart(request_sources, use_container_width=True)
-
-        with req_col4:
-            request_tribunal = make_bar(sliced_enriched_requests, "MediationOrTribunal", "Requests - mediation or tribunal")
+            request_tribunal = make_bar(sliced_enriched_requests, "MediationOrTribunal", "Requests - mediation or tribunal", buckets=['Mediation', "Tribunal", "No"])
             st.plotly_chart(request_tribunal, use_container_width=True)
 
-            requests_exported = px.pie(
-                sliced_enriched_requests, names="Exported", title="Requests exported"
-            )
-            requests_exported.update_traces(textinfo='value+percent')
-            st.plotly_chart(requests_exported, use_container_width=True)
+            
+
+
+        request_lengths = make_bar(sliced_enriched_requests,
+                                    "RequestLengthBucket",
+                                    "Request timeframe (received to outcome)",
+                                    buckets=["a) Under 10 days",
+                                    "b) 10 to 20 days",
+                                    "c) 21 to 30 days",
+                                    "d) 31 to 40 days",
+                                    "e) 41 to 50 days",
+                                    "f) 51 to 60 days",
+                                    "g) 61+ days",
+                                    "x) Request incomplete"],)
+        st.plotly_chart(request_lengths, use_container_width=True)
+
+        request_sources = make_bar(sliced_enriched_requests, "RequestSource", "Request sources", buckets=["Young person or parent", "School or other education setting", "Health care professionals", "Social care professionals", "Other"])
+        st.plotly_chart(request_sources, use_container_width=True)
 
     with st.expander("Assessments"):
         ass_col1, ass_col2, ass_col3, ass_col4 = st.columns(4)
@@ -1058,7 +1105,7 @@ if input_file:
             st.plotly_chart(assessments_by_age, use_container_width=True)
 
         with ass_col3:
-            assessment_tribunal = make_bar(sliced_enriched_assessments, "MediationOrTribunal", "Assessments - mediation or tribunal")
+            assessment_tribunal = make_bar(sliced_enriched_assessments, "MediationOrTribunal", "Assessments - mediation or tribunal", buckets=['Mediation', "Tribunal", "No"])
             st.plotly_chart(assessment_tribunal, use_container_width=True)
 
         with ass_col4:
@@ -1066,9 +1113,10 @@ if input_file:
             st.plotly_chart(assessment_outcomes, use_container_width=True)
 
     with st.expander("Named Plans"):
-        np_col1, np_col2, np_col3, np_col4 = st.columns(4)
+        np_c1r1, np_c2r1, np_c3r1 = st.columns(3)
+        np_c1r2, np_c2r2 = st.columns(2)
 
-        with np_col1:
+        with np_c1r1:
             plans_starting = make_indicator(
                 sliced_enriched_np[
                     (sliced_enriched_np["StartDate"] > sen2.reference_period["start"])
@@ -1076,21 +1124,6 @@ if input_file:
                 "Plans starting (year)",
             )
             st.plotly_chart(plans_starting, use_container_width=True)
-
-            open_plan_lengths = make_bar(sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
-                                         "NamedPlanLength (years)",
-                                         title="Plans active on census day - length (years)") 
-
-            st.plotly_chart(open_plan_lengths, use_container_width=True)
-
-        with np_col2:
-            plans_ending = make_indicator(
-                sliced_enriched_np[
-                    (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
-                ],
-                "Plans ending (year)",
-            )
-            st.plotly_chart(plans_ending, use_container_width=True)
 
             # Children with multiple placements
             placements_df = (
@@ -1107,7 +1140,29 @@ if input_file:
             multiple_placements.update_traces(textinfo='value+percent')
             st.plotly_chart(multiple_placements, use_container_width=True)
 
-        with np_col3:
+            
+
+        with np_c2r1:
+            plans_ending = make_indicator(
+                sliced_enriched_np[
+                    (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
+                ],
+                "Plans ending (year)",
+            )
+            st.plotly_chart(plans_ending, use_container_width=True)
+
+            residential_setting = px.pie(
+            sliced_enriched_np[
+                sliced_enriched_np["CeaseDate"].isna()
+                & sliced_enriched_np["PlanRes"].notna()
+            ],
+            names="PlanRes",
+            title="Residential Setting",
+            )
+            residential_setting.update_traces(textinfo='value+percent')
+            st.plotly_chart(residential_setting, use_container_width=True)
+
+        with np_c3r1:
             active_census_day = make_indicator(
                 sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
                 "Plans active on census day",
@@ -1117,12 +1172,20 @@ if input_file:
             sen_setting = make_bar(sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
                 "SENSetting_mapped", title="Plans active on census day - SEN Setting", buckets=["Other (OLA)",
                 "Other (OPA)",
-                "Elective home education",
-                "Early years provider",
-                "Other (OTH)"])
+                "Other (OTH)",
+                "Elective home education (EHE)",
+                "Early years provider (EYP)",
+                ])
             st.plotly_chart(sen_setting, use_container_width=True)
 
-        with np_col4:
+        with np_c1r2:
+            open_plan_lengths = make_bar(sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                                         "NamedPlanLength (years)",
+                                         title="Plans active on census day - length (years)") 
+
+            st.plotly_chart(open_plan_lengths, use_container_width=True)
+
+        with np_c2r2:
             ceased_reasons = make_bar(sliced_enriched_np,
                 "CeaseReason", title="Plans ceasing this year - Reason", buckets=["1) Reached maximum age","2) Need met w/o EHC",
                 "3) Moved to HE",
@@ -1134,16 +1197,7 @@ if input_file:
                 "9) Other",])
             st.plotly_chart(ceased_reasons, use_container_width=True)
 
-            residential_setting = px.pie(
-                sliced_enriched_np[
-                    sliced_enriched_np["CeaseDate"].isna()
-                    & sliced_enriched_np["PlanRes"].notna()
-                ],
-                names="PlanRes",
-                title="Residential Setting",
-            )
-            residential_setting.update_traces(textinfo='value+percent')
-            st.plotly_chart(residential_setting, use_container_width=True)
+
 
     with st.expander("Timeliness"):
         st.write(
@@ -1187,22 +1241,11 @@ if input_file:
             )
         )
 
-        timeliness_unconsidered = px.histogram(
-            timeliness_df,
-            "Timeliness - week 20 exceptions not considered",
-            color="Sex",
-            title="Timeliness - week 20 including exceptions",
-        )
-        timeliness_unconsidered.update_layout(yaxis_title="Number of children") 
-
-        timeliness_considered = px.histogram(
-            timeliness_df[timeliness_df["Timeliness - week 20 exceptions considered"] != "Exception granted"],
-            "Timeliness - week 20 exceptions considered",
-            color="Sex",
-            title="Timeliness - week 20 excluding exceptions",
-        )
-        timeliness_considered.update_layout(yaxis_title="Number of children") 
-
+        timeliness_unconsidered = make_bar(timeliness_df,
+            "Timeliness - week 20 exceptions not considered", title="Timeliness - week 20 including exceptions", color_column=None)
+        
+        timeliness_considered = make_bar(timeliness_df[timeliness_df["Timeliness - week 20 exceptions considered"] != "Exception granted"],
+            "Timeliness - week 20 exceptions considered", title="Timeliness - week 20 excluding exceptions", color_column=None)
         time_col1, time_col2 = st.columns(2)
 
         with time_col1:
@@ -1221,11 +1264,6 @@ if input_file:
             )
             open_closed_ap.update_traces(textinfo='value+percent')
             st.plotly_chart(open_closed_ap, use_container_width=True)
-
-            ehcs_transferred = make_bar(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
-                "TransferLA",title="Open active plans - EHCs transferred in",
-                )
-            st.plotly_chart(ehcs_transferred, use_container_width=True)
 
         with ap_col2:
             ap_residential = make_bar(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
@@ -1272,6 +1310,11 @@ if input_file:
                 "ReviewOutcome",title="Open active plans - review outcomes",)
             ap_review_outcomes.update_layout(yaxis_title="Number of children") 
             st.plotly_chart(ap_review_outcomes, use_container_width=True)
+        
+        ehcs_transferred = make_bar(sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
+            "TransferLA",title="Open active plans - EHCs transferred in",
+            )
+        st.plotly_chart(ehcs_transferred, use_container_width=True)
 
 
     with st.expander("CYP in selected drilldown:"):

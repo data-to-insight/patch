@@ -1,5 +1,13 @@
-["Other (OLA)",
-"Other (OPA)",
-"Elective home education",
-"Early years provider",
-"Other (OTH)"]
+["Specific learning difficulty",
+"Moderate learning difficulty",
+"Severe learning difficulty",
+"Profound and multiple learning difficulty",
+"Social, emotional and mental health",
+"Speech, language and communication needs",
+"Hearing impairment",
+"Vision impairment",
+"Multi-sensory impairment",
+"Physical disability",
+"Autistic spectrum disorder",
+"Down Syndrome",
+"Other difficulty",]
