@@ -1417,21 +1417,6 @@ if input_file:
             )
             st.plotly_chart(active_census_day, use_container_width=True)
 
-            sen_setting = make_bar(
-                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
-                "SENSetting_np",
-                x_label="SEN settings",
-                title="Plans active on census day - SEN Setting",
-                buckets=[
-                    "Other (OLA)",
-                    "Other (OPA)",
-                    "Other (OTH)",
-                    "Elective home education (EHE)",
-                    "Early years provider (EYP)",
-                ],
-            )
-            st.plotly_chart(sen_setting, use_container_width=True)
-
         with np_c1r2:
             open_plan_lengths = make_bar(
                 sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
@@ -1461,6 +1446,14 @@ if input_file:
                 ],
             )
             st.plotly_chart(ceased_reasons, use_container_width=True)
+
+        sen_setting = make_bar(
+            sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+            "SENSetting_np",
+            x_label="SEN settings (named plans)",
+            title="Plans active on census day - SEN Setting",
+        )
+        st.plotly_chart(sen_setting, use_container_width=True)
 
     with st.expander("Timeliness"):
         st.write(
@@ -1628,7 +1621,7 @@ if input_file:
         sen_settings = make_bar(
             sliced_enriched_ap,
             "SENSetting_mapped",
-            title="SEN settings",
+            title="SEN settings (active plans)",
             x_label="SEN setting",
         )
         st.plotly_chart(sen_settings, use_container_width=True)
