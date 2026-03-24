@@ -1067,8 +1067,6 @@ input_file = st.file_uploader("Upload SEN2 XML here")
 
 urn_lookup, ukprn_lookup, la_codes = read_lookups()
 
-st.write(type(list(ukprn_lookup.values())[0]))
-
 if input_file:
     tree = ET.parse(input_file)
     root = tree.getroot()
