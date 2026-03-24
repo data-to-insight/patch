@@ -24,6 +24,8 @@ st.set_page_config(layout="wide")
 
 
 class SENTypes(Enum):
+    """Used to map SENtype codes to descriptions"""
+
     SPLD = "Specific learning difficulty"
     MLD = "Moderate learning difficulty"
     SLD = "Severe learning difficulty"
@@ -40,6 +42,8 @@ class SENTypes(Enum):
 
 
 class SENSettings(Enum):
+    """Used to map SEN setting codes to descriptions"""
+
     OLA = "Other (OLA)"
     OPA = "Other (OPA)"
     EHE = "Elective home education (EHE)"
@@ -51,6 +55,8 @@ class SENSettings(Enum):
 
 
 class EthnicSubcategories(Enum):
+    """Used to map ehtnicity codes to groups, uses long GIAS code-set"""
+
     WBRI = "White"
     WCOR = "White"
     WENG = "White"
@@ -170,6 +176,8 @@ class EthnicSubcategories(Enum):
 def read_lookups():
     """Reads lookups for the URN, and UKPRNs to map SENsettings, also reads LA names and codes to map transfers.
 
+    Input data will need to be updates as URNs, UKPRNs and LA codes change.
+
     We need to use open_url from pyodide so we can open https urls.
     """
     urn_url = open_url(
@@ -183,6 +191,8 @@ def read_lookups():
 
     la_names_lookups["LA code"] = la_names_lookups["LA code"].astype("str")
 
+    # Turn the dfs into dictionaries for easier mapping rather than merging in the
+    # relevant function
     urn_lookup = dict(
         zip(
             urn_ukprn_lookups["URN"].astype("float"),
@@ -200,6 +210,12 @@ def read_lookups():
 
 
 def map_sen_settings(row):
+    """Takes rows of Named and Active plans. Looks at values in URN, UKPRN and then SENSetting
+    to determine overall SEN setting according to item 5.7 <PlacementDetail>.
+
+    Tries checks if there is a URN, then UKPRN, then SENSetting to match, in that order of
+    priority. Returns error to front end charts if there is no matching code.
+    """
     if pd.notnull(row["URN"]):
         try:
             return urn_lookup[float(row["URN"])]
@@ -229,7 +245,7 @@ def map_sen_settings(row):
 
 
 def calculate_age_buckets(age):
-    # Used to make age buckets matching published data
+    """Used to calculate age buckets for calculated ages in DataContainer"""
     if age < 1:
         return "a) Under 1 year"
     elif age < 5:
@@ -245,6 +261,8 @@ def calculate_age_buckets(age):
 
 
 def request_days_buckets(days):
+    """Used to calculate time buckets for time between ReceivedDate and
+    OutcomeDate in enriched_requests in DataContainer"""
     if days < 10:
         return "a) Under 10 days"
     elif days < 21:
@@ -264,6 +282,7 @@ def request_days_buckets(days):
 
 
 def make_year_buckets(years):
+    """Used to make buckets for open plan lengths for named plans"""
     if years < 1:
         return "a) Less than 1 year"
     elif years < 2:
@@ -293,8 +312,13 @@ def make_year_buckets(years):
 
 
 def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None):
+    """Used to make and format all bar charts in dashboard. Allows users to force 0
+    counts on columns if needed. Also overlays data labels by adding a scatter trace as
+    text."""
+    # TODO refactor
     if buckets:
-        # TODO refactor
+        # Makes an empty dataframe with column names according to specified buckets
+        # to merge groupby to, in order to have rows for counts of zero which are then filled.
         values_df = pd.DataFrame({column: buckets})
 
         df_counts = (
@@ -319,6 +343,9 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             labels={column: x_label},
             color_discrete_sequence=px.colors.qualitative.Dark2,
         )
+
+        # Needed to add total stacked bar heights where we are using sex to split bars
+        # Makes a scatter using text lined up with the top of the bar chart
         bar.add_trace(
             go.Scatter(
                 mode="text",
@@ -330,12 +357,13 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             )
         )
     elif not color_column:
+        # Used to make charts not split by Sex, and without specified x-buckets
         df_counts = (
             df.groupby([column]).size().to_frame("Number of children").reset_index()
         )
 
         # Needed to add total stacked bar heights where we are using sex to split bars
-        # Makes a scatter using text lined up with the top of the bar chart above
+        # Makes a scatter using text lined up with the top of the bar chart
         bar = px.bar(
             df_counts,
             x=column,
@@ -349,6 +377,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
         )
 
     else:
+        # Used to make charts with a specified sex value but no need to specify buckets.
         df_counts = (
             df.groupby([column, color_column])
             .size()
@@ -384,6 +413,8 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
 
 
 def make_indicator(df, title):
+    "Used to make and format indicators to display overall, male, and female counts for given columns."
+    "Will return no number if there are none of a given sex."
     indicator = make_subplots(
         rows=3,
         cols=1,
@@ -438,6 +469,7 @@ def make_indicator(df, title):
 
 
 def get_values(xml_elements, table_dict: dict, xml_block):
+    """Used to find all values in XML elements/messages to return dicts ready to convert to dfs."""
     for element in xml_elements:
         try:
             table_dict[element] = xml_block.find(element).text
@@ -447,6 +479,10 @@ def get_values(xml_elements, table_dict: dict, xml_block):
 
 
 class XMLtoDF:
+    """Uses Element Tree to read in the XML as tables, flattened when needed. If children have
+    multiple of a message, it will appear on multiple rows, which will need to be sliced appropriately for different charts/calculations.
+    """
+
     header = pd.DataFrame(columns=["Collection", "Year", "ReferenceDate"])
 
     # columns and info can be found:
@@ -542,14 +578,10 @@ class XMLtoDF:
 
         for child in children.findall("Person"):
             self.create_child(child)
-            # The progress info doesn't work on streamlit
-            # if self.child_id % 1000 == 0:
-            #     st.write(f'Read data for {self.child_id} children of {self.total_children} children.')
 
         self.named_plan = self.named_plan[self.named_plan["StartDate"].notna()].copy()
 
     def create_header(self, header):
-
         header_dict = {}
         collection_details = header.find("CollectionDetails")
         collection_elements = ["Collection", "Year", "ReferenceDate"]
@@ -740,6 +772,9 @@ class XMLtoDF:
 
 @st.cache_data
 def convert_data(_root: ET.Element):
+    """Used to make input data python readable and to enable caching.
+    Runs XMLtoDF to read in SEN2 XML as a dictionary of dataframes, ready to be passed to DataContainer for cleaning.
+    """
     datafiles = XMLtoDF(_root)
 
     return datafiles
@@ -750,8 +785,9 @@ def convert_data(_root: ET.Element):
 ###########################
 class Datacontainer:
     """
-    A container for SEN2 data. Indexes data by table type. Provides methods for
-    merging data to create a single, consistent dataset.
+    A container for SEN2 data. Indexes data by table type. Provieds methods to extract key info,
+    and returns each table as a property, enriched with key info for slicing and calculations.
+    Enrichment includes mapping codes to descriptions, and adding columns necessary to work slicers to all tables.
     """
 
     def __init__(self, data_dict: dict):
@@ -762,6 +798,7 @@ class Datacontainer:
         self.persons = self.data.persons
 
     def _get_reference_period(self, df):
+        """Takes the Year value from the header and uses it to set the reference period start and end dates."""
         year = int(df["Year"].iloc[0])
 
         start = pd.to_datetime(f"{str(year-1)}-01-01", format=f"%Y-%m-%d")
@@ -1066,6 +1103,11 @@ class Datacontainer:
 # Main App
 ###########################
 st.title("SEN2 drilldown tool")
+st.markdown(
+    "[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/015_SEN2_app/sen2_app.py)"
+)
+
 with st.expander("Instructions"):
     st.write(
         "Upload your clean SEN2 XML as it is downloaded from COLLECT. Use the slicers on the "
