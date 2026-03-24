@@ -308,7 +308,6 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             df_counts["Number of children"].fillna(0).astype("int")
         )
         df_counts[color_column].fillna("", inplace=True)
-        # df_counts.sort_values(column, inplace=True)
         df_sum = df_counts.groupby(column).sum()
         bar = px.bar(
             df_counts,
@@ -318,6 +317,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             color=color_column,
             category_orders={"Sex": ["M", "F"], column: buckets},
             labels={column: x_label},
+            color_discrete_sequence=px.colors.qualitative.Dark2,
         )
         bar.add_trace(
             go.Scatter(
@@ -325,7 +325,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
                 x=df_sum.index,
                 y=df_sum["Number of children"].tolist(),
                 text=[str(x) for x in df_sum["Number of children"].tolist()],
-                textposition="top center",
+                textposition="bottom center",
                 showlegend=False,
             )
         )
@@ -345,6 +345,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             text="Number of children",
             category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
+            color_discrete_sequence=px.colors.qualitative.Dark2,
         )
 
     else:
@@ -366,6 +367,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             color=color_column,
             category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
+            color_discrete_sequence=px.colors.qualitative.Dark2,
         )
         bar.add_trace(
             go.Scatter(
@@ -373,7 +375,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
                 x=df_sum.index,
                 y=df_sum["Number of children"].tolist(),
                 text=[str(x) for x in df_sum["Number of children"].tolist()],
-                textposition="top center",
+                textposition="bottom center",
                 showlegend=False,
             )
         )
@@ -1063,6 +1065,16 @@ class Datacontainer:
 ###########################
 # Main App
 ###########################
+st.title("SEN2 drilldown tool")
+with st.expander("Instructions"):
+    st.write(
+        "Upload your clean SEN2 XML as it is downloaded from COLLECT. Use the slicers on the "
+        "left to further select down for data views. Use the bottom expander to view remaining children."
+        "If you need to upload a different data set, you'll need to reload the page."
+        "Some numbers may be cut off on bar charts, to overcome this, expand the chart using"
+        "the button on the top right"
+    )
+
 input_file = st.file_uploader("Upload SEN2 XML here")
 
 urn_lookup, ukprn_lookup, la_codes = read_lookups()
@@ -1075,7 +1087,7 @@ if input_file:
     sen2 = Datacontainer(data_files)
 
     with st.sidebar:
-        st.write("Slice here")
+        st.write("Make selections here:")
 
         sex_selected = st.sidebar.multiselect(
             "Select Sex",
