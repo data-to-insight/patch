@@ -166,7 +166,7 @@ class EthnicSubcategories(Enum):
 ###################
 
 
-@st.cache_data
+# @st.cache_data
 def read_lookups():
     """Reads lookups for the URN, and UKPRNs to map SENsettings, also reads LA names and codes to map transfers.
 
@@ -184,10 +184,16 @@ def read_lookups():
     la_names_lookups["LA code"] = la_names_lookups["LA code"].astype("str")
 
     urn_lookup = dict(
-        zip(urn_ukprn_lookups["URN"], urn_ukprn_lookups["TypeOfEstablishment (name)"])
+        zip(
+            urn_ukprn_lookups["URN"].astype("float"),
+            urn_ukprn_lookups["TypeOfEstablishment (name)"],
+        )
     )
     ukprn_lookup = dict(
-        zip(urn_ukprn_lookups["UKPRN"], urn_ukprn_lookups["TypeOfEstablishment (name)"])
+        zip(
+            urn_ukprn_lookups["UKPRN"].astype("float"),
+            urn_ukprn_lookups["TypeOfEstablishment (name)"],
+        )
     )
 
     return urn_lookup, ukprn_lookup, la_names_lookups
@@ -195,9 +201,15 @@ def read_lookups():
 
 def map_sen_settings(row):
     if pd.notnull(row["URN"]):
-        return urn_lookup[float(row["URN"])]
+        try:
+            return urn_lookup[float(row["URN"])]
+        except:
+            return f"URN match not found for {row['URN']}"
     elif pd.notnull(row["UKPRN"]):
-        return ukprn_lookup[float(row["UKPRN"])]
+        try:
+            return ukprn_lookup[float(row["UKPRN"])]
+        except:
+            return f"UKPRN match not found for {row['UKPRN']}"
     elif pd.notnull(row["SENSetting"]):
         if row["SENSetting"] in [
             "Other (OLA)",
@@ -280,14 +292,10 @@ def make_year_buckets(years):
         return "m) 12+ years"
 
 
-def make_bar(df, column, title, color_column="Sex", buckets=None):
+def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None):
     if buckets:
         # TODO refactor
         values_df = pd.DataFrame({column: buckets})
-        # df_counts = df.groupby(column).size().to_frame("Number of children").reset_index()
-        # df_counts = df_counts.merge(values_df, how="outer", on=column)
-        # df_counts["Number of children"] = df_counts["Number of children"].fillna(0).astype("int")
-        # df_counts.sort_values(column, inplace=True)
 
         df_counts = (
             df.groupby([column, color_column])
@@ -309,6 +317,7 @@ def make_bar(df, column, title, color_column="Sex", buckets=None):
             title=title,
             color=color_column,
             category_orders={"Sex": ["M", "F"], column: buckets},
+            labels={column: x_label},
         )
         bar.add_trace(
             go.Scatter(
@@ -334,6 +343,8 @@ def make_bar(df, column, title, color_column="Sex", buckets=None):
             title=title,
             color=color_column,
             text="Number of children",
+            category_orders={"Sex": ["M", "F"]},
+            labels={column: x_label},
         )
 
     else:
@@ -348,7 +359,13 @@ def make_bar(df, column, title, color_column="Sex", buckets=None):
         # Makes a scatter using text lined up with the top of the bar chart above
         df_sum = df_counts.groupby(column).sum()
         bar = px.bar(
-            df_counts, x=column, y="Number of children", title=title, color=color_column
+            df_counts,
+            x=column,
+            y="Number of children",
+            title=title,
+            color=color_column,
+            category_orders={"Sex": ["M", "F"]},
+            labels={column: x_label},
         )
         bar.add_trace(
             go.Scatter(
@@ -986,9 +1003,10 @@ class Datacontainer:
 
         enriched_df["PlacementRank"] = enriched_df["PlacementRank"].astype("str")
 
-        enriched_df["SENSetting_mapped"] = enriched_df["SENSetting"].apply(
-            lambda x: SENSettings[x].value if pd.notnull(x) else "None"
-        )
+        # enriched_df["SENSetting_np"] = enriched_df["SENSetting"].apply(
+        #     lambda x: SENSettings[x].value if pd.notnull(x) else "None"
+        # )
+        enriched_df["SENSetting_np"] = enriched_df.apply(map_sen_settings, axis=1)
 
         return enriched_df
 
@@ -1025,7 +1043,19 @@ class Datacontainer:
             lambda x: SENTypes[x].value if pd.notnull(x) else "Not yet determined"
         )
 
-        # enriched_df["SENSetting_mapped"] = enriched_df.apply(map_sen_settings, axis=1)
+        enriched_df["SENunitIndicator"] = enriched_df["SENunitIndicator"].apply(
+            lambda x: (
+                "Yes" if str(x) == "1" else ("No" if str(x) == "0" else "Undefined")
+            )
+        )
+
+        enriched_df["ResourcedProvisionIndicator"] = enriched_df[
+            "ResourcedProvisionIndicator"
+        ].apply(
+            lambda x: (
+                "Yes" if str(x) == "1" else ("No" if str(x) == "0" else "Undefined")
+            )
+        )
 
         return enriched_df
 
@@ -1036,6 +1066,8 @@ class Datacontainer:
 input_file = st.file_uploader("Upload SEN2 XML here")
 
 urn_lookup, ukprn_lookup, la_codes = read_lookups()
+
+st.write(type(list(ukprn_lookup.values())[0]))
 
 if input_file:
     tree = ET.parse(input_file)
@@ -1089,7 +1121,7 @@ if input_file:
         )
 
         sen_setting_selected = st.sidebar.multiselect(
-            "Select SEN settings",
+            "Select SEN settings (active plans)",
             (sen2.enriched_persons["SENSetting_mapped"].unique()),
             default=(sen2.enriched_persons["SENSetting_mapped"].unique()),
         )
@@ -1148,6 +1180,7 @@ if input_file:
                 sliced_enriched_persons,
                 "AgeBuckets",
                 title="Age group - all children",
+                x_label="Age groups",
                 buckets=[
                     "a) Under 1 year",
                     "b) 1 to 4 years",
@@ -1163,6 +1196,7 @@ if input_file:
                 sliced_enriched_persons,
                 "EthnicityGroup",
                 title="Ethnicity - all children",
+                x_label="Ethnicity",
             )
             st.plotly_chart(ethnicity_chart, use_container_width=True)
 
@@ -1170,6 +1204,7 @@ if input_file:
             sliced_enriched_persons,
             "SENtype",
             title="Sen Type (most recent active plan) - all children",
+            x_label="SEN Type",
             buckets=[
                 "Specific learning difficulty",
                 "Moderate learning difficulty",
@@ -1205,6 +1240,7 @@ if input_file:
             requests_by_age = make_bar(
                 sliced_enriched_requests,
                 "AgeBuckets",
+                x_label="Age groups",
                 title="Requests by age",
                 buckets=[
                     "a) Under 1 year",
@@ -1227,7 +1263,10 @@ if input_file:
 
         with req_col3:
             request_outcomes = make_bar(
-                sliced_enriched_requests, "RequestOutcome", "Request outcomes"
+                sliced_enriched_requests,
+                "RequestOutcome",
+                "Request outcomes",
+                x_label="Outcomes",
             )
             st.plotly_chart(request_outcomes, use_container_width=True)
 
@@ -1235,6 +1274,7 @@ if input_file:
                 sliced_enriched_requests,
                 "MediationOrTribunal",
                 "Requests - mediation or tribunal",
+                x_label="Challenge to request outcome",
                 buckets=["Mediation", "Tribunal", "No"],
             )
             st.plotly_chart(request_tribunal, use_container_width=True)
@@ -1243,6 +1283,7 @@ if input_file:
             sliced_enriched_requests,
             "RequestLengthBucket",
             "Request timeframe (received to outcome)",
+            x_label="Request length (days)",
             buckets=[
                 "a) Under 10 days",
                 "b) 10 to 20 days",
@@ -1260,6 +1301,7 @@ if input_file:
             sliced_enriched_requests,
             "RequestSource",
             "Request sources",
+            x_label="Sources",
             buckets=[
                 "Young person or parent",
                 "School or other education setting",
@@ -1284,6 +1326,7 @@ if input_file:
                 sliced_enriched_assessments,
                 "AgeBuckets",
                 title="Assessments by age",
+                x_label="Age group",
                 buckets=[
                     "a) Under 1 year",
                     "b) 1 to 4 years",
@@ -1299,6 +1342,7 @@ if input_file:
                 sliced_enriched_assessments,
                 "MediationOrTribunal",
                 "Assessments - mediation or tribunal",
+                x_label="Challenge to assessment outcome",
                 buckets=[
                     "Assessment Mediation",
                     "Assessment Tribunal",
@@ -1311,7 +1355,10 @@ if input_file:
 
         with ass_col4:
             assessment_outcomes = make_bar(
-                sliced_enriched_assessments, "AssessmentOutcome", "Assesment outcomes"
+                sliced_enriched_assessments,
+                "AssessmentOutcome",
+                "Assesment outcomes",
+                x_label="Outcomes",
             )
             st.plotly_chart(assessment_outcomes, use_container_width=True)
 
@@ -1372,7 +1419,8 @@ if input_file:
 
             sen_setting = make_bar(
                 sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
-                "SENSetting_mapped",
+                "SENSetting_np",
+                x_label="SEN settings",
                 title="Plans active on census day - SEN Setting",
                 buckets=[
                     "Other (OLA)",
@@ -1388,7 +1436,8 @@ if input_file:
             open_plan_lengths = make_bar(
                 sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
                 "NamedPlanLength (years)",
-                title="Plans active on census day - length (years)",
+                x_label="Named plan lengths (years)",
+                title="Plans active on census day - length",
             )
 
             st.plotly_chart(open_plan_lengths, use_container_width=True)
@@ -1398,6 +1447,7 @@ if input_file:
                 sliced_enriched_np,
                 "CeaseReason",
                 title="Plans ceasing this year - Reason",
+                x_label="Reasons",
                 buckets=[
                     "1) Reached maximum age",
                     "2) Need met w/o EHC",
@@ -1458,6 +1508,7 @@ if input_file:
             timeliness_df,
             "Timeliness - week 20 exceptions not considered",
             title="Timeliness - week 20 including exceptions",
+            x_label="Timeliness",
             color_column=None,
         )
 
@@ -1468,6 +1519,7 @@ if input_file:
             ],
             "Timeliness - week 20 exceptions considered",
             title="Timeliness - week 20 excluding exceptions",
+            x_label="Timeliness",
             color_column=None,
         )
         time_col1, time_col2 = st.columns(2)
@@ -1491,10 +1543,26 @@ if input_file:
             open_closed_ap.update_traces(textinfo="value+percent")
             st.plotly_chart(open_closed_ap, use_container_width=True)
 
+            placements_df_ap_open = (
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()]
+                .groupby(["child_id"])
+                .size()
+                .to_frame("Number of plans")
+                .reset_index()
+            )
+            multiple_placements_ap_open = px.pie(
+                placements_df_ap_open,
+                names="Number of plans",
+                title="Number of open placements per child",
+            )
+            multiple_placements_ap_open.update_traces(textinfo="value+percent")
+            st.plotly_chart(multiple_placements_ap_open, use_container_width=True)
+
         with ap_col2:
             ap_residential = make_bar(
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
                 "RES",
+                x_label="Residential setting",
                 title="Open active plans - residential setting",
             )
             st.plotly_chart(ap_residential, use_container_width=True)
@@ -1518,43 +1586,50 @@ if input_file:
             ap_wpb = make_bar(
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
                 "WPB",
-                title="Open active plans - work based learning ",
+                x_label="Work-based learning activity",
+                title="Open active plans - work-based learning ",
             )
             st.plotly_chart(ap_wpb, use_container_width=True)
 
-            placements_df_ap_open = (
-                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()]
-                .groupby(["child_id"])
-                .size()
-                .to_frame("Number of plans")
-                .reset_index()
+            sen_unit_count = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
+                "SENunitIndicator",
+                title="In SEN unit on census day",
+                x_label="SEN unit indicator",
             )
-            multiple_placements_ap_open = px.pie(
-                placements_df_ap_open,
-                names="Number of plans",
-                title="Number of open placements per child",
-            )
-            multiple_placements_ap_open.update_traces(textinfo="value+percent")
-            st.plotly_chart(multiple_placements_ap_open, use_container_width=True)
+            st.plotly_chart(sen_unit_count, use_container_width=True)
 
         with ap_col4:
             ap_review_outcomes = make_bar(
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
                 "ReviewOutcome",
+                x_label="Outcomes",
                 title="Open active plans - review outcomes",
             )
             ap_review_outcomes.update_layout(yaxis_title="Number of children")
             st.plotly_chart(ap_review_outcomes, use_container_width=True)
 
+            resourced_provision_count = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
+                "ResourcedProvisionIndicator",
+                title="In resourced provision on census day",
+                x_label="Resourced provision indicator",
+            )
+            st.plotly_chart(resourced_provision_count, use_container_width=True)
+
         ehcs_transferred = make_bar(
             sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
             "LA name",
+            x_label="LA name",
             title="Open active plans - EHCs transferred in",
         )
         st.plotly_chart(ehcs_transferred, use_container_width=True)
 
         sen_settings = make_bar(
-            sliced_enriched_ap, "SENSetting_mapped", title="SEN settings"
+            sliced_enriched_ap,
+            "SENSetting_mapped",
+            title="SEN settings",
+            x_label="SEN setting",
         )
         st.plotly_chart(sen_settings, use_container_width=True)
 
