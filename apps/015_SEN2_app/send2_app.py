@@ -1,19 +1,3 @@
-# Questions:
-# What extra measures do we want
-# Are there any measures we'd rather view in a different way - labels
-# Are there colour scheme adjustments to make
-# How do we want to look at active plans
-# WHat slicers would we like
-# WHat buckets would we like on different timeframe calculations
-
-# data labels on charts
-# primary needs slicers
-# setting type slicers
-
-# annual review timeliness
-
-# list of maintenance
-
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -29,6 +13,8 @@ from dateutil.relativedelta import relativedelta
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+
+from pyodide.http import open_url
 
 ###################
 # Config
@@ -178,6 +164,58 @@ class EthnicSubcategories(Enum):
 ###################
 # Util functions
 ###################
+
+
+@st.cache_data
+def read_lookups():
+    """Reads lookups for the URN, and UKPRNs to map SENsettings, also reads LA names and codes to map transfers.
+
+    We need to use open_url from pyodide so we can open https urls.
+    """
+    urn_url = open_url(
+        "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/015_SEN2_app/urn_ukprn_lookups.csv"
+    )
+    la_names_url = open_url(
+        "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/015_SEN2_app/la_names_lookup.csv"
+    )
+    urn_ukprn_lookups = pd.read_csv(urn_url)
+    la_names_lookups = pd.read_csv(la_names_url)
+
+    la_names_lookups["LA code"] = la_names_lookups["LA code"].astype("str")
+
+    urn_lookup = dict(
+        zip(urn_ukprn_lookups["URN"], urn_ukprn_lookups["TypeOfEstablishment (name)"])
+    )
+    ukprn_lookup = dict(
+        zip(urn_ukprn_lookups["UKPRN"], urn_ukprn_lookups["TypeOfEstablishment (name)"])
+    )
+
+    return urn_lookup, ukprn_lookup, la_names_lookups
+
+
+def map_sen_settings(row):
+    if pd.notnull(row["URN"]):
+        return urn_lookup[float(row["URN"])]
+    elif pd.notnull(row["UKPRN"]):
+        return ukprn_lookup[float(row["UKPRN"])]
+    elif pd.notnull(row["SENSetting"]):
+        if row["SENSetting"] in [
+            "Other (OLA)",
+            "Other (OPA)",
+            "Elective home education (EHE)",
+            "Early years provider (EYP)",
+            "Other (OTH)",
+            "Not in education, employment, or training",
+            "Not in education or training - notice issued",
+            "Not in education or training - other",
+        ]:
+            return SENSettings[row].value
+        else:
+            return "SEN setting not found"
+    else:
+        return "SEN setting not found"
+
+
 def calculate_age_buckets(age):
     # Used to make age buckets matching published data
     if age < 1:
@@ -734,18 +772,27 @@ class Datacontainer:
         # Get just the primary needs and sen settings for slicing and map to descriptions
         sen_types = self.data.active_plans[
             self.data.active_plans["SENtypeRank"].astype("str") == "1"
-        ][["child_id", "SENtype", "EntryDate", "SENSetting"]]
+        ][["child_id", "SENtype", "EntryDate", "URN", "UKPRN", "SENSetting"]]
         sen_types["EntryDate"] = pd.to_datetime(
             sen_types["EntryDate"], format="%Y-%m-%d"
         )
         sen_types.sort_values(["EntryDate"], ascending=False, inplace=True)
         sen_types.drop_duplicates(subset="child_id", keep="first", inplace=True)
-        sen_types = sen_types[["child_id", "SENtype", "SENSetting"]]
+        sen_types = sen_types[
+            [
+                "child_id",
+                "SENtype",
+                "SENSetting",
+                "URN",
+                "UKPRN",
+            ]
+        ]
         enriched_df = enriched_df.merge(sen_types, on="child_id", how="left")
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
             lambda x: SENTypes[x].value if pd.notnull(x) else "Not yet determined"
         )
+        enriched_df["SENSetting_mapped"] = enriched_df.apply(map_sen_settings, axis=1)
 
         return enriched_df
 
@@ -763,7 +810,7 @@ class Datacontainer:
                     "Sex",
                     "child_id",
                     "SENtype",
-                    "SENSetting",
+                    "SENSetting_mapped",
                 ]
             ],
             how="left",
@@ -832,7 +879,7 @@ class Datacontainer:
                     "Sex",
                     "child_id",
                     "SENtype",
-                    "SENSetting",
+                    "SENSetting_mapped",
                 ]
             ],
             how="left",
@@ -845,14 +892,23 @@ class Datacontainer:
 
         enriched_df["MediationOrTribunal"] = enriched_df.apply(
             lambda x: (
-                "Mediation"
-                if (x["AssessmentOutcome"] != "H")
-                & ((x["AssessmentMediation"] == "1") | (x["OtherMediation"] == "1"))
+                "Assessment Mediation"
+                if (x["AssessmentOutcome"] != "H") & (x["AssessmentMediation"] == "1")
                 else (
-                    "Tribunal"
+                    "Assessment Tribunal"
                     if (x["AssessmentOutcome"] != "H")
-                    & ((x["AssessmentTribunal"] == "1") | (x["OtherTribunal"] == "1"))
-                    else "No"
+                    & (x["AssessmentTribunal"] == "1")
+                    else (
+                        "Other Mediation"
+                        if (x["AssessmentOutcome"] != "H")
+                        & (x["OtherMediation"] == "1")
+                        else (
+                            "Other Tribunal"
+                            if (x["AssessmentOutcome"] != "H")
+                            & (x["OtherTribunal"] == "1")
+                            else "No"
+                        )
+                    )
                 )
             ),
             axis=1,
@@ -875,7 +931,14 @@ class Datacontainer:
 
         enriched_df = enriched_df.merge(
             self.enriched_persons[
-                ["AgeBuckets", "EthnicityGroup", "Sex", "child_id", "SENtype"]
+                [
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "Sex",
+                    "child_id",
+                    "SENtype",
+                    "SENSetting_mapped",
+                ]
             ],
             how="left",
             on="child_id",
@@ -934,7 +997,9 @@ class Datacontainer:
         enriched_df = self.data.active_plans.copy()
 
         enriched_df = enriched_df.merge(
-            self.enriched_persons[["AgeBuckets", "EthnicityGroup", "Sex", "child_id"]],
+            self.enriched_persons[
+                ["AgeBuckets", "EthnicityGroup", "Sex", "child_id", "SENSetting_mapped"]
+            ],
             how="left",
             on="child_id",
         )
@@ -949,18 +1014,18 @@ class Datacontainer:
 
         enriched_df["LastReview"].fillna("Not applicable", inplace=True)
 
-        enriched_df["TransferLA"] = enriched_df["TransferLA"].apply(
-            lambda x: f"LA Code: {x}" if pd.notnull(x) else "Not transferred"
+        enriched_df["TransferLA"] = enriched_df["TransferLA"].fillna("Not transferred")
+
+        enriched_df = enriched_df.merge(
+            la_codes, how="left", left_on="TransferLA", right_on="LA code"
         )
-        enriched_df["TransferLA"].fillna("Not transferred", inplace=True)
+        enriched_df["LA name"].fillna("Not transferred", inplace=True)
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
             lambda x: SENTypes[x].value if pd.notnull(x) else "Not yet determined"
         )
 
-        enriched_df["SENSetting_mapped"] = enriched_df["SENSetting"].apply(
-            lambda x: SENSettings[x].value if pd.notnull(x) else "None"
-        )
+        # enriched_df["SENSetting_mapped"] = enriched_df.apply(map_sen_settings, axis=1)
 
         return enriched_df
 
@@ -968,21 +1033,14 @@ class Datacontainer:
 ###########################
 # Main App
 ###########################
-
 input_file = st.file_uploader("Upload SEN2 XML here")
 
-if input_file:
-    # Get time to test ingress speed and caching
-    # start_time = time.time()
-    # st.write("Starting data read, for large datasets this could take 5 minutes.")
+urn_lookup, ukprn_lookup, la_codes = read_lookups()
 
+if input_file:
     tree = ET.parse(input_file)
     root = tree.getroot()
     data_files = convert_data(root)
-
-    # after_ingress_time = time.time()
-    # total_ingress_time = after_ingress_time - start_time
-    # st.write(f"Total ingress time: {int(total_ingress_time/60)} minutes.")
 
     sen2 = Datacontainer(data_files)
 
@@ -1030,11 +1088,18 @@ if input_file:
             default=(sen2.enriched_persons["EthnicityGroup"].unique()),
         )
 
+        sen_setting_selected = st.sidebar.multiselect(
+            "Select SEN settings",
+            (sen2.enriched_persons["SENSetting_mapped"].unique()),
+            default=(sen2.enriched_persons["SENSetting_mapped"].unique()),
+        )
+
     sliced_enriched_persons = sen2.enriched_persons[
         sen2.enriched_persons["Sex"].isin(sex_selected)
         & sen2.enriched_persons["AgeBuckets"].isin(age_selected)
         & (sen2.enriched_persons["EthnicityGroup"].isin(ethnicity_selected))
         & (sen2.enriched_persons["SENtype"].isin(sen_type_selected))
+        & (sen2.enriched_persons["SENSetting_mapped"].isin(sen_setting_selected))
     ]
 
     sliced_enriched_requests = sen2.enriched_requests[
@@ -1043,6 +1108,7 @@ if input_file:
         & (sen2.enriched_requests["RequestOutcome"] != "H")
         & (sen2.enriched_requests["EthnicityGroup"].isin(ethnicity_selected))
         & (sen2.enriched_requests["SENtype"].isin(sen_type_selected))
+        & (sen2.enriched_requests["SENSetting_mapped"].isin(sen_setting_selected))
     ]
 
     sliced_enriched_assessments = sen2.enriched_assessments[
@@ -1051,15 +1117,15 @@ if input_file:
         & (sen2.enriched_assessments["AssessmentOutcome"] != "H")
         & (sen2.enriched_assessments["EthnicityGroup"].isin(ethnicity_selected))
         & (sen2.enriched_assessments["SENtype"].isin(sen_type_selected))
+        & (sen2.enriched_assessments["SENSetting_mapped"].isin(sen_setting_selected))
     ]
 
     sliced_enriched_np = sen2.enriched_named_plan[
         (sen2.enriched_named_plan["Sex"].isin(sex_selected))
-        & (
-            sen2.enriched_named_plan["AgeBuckets"].isin(age_selected)
-            & (sen2.enriched_named_plan["EthnicityGroup"].isin(ethnicity_selected))
-            & (sen2.enriched_named_plan["SENtype"].isin(sen_type_selected))
-        )
+        & (sen2.enriched_named_plan["AgeBuckets"].isin(age_selected))
+        & (sen2.enriched_named_plan["EthnicityGroup"].isin(ethnicity_selected))
+        & (sen2.enriched_named_plan["SENtype"].isin(sen_type_selected))
+        & (sen2.enriched_named_plan["SENSetting_mapped"].isin(sen_setting_selected))
     ]
 
     sliced_enriched_ap = sen2.enriched_active_plans[
@@ -1067,6 +1133,7 @@ if input_file:
         & (sen2.enriched_active_plans["AgeBuckets"].isin(age_selected))
         & (sen2.enriched_active_plans["EthnicityGroup"].isin(ethnicity_selected))
         & (sen2.enriched_active_plans["SENtype"].isin(sen_type_selected))
+        & (sen2.enriched_active_plans["SENSetting_mapped"].isin(sen_setting_selected))
     ]
 
     with st.expander("All children in data (every child with a persons block)"):
@@ -1232,7 +1299,13 @@ if input_file:
                 sliced_enriched_assessments,
                 "MediationOrTribunal",
                 "Assessments - mediation or tribunal",
-                buckets=["Mediation", "Tribunal", "No"],
+                buckets=[
+                    "Assessment Mediation",
+                    "Assessment Tribunal",
+                    "Other Mediation",
+                    "Other Tribunal",
+                    "No",
+                ],
             )
             st.plotly_chart(assessment_tribunal, use_container_width=True)
 
@@ -1475,10 +1548,15 @@ if input_file:
 
         ehcs_transferred = make_bar(
             sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
-            "TransferLA",
+            "LA name",
             title="Open active plans - EHCs transferred in",
         )
         st.plotly_chart(ehcs_transferred, use_container_width=True)
+
+        sen_settings = make_bar(
+            sliced_enriched_ap, "SENSetting_mapped", title="SEN settings"
+        )
+        st.plotly_chart(sen_settings, use_container_width=True)
 
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_persons)
