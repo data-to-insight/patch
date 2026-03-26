@@ -170,9 +170,30 @@ class EthnicSubcategories(Enum):
 ###################
 # Util functions
 ###################
+def apply_filters(
+    df,
+    sex_selected,
+    age_selected,
+    ethnicity_selected,
+    sen_type_selected,
+    sen_setting_selected,
+    plan_length,
+):
+    """Used to apply all filters to enriched tables"""
+    df = df[
+        df["Sex"].isin(sex_selected)
+        & df["AgeBuckets"].isin(age_selected)
+        & (df["EthnicityGroup"].isin(ethnicity_selected))
+        & (df["SENtype"].isin(sen_type_selected))
+        & (df["SENSetting_mapped"].isin(sen_setting_selected))
+        & (df["NamedPlanLength (days)"] >= plan_length[0])
+        & (df["NamedPlanLength (days)"] <= plan_length[1])
+    ]
+
+    return df
 
 
-# @st.cache_data
+@st.cache_data
 def read_lookups():
     """Reads lookups for the URN, and UKPRNs to map SENsettings, also reads LA names and codes to map transfers.
 
@@ -341,7 +362,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             color=color_column,
             category_orders={"Sex": ["M", "F"], column: buckets},
             labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.Dark2,
+            color_discrete_sequence=px.colors.qualitative.G10,
         )
 
         # Needed to add total stacked bar heights where we are using sex to split bars
@@ -373,7 +394,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             text="Number of children",
             category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.Dark2,
+            color_discrete_sequence=px.colors.qualitative.G10,
         )
 
     else:
@@ -396,7 +417,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             color=color_column,
             category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.Dark2,
+            color_discrete_sequence=px.colors.qualitative.G10,
         )
         bar.add_trace(
             go.Scatter(
@@ -409,12 +430,21 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             )
         )
 
+    bar.update_layout(
+        template="seaborn",
+        plot_bgcolor="lightgrey",
+        paper_bgcolor="lightgrey",
+        font_color="black",
+        title_font_color="black",
+        legend_font_color="black",
+        legend_title_font_color="black",
+    )
     return bar
 
 
 def make_indicator(df, title):
-    "Used to make and format indicators to display overall, male, and female counts for given columns."
-    "Will return no number if there are none of a given sex."
+    """Used to make and format indicators to display overall, male, and female counts for given columns.
+    Will return no number if there are none of a given sex."""
     indicator = make_subplots(
         rows=3,
         cols=1,
@@ -850,6 +880,39 @@ class Datacontainer:
         )
         enriched_df["SENSetting_mapped"] = enriched_df.apply(map_sen_settings, axis=1)
 
+        # Get named plan lengths from named plans
+        plan_lengths = self.data.named_plan[
+            self.data.named_plan["PlacementRank"].astype("str") == "1"
+        ][["child_id", "StartDate", "CeaseDate"]]
+
+        plan_lengths["StartDate"] = pd.to_datetime(
+            plan_lengths["StartDate"], format="%Y-%m-%d", errors="coerce"
+        )
+        plan_lengths["CeaseDate"] = pd.to_datetime(
+            plan_lengths["CeaseDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        plan_lengths["CeaseDate"].fillna(self.reference_period["end"], inplace=True)
+
+        plan_lengths["NamedPlanLength (days)"] = (
+            plan_lengths["CeaseDate"] - plan_lengths["StartDate"]
+        ) / pd.Timedelta(days=1)
+
+        plan_lengths["NamedPlanLength (years)"] = (
+            plan_lengths["NamedPlanLength (days)"] / 365.25
+        )
+
+        plan_lengths["NamedPlanLength (years)"] = plan_lengths[
+            "NamedPlanLength (years)"
+        ].apply(make_year_buckets)
+        enriched_df = enriched_df.merge(
+            plan_lengths[
+                ["child_id", "NamedPlanLength (days)", "NamedPlanLength (years)"]
+            ],
+            how="left",
+            on="child_id",
+        )
+
         return enriched_df
 
     @property
@@ -867,6 +930,7 @@ class Datacontainer:
                     "child_id",
                     "SENtype",
                     "SENSetting_mapped",
+                    "NamedPlanLength (days)",
                 ]
             ],
             how="left",
@@ -936,6 +1000,7 @@ class Datacontainer:
                     "child_id",
                     "SENtype",
                     "SENSetting_mapped",
+                    "NamedPlanLength (days)",
                 ]
             ],
             how="left",
@@ -994,6 +1059,8 @@ class Datacontainer:
                     "child_id",
                     "SENtype",
                     "SENSetting_mapped",
+                    "NamedPlanLength (years)",
+                    "NamedPlanLength (days)",
                 ]
             ],
             how="left",
@@ -1027,13 +1094,13 @@ class Datacontainer:
 
         enriched_df["CeaseDate_year"] = enriched_df["CeaseDate"].dt.year
 
-        enriched_df["NamedPlanLength (years)"] = (
-            self.reference_period["end"] - enriched_df["StartDate"]
-        ) / pd.Timedelta(days=365.25)
+        # enriched_df["NamedPlanLength (years)"] = (
+        #     self.reference_period["end"] - enriched_df["StartDate"]
+        # ) / pd.Timedelta(days=365.25)
 
-        enriched_df["NamedPlanLength (years)"] = enriched_df[
-            "NamedPlanLength (years)"
-        ].apply(make_year_buckets)
+        # enriched_df["NamedPlanLength (years)"] = enriched_df[
+        #     "NamedPlanLength (years)"
+        # ].apply(make_year_buckets)
 
         enriched_df["PlanRes"].fillna("Non-residential", inplace=True)
         enriched_df["PlanRes"] = enriched_df["PlanRes"].map(
@@ -1042,9 +1109,6 @@ class Datacontainer:
 
         enriched_df["PlacementRank"] = enriched_df["PlacementRank"].astype("str")
 
-        # enriched_df["SENSetting_np"] = enriched_df["SENSetting"].apply(
-        #     lambda x: SENSettings[x].value if pd.notnull(x) else "None"
-        # )
         enriched_df["SENSetting_np"] = enriched_df.apply(map_sen_settings, axis=1)
 
         return enriched_df
@@ -1055,7 +1119,14 @@ class Datacontainer:
 
         enriched_df = enriched_df.merge(
             self.enriched_persons[
-                ["AgeBuckets", "EthnicityGroup", "Sex", "child_id", "SENSetting_mapped"]
+                [
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "Sex",
+                    "child_id",
+                    "SENSetting_mapped",
+                    "NamedPlanLength (days)",
+                ]
             ],
             how="left",
             on="child_id",
@@ -1126,7 +1197,14 @@ if input_file:
     root = tree.getroot()
     data_files = convert_data(root)
 
-    sen2 = Datacontainer(data_files)
+    @st.cache_data
+    def get_datacontainer(_data_files):
+        """This function exists to create a datacontainer object for the sen2 so we can cache it
+        with the st.cache_data decorator, this cant be done with the class directly."""
+        sen2_object = Datacontainer(_data_files)
+        return sen2_object
+
+    sen2 = get_datacontainer(data_files)
 
     with st.sidebar:
         st.write("Make selections here:")
@@ -1178,47 +1256,58 @@ if input_file:
             default=(sen2.enriched_persons["SENSetting_mapped"].unique()),
         )
 
-    sliced_enriched_persons = sen2.enriched_persons[
-        sen2.enriched_persons["Sex"].isin(sex_selected)
-        & sen2.enriched_persons["AgeBuckets"].isin(age_selected)
-        & (sen2.enriched_persons["EthnicityGroup"].isin(ethnicity_selected))
-        & (sen2.enriched_persons["SENtype"].isin(sen_type_selected))
-        & (sen2.enriched_persons["SENSetting_mapped"].isin(sen_setting_selected))
-    ]
+        plan_length = st.sidebar.slider(
+            "Select named plan length (includes closed plans)",
+            min_value=int(sen2.enriched_persons["NamedPlanLength (days)"].min()),
+            max_value=int(sen2.enriched_persons["NamedPlanLength (days)"].max()),
+            value=[0, int(sen2.enriched_persons["NamedPlanLength (days)"].max())],
+        )
 
-    sliced_enriched_requests = sen2.enriched_requests[
-        sen2.enriched_requests["Sex"].isin(sex_selected)
-        & sen2.enriched_requests["AgeBuckets"].isin(age_selected)
-        & (sen2.enriched_requests["RequestOutcome"] != "H")
-        & (sen2.enriched_requests["EthnicityGroup"].isin(ethnicity_selected))
-        & (sen2.enriched_requests["SENtype"].isin(sen_type_selected))
-        & (sen2.enriched_requests["SENSetting_mapped"].isin(sen_setting_selected))
-    ]
-
-    sliced_enriched_assessments = sen2.enriched_assessments[
-        (sen2.enriched_assessments["Sex"].isin(sex_selected))
-        & (sen2.enriched_assessments["AgeBuckets"].isin(age_selected))
-        & (sen2.enriched_assessments["AssessmentOutcome"] != "H")
-        & (sen2.enriched_assessments["EthnicityGroup"].isin(ethnicity_selected))
-        & (sen2.enriched_assessments["SENtype"].isin(sen_type_selected))
-        & (sen2.enriched_assessments["SENSetting_mapped"].isin(sen_setting_selected))
-    ]
-
-    sliced_enriched_np = sen2.enriched_named_plan[
-        (sen2.enriched_named_plan["Sex"].isin(sex_selected))
-        & (sen2.enriched_named_plan["AgeBuckets"].isin(age_selected))
-        & (sen2.enriched_named_plan["EthnicityGroup"].isin(ethnicity_selected))
-        & (sen2.enriched_named_plan["SENtype"].isin(sen_type_selected))
-        & (sen2.enriched_named_plan["SENSetting_mapped"].isin(sen_setting_selected))
-    ]
-
-    sliced_enriched_ap = sen2.enriched_active_plans[
-        (sen2.enriched_active_plans["Sex"].isin(sex_selected))
-        & (sen2.enriched_active_plans["AgeBuckets"].isin(age_selected))
-        & (sen2.enriched_active_plans["EthnicityGroup"].isin(ethnicity_selected))
-        & (sen2.enriched_active_plans["SENtype"].isin(sen_type_selected))
-        & (sen2.enriched_active_plans["SENSetting_mapped"].isin(sen_setting_selected))
-    ]
+    sliced_enriched_persons = apply_filters(
+        sen2.enriched_persons,
+        sex_selected,
+        age_selected,
+        ethnicity_selected,
+        sen_type_selected,
+        sen_setting_selected,
+        plan_length,
+    )
+    sliced_enriched_requests = apply_filters(
+        sen2.enriched_requests,
+        sex_selected,
+        age_selected,
+        ethnicity_selected,
+        sen_type_selected,
+        sen_setting_selected,
+        plan_length,
+    )
+    sliced_enriched_assessments = apply_filters(
+        sen2.enriched_assessments,
+        sex_selected,
+        age_selected,
+        ethnicity_selected,
+        sen_type_selected,
+        sen_setting_selected,
+        plan_length,
+    )
+    sliced_enriched_np = apply_filters(
+        sen2.enriched_named_plan,
+        sex_selected,
+        age_selected,
+        ethnicity_selected,
+        sen_type_selected,
+        sen_setting_selected,
+        plan_length,
+    )
+    sliced_enriched_ap = apply_filters(
+        sen2.enriched_active_plans,
+        sex_selected,
+        age_selected,
+        ethnicity_selected,
+        sen_type_selected,
+        sen_setting_selected,
+        plan_length,
+    )
 
     with st.expander("All children in data (every child with a persons block)"):
         col1, col2, col3 = st.columns(3)
@@ -1241,7 +1330,7 @@ if input_file:
                     "e) 16 years and over",
                 ],
             )
-            st.plotly_chart(age_chart, use_container_width=True)
+            st.plotly_chart(age_chart, use_container_width=True, theme=None)
 
         with col3:
             ethnicity_chart = make_bar(
@@ -1250,43 +1339,32 @@ if input_file:
                 title="Ethnicity - all children",
                 x_label="Ethnicity",
             )
-            st.plotly_chart(ethnicity_chart, use_container_width=True)
-
-        sen_type_chart = make_bar(
-            sliced_enriched_persons,
-            "SENtype",
-            title="Sen Type (most recent active plan) - all children",
-            x_label="SEN Type",
-            buckets=[
-                "Specific learning difficulty",
-                "Moderate learning difficulty",
-                "Severe learning difficulty",
-                "Profound and multiple learning difficulty",
-                "Social, emotional and mental health",
-                "Speech, language and communication needs",
-                "Hearing impairment",
-                "Vision impairment",
-                "Multi-sensory impairment",
-                "Physical disability",
-                "Autistic spectrum disorder",
-                "Down Syndrome",
-                "Other difficulty",
-            ],
-        )
-        st.plotly_chart(sen_type_chart, use_container_width=True)
+            st.plotly_chart(ethnicity_chart, use_container_width=True, theme=None)
 
     with st.expander("Requests"):
         req_col1, req_col2, req_col3 = st.columns(3)
 
         with req_col1:
             total_requests = make_indicator(sliced_enriched_requests, "Total Requests")
-            st.plotly_chart(total_requests, use_container_width=True)
+            st.plotly_chart(total_requests, use_container_width=True, theme=None)
 
             requests_exported = px.pie(
-                sliced_enriched_requests, names="Exported", title="Requests exported"
+                sliced_enriched_requests,
+                names="Exported",
+                title="Requests exported",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             requests_exported.update_traces(textinfo="value+percent")
-            st.plotly_chart(requests_exported, use_container_width=True)
+            requests_exported.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
+            )
+            st.plotly_chart(requests_exported, use_container_width=True, theme=None)
 
         with req_col2:
             requests_by_age = make_bar(
@@ -1303,15 +1381,25 @@ if input_file:
                 ],
             )
             requests_by_age.update_layout(yaxis_title="Number of children")
-            st.plotly_chart(requests_by_age, use_container_width=True)
+            st.plotly_chart(requests_by_age, use_container_width=True, theme=None)
 
             requests_rya = px.pie(
                 sliced_enriched_requests,
                 names="RYA",
                 title="Registered youth accomodation",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             requests_rya.update_traces(textinfo="value+percent")
-            st.plotly_chart(requests_rya, use_container_width=True)
+            requests_rya.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
+            )
+            st.plotly_chart(requests_rya, use_container_width=True, theme=None)
 
         with req_col3:
             request_outcomes = make_bar(
@@ -1320,7 +1408,7 @@ if input_file:
                 "Request outcomes",
                 x_label="Outcomes",
             )
-            st.plotly_chart(request_outcomes, use_container_width=True)
+            st.plotly_chart(request_outcomes, use_container_width=True, theme=None)
 
             request_tribunal = make_bar(
                 sliced_enriched_requests,
@@ -1329,7 +1417,7 @@ if input_file:
                 x_label="Challenge to request outcome",
                 buckets=["Mediation", "Tribunal", "No"],
             )
-            st.plotly_chart(request_tribunal, use_container_width=True)
+            st.plotly_chart(request_tribunal, use_container_width=True, theme=None)
 
         request_lengths = make_bar(
             sliced_enriched_requests,
@@ -1347,7 +1435,7 @@ if input_file:
                 "x) Request incomplete",
             ],
         )
-        st.plotly_chart(request_lengths, use_container_width=True)
+        st.plotly_chart(request_lengths, use_container_width=True, theme=None)
 
         request_sources = make_bar(
             sliced_enriched_requests,
@@ -1362,7 +1450,7 @@ if input_file:
                 "Other",
             ],
         )
-        st.plotly_chart(request_sources, use_container_width=True)
+        st.plotly_chart(request_sources, use_container_width=True, theme=None)
 
     with st.expander("Assessments"):
         ass_col1, ass_col2, ass_col3, ass_col4 = st.columns(4)
@@ -1371,7 +1459,7 @@ if input_file:
             total_assessments = make_indicator(
                 sliced_enriched_assessments, "Total assessments"
             )
-            st.plotly_chart(total_assessments, use_container_width=True)
+            st.plotly_chart(total_assessments, use_container_width=True, theme=None)
 
         with ass_col2:
             assessments_by_age = make_bar(
@@ -1387,7 +1475,7 @@ if input_file:
                     "e) 16 years and over",
                 ],
             )
-            st.plotly_chart(assessments_by_age, use_container_width=True)
+            st.plotly_chart(assessments_by_age, use_container_width=True, theme=None)
 
         with ass_col3:
             assessment_tribunal = make_bar(
@@ -1403,16 +1491,16 @@ if input_file:
                     "No",
                 ],
             )
-            st.plotly_chart(assessment_tribunal, use_container_width=True)
+            st.plotly_chart(assessment_tribunal, use_container_width=True, theme=None)
 
         with ass_col4:
             assessment_outcomes = make_bar(
                 sliced_enriched_assessments,
                 "AssessmentOutcome",
-                "Assesment outcomes",
+                "Assessment outcomes",
                 x_label="Outcomes",
             )
-            st.plotly_chart(assessment_outcomes, use_container_width=True)
+            st.plotly_chart(assessment_outcomes, use_container_width=True, theme=None)
 
     with st.expander("Named Plans"):
         np_c1r1, np_c2r1, np_c3r1 = st.columns(3)
@@ -1425,8 +1513,25 @@ if input_file:
                 ],
                 "Plans starting (year)",
             )
-            st.plotly_chart(plans_starting, use_container_width=True)
+            st.plotly_chart(plans_starting, use_container_width=True, theme=None)
 
+        with np_c2r1:
+            plans_ending = make_indicator(
+                sliced_enriched_np[
+                    (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
+                ],
+                "Plans ending (year)",
+            )
+            st.plotly_chart(plans_ending, use_container_width=True, theme=None)
+
+        with np_c3r1:
+            active_census_day = make_indicator(
+                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                "Plans active on census day",
+            )
+            st.plotly_chart(active_census_day, use_container_width=True, theme=None)
+
+        with np_c1r2:
             # Children with multiple placements
             placements_df = (
                 sliced_enriched_np.groupby(["child_id"])
@@ -1438,19 +1543,44 @@ if input_file:
                 placements_df,
                 names="Number of plans",
                 title="Number of plans per child",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             multiple_placements.update_traces(textinfo="value+percent")
-            st.plotly_chart(multiple_placements, use_container_width=True)
-
-        with np_c2r1:
-            plans_ending = make_indicator(
-                sliced_enriched_np[
-                    (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
-                ],
-                "Plans ending (year)",
+            multiple_placements.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
             )
-            st.plotly_chart(plans_ending, use_container_width=True)
+            st.plotly_chart(multiple_placements, use_container_width=True, theme=None)
 
+            open_plan_lengths = make_bar(
+                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                "NamedPlanLength (years)",
+                x_label="Named plan lengths (years)",
+                title="Plans active on census day - length",
+                buckets=[
+                    "a) Less than 1 year",
+                    "b) 1-2 years",
+                    "c) 2-3 years",
+                    "d) 13-4 years",
+                    "e) 4-5 years",
+                    "f) 5-6 years",
+                    "g) 6-7 years",
+                    "h) 7-8 years",
+                    "i) 8-9 years",
+                    "j) 9-10 years",
+                    "k) 10-11 years",
+                    "l) 11-12 years",
+                    "m) 12+ years",
+                ],
+            )
+            st.plotly_chart(open_plan_lengths, use_container_width=True, theme=None)
+
+        with np_c2r2:
             residential_setting = px.pie(
                 sliced_enriched_np[
                     sliced_enriched_np["CeaseDate"].isna()
@@ -1458,28 +1588,20 @@ if input_file:
                 ],
                 names="PlanRes",
                 title="Residential Setting",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             residential_setting.update_traces(textinfo="value+percent")
-            st.plotly_chart(residential_setting, use_container_width=True)
-
-        with np_c3r1:
-            active_census_day = make_indicator(
-                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
-                "Plans active on census day",
+            residential_setting.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
             )
-            st.plotly_chart(active_census_day, use_container_width=True)
+            st.plotly_chart(residential_setting, use_container_width=True, theme=None)
 
-        with np_c1r2:
-            open_plan_lengths = make_bar(
-                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
-                "NamedPlanLength (years)",
-                x_label="Named plan lengths (years)",
-                title="Plans active on census day - length",
-            )
-
-            st.plotly_chart(open_plan_lengths, use_container_width=True)
-
-        with np_c2r2:
             ceased_reasons = make_bar(
                 sliced_enriched_np,
                 "CeaseReason",
@@ -1497,15 +1619,38 @@ if input_file:
                     "9) Other",
                 ],
             )
-            st.plotly_chart(ceased_reasons, use_container_width=True)
+            st.plotly_chart(ceased_reasons, use_container_width=True, theme=None)
 
         sen_setting = make_bar(
             sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
             "SENSetting_np",
-            x_label="SEN settings (named plans)",
-            title="Plans active on census day - SEN Setting",
+            x_label="SEN settings",
+            title="Plans active on census day - SEN Setting (from named plans)",
         )
-        st.plotly_chart(sen_setting, use_container_width=True)
+        st.plotly_chart(sen_setting, use_container_width=True, theme=None)
+
+        sen_type_chart = make_bar(
+            sliced_enriched_np,
+            "SENtype",
+            title="SEN type (named plan) - all children",
+            x_label="SEN Type",
+            buckets=[
+                "Specific learning difficulty",
+                "Moderate learning difficulty",
+                "Severe learning difficulty",
+                "Profound and multiple learning difficulty",
+                "Social, emotional and mental health",
+                "Speech, language and communication needs",
+                "Hearing impairment",
+                "Vision impairment",
+                "Multi-sensory impairment",
+                "Physical disability",
+                "Autistic spectrum disorder",
+                "Down Syndrome",
+                "Other difficulty",
+            ],
+        )
+        st.plotly_chart(sen_type_chart, use_container_width=True, theme=None)
 
     with st.expander("Timeliness"):
         st.write(
@@ -1570,10 +1715,12 @@ if input_file:
         time_col1, time_col2 = st.columns(2)
 
         with time_col1:
-            st.plotly_chart(timeliness_unconsidered, use_container_width=True)
+            st.plotly_chart(
+                timeliness_unconsidered, use_container_width=True, theme=None
+            )
 
         with time_col2:
-            st.plotly_chart(timeliness_considered, use_container_width=True)
+            st.plotly_chart(timeliness_considered, use_container_width=True, theme=None)
 
     with st.expander("Active Plans"):
         ap_col1, ap_col2, ap_col3, ap_col4 = st.columns(4)
@@ -1584,9 +1731,19 @@ if input_file:
                 sliced_enriched_ap,
                 names="PlanOpen",
                 title="Active plans module open and closed",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             open_closed_ap.update_traces(textinfo="value+percent")
-            st.plotly_chart(open_closed_ap, use_container_width=True)
+            open_closed_ap.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
+            )
+            st.plotly_chart(open_closed_ap, use_container_width=True, theme=None)
 
             placements_df_ap_open = (
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()]
@@ -1599,9 +1756,21 @@ if input_file:
                 placements_df_ap_open,
                 names="Number of plans",
                 title="Number of open placements per child",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             multiple_placements_ap_open.update_traces(textinfo="value+percent")
-            st.plotly_chart(multiple_placements_ap_open, use_container_width=True)
+            multiple_placements_ap_open.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
+            )
+            st.plotly_chart(
+                multiple_placements_ap_open, use_container_width=True, theme=None
+            )
 
         with ap_col2:
             ap_residential = make_bar(
@@ -1610,7 +1779,7 @@ if input_file:
                 x_label="Residential setting",
                 title="Open active plans - residential setting",
             )
-            st.plotly_chart(ap_residential, use_container_width=True)
+            st.plotly_chart(ap_residential, use_container_width=True, theme=None)
 
             # Children with multiple placements
             placements_df_ap = (
@@ -1623,9 +1792,21 @@ if input_file:
                 placements_df_ap,
                 names="Number of plans",
                 title="Number of placements per child",
+                color_discrete_sequence=px.colors.qualitative.G10,
             )
             multiple_placements_ap.update_traces(textinfo="value+percent")
-            st.plotly_chart(multiple_placements_ap, use_container_width=True)
+            multiple_placements_ap.update_layout(
+                template="seaborn",
+                plot_bgcolor="lightgrey",
+                paper_bgcolor="lightgrey",
+                font_color="black",
+                title_font_color="black",
+                legend_font_color="black",
+                legend_title_font_color="black",
+            )
+            st.plotly_chart(
+                multiple_placements_ap, use_container_width=True, theme=None
+            )
 
         with ap_col3:
             ap_wpb = make_bar(
@@ -1634,7 +1815,7 @@ if input_file:
                 x_label="Work-based learning activity",
                 title="Open active plans - work-based learning ",
             )
-            st.plotly_chart(ap_wpb, use_container_width=True)
+            st.plotly_chart(ap_wpb, use_container_width=True, theme=None)
 
             sen_unit_count = make_bar(
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
@@ -1642,7 +1823,7 @@ if input_file:
                 title="In SEN unit on census day",
                 x_label="SEN unit indicator",
             )
-            st.plotly_chart(sen_unit_count, use_container_width=True)
+            st.plotly_chart(sen_unit_count, use_container_width=True, theme=None)
 
         with ap_col4:
             ap_review_outcomes = make_bar(
@@ -1652,7 +1833,7 @@ if input_file:
                 title="Open active plans - review outcomes",
             )
             ap_review_outcomes.update_layout(yaxis_title="Number of children")
-            st.plotly_chart(ap_review_outcomes, use_container_width=True)
+            st.plotly_chart(ap_review_outcomes, use_container_width=True, theme=None)
 
             resourced_provision_count = make_bar(
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
@@ -1660,7 +1841,9 @@ if input_file:
                 title="In resourced provision on census day",
                 x_label="Resourced provision indicator",
             )
-            st.plotly_chart(resourced_provision_count, use_container_width=True)
+            st.plotly_chart(
+                resourced_provision_count, use_container_width=True, theme=None
+            )
 
         ehcs_transferred = make_bar(
             sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
@@ -1668,15 +1851,15 @@ if input_file:
             x_label="LA name",
             title="Open active plans - EHCs transferred in",
         )
-        st.plotly_chart(ehcs_transferred, use_container_width=True)
+        st.plotly_chart(ehcs_transferred, use_container_width=True, theme=None)
 
         sen_settings = make_bar(
-            sliced_enriched_ap,
+            sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
             "SENSetting_mapped",
-            title="SEN settings (active plans)",
+            title="Plans active on census day - SEN settings (from active plans)",
             x_label="SEN setting",
         )
-        st.plotly_chart(sen_settings, use_container_width=True)
+        st.plotly_chart(sen_settings, use_container_width=True, theme=None)
 
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_persons)
