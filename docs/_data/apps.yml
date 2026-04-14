@@ -69,7 +69,7 @@
   description: "Processes the Annex A as recieved from the Social Finance pipeline for the Annex A Power BI Dashboard"
 
 
-- name: SEN2 Drill DOwn
+- name: SEN2 Drill Down
   url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/015_SEN2_app/send2_app.py&req=plotly==5.5.0&req=pyarrow
   description: "Dashboard and drilldown for sen2"
 

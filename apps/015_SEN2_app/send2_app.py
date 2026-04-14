@@ -54,8 +54,8 @@ class SENSettings(Enum):
     NIEO = "Not in education or training - other"
 
 
-class EthnicSubcategories(Enum):
-    """Used to map ehtnicity codes to groups, uses long GIAS code-set"""
+class EthnicMaincategories(Enum):
+    """Used to map ethnicity codes to main groups, uses long GIAS code-set"""
 
     WBRI = "White"
     WCOR = "White"
@@ -167,6 +167,119 @@ class EthnicSubcategories(Enum):
     REFU = "Unclassified"
 
 
+class EthnicSubcategories(Enum):
+    """Used to map ethnicity codes to main groups, uses long GIAS code-set"""
+
+    WBRI = "White - British"
+    WCOR = "White - British"
+    WENG = "White - British"
+    WNIR = "White - British"
+    WSCO = "White - British"
+    WWEL = "White - British"
+    WOWB = "White - British"
+    WIRI = "White"
+    WIRT = "White"
+    WOTH = "Any other white background"
+    WALB = "Any other white background"
+    WBOS = "Any other white background"
+    WCRO = "Any other white background"
+    WGRE = "Any other white background"
+    WGRK = "Any other white background"
+    WGRC = "Any other white background"
+    WITA = "Any other white background"
+    WKOS = "Any other white background"
+    WPOR = "Any other white background"
+    WSER = "Any other white background"
+    WTUR = "Any other white background"
+    WTUK = "Any other white background"
+    WTUC = "Any other white background"
+    WEUR = "Any other white background"
+    WEEU = "Any other white background"
+    WWEU = "Any other white background"
+    WOTW = "Any other white background"
+    WROM = "Gypsy/Roma"
+    WROG = "Gypsy/Roma"
+    WROR = "Gypsy/Roma"
+    WROO = "Gypsy/Roma"
+    MWBC = "White and Black Caribbean"
+    MWBA = "White and Black African"
+    MWAS = "White and Asian"
+    MWAP = "White and Asian"
+    MWAI = "White and Asian"
+    MWAO = "White and Asian"
+    ABRI = "Asian - British"
+    AWEL = "Asian - Welsh"
+    MOTH = "Any other mixed background"
+    MAOE = "Any other mixed background"
+    MABL = "Any other mixed background"
+    MACH = "Any other mixed background"
+    MBOE = "Any other mixed background"
+    MBCH = "Any other mixed background"
+    MCOE = "Any other mixed background"
+    MWOE = "Any other mixed background"
+    MWCH = "Any other mixed background"
+    MOTM = "Any other mixed background"
+    AIND = "Indian"
+    APKN = "Pakistani"
+    AMPK = "Pakistani"
+    AKPA = "Pakistani"
+    AOPK = "Pakistani"
+    ABAN = "Bangladeshi"
+    AOTH = "Any other Asian background"
+    AAFR = "Any other Asian background"
+    AKAO = "Any other Asian background"
+    ANEP = "Any other Asian background"
+    ASNL = "Any other Asian background"
+    ASLT = "Any other Asian background"
+    ASRO = "Any other Asian background"
+    AOTA = "Any other Asian background"
+    BBRI = "Black - British"
+    BWEL = "Black - Welsh"
+    BCRB = "Black Caribbean"
+    BAFR = "Black - African"
+    BANN = "Black - African"
+    BCON = "Black - African"
+    BGHA = "Black - African"
+    BNGN = "Black - African"
+    BSLN = "Black - African"
+    BSOM = "Black - African"
+    BSUD = "Black - African"
+    BAOF = "Black - African"
+    BOTH = "Any other black background"
+    BEUR = "Any other black background"
+    BNAM = "Any other black background"
+    BOTB = "Any other black background"
+    CHNE = "Chinese"
+    CHKC = "Chinese"
+    CMAL = "Chinese"
+    CSNG = "Chinese"
+    CTWN = "Chinese"
+    COCH = "Chinese"
+    OOTH = "Any other ethnic group"
+    OAFG = "Any other ethnic group"
+    ORAB = "Any other ethnic group"
+    OARA = "Any other ethnic group"
+    OEGY = "Any other ethnic group"
+    OFIL = "Any other ethnic group"
+    OIRN = "Any other ethnic group"
+    OIRQ = "Any other ethnic group"
+    OJPN = "Any other ethnic group"
+    OKOR = "Any other ethnic group"
+    OKRD = "Any other ethnic group"
+    OLAM = "Other ethnic group"
+    OLEB = "Any other ethnic group"
+    OLIB = "Any other ethnic group"
+    OMAL = "Any other ethnic group"
+    OMRC = "Any other ethnic group"
+    OPOL = "Any other ethnic group"
+    OTHA = "Any other ethnic group"
+    OVIE = "Any other ethnic group"
+    OYEM = "Any other ethnic group"
+    OOEG = "Any other ethnic group"
+    REFU = "Refused"
+    NOBT = "Information not yet obtained"
+
+
 ###################
 # Util functions
 ###################
@@ -183,7 +296,7 @@ def apply_filters(
     df = df[
         df["Sex"].isin(sex_selected)
         & df["AgeBuckets"].isin(age_selected)
-        & (df["EthnicityGroup"].isin(ethnicity_selected))
+        & (df["EthnicitySubGroup"].isin(ethnicity_selected))
         & (df["SENtype"].isin(sen_type_selected))
         & (df["SENSetting_mapped"].isin(sen_setting_selected))
         & (df["NamedPlanLength (days)"] >= plan_length[0])
@@ -267,16 +380,16 @@ def map_sen_settings(row):
 
 def calculate_age_buckets(age):
     """Used to calculate age buckets for calculated ages in DataContainer"""
-    if age < 1:
-        return "a) Under 1 year"
-    elif age < 5:
-        return "b) 1 to 4 years"
-    elif age < 10:
-        return "c) 5 to 9 years"
+    if age < 5:
+        return "a) Under 5 years"
+    elif age < 11:
+        return "b) 5 to 10 years"
     elif age < 16:
-        return "d) 10 to 16 years"
-    elif age >= 16:
-        return "e) 16 years and over"
+        return "c) 11 to 15 years"
+    elif age < 20:
+        return "d) 16 to 19 years"
+    elif age >= 20:
+        return "e) 20 years and over"
     else:
         return "f) Age error"
 
@@ -842,6 +955,10 @@ class Datacontainer:
     def enriched_persons(self):
         enriched_df = self.data.persons.copy()
         enriched_df["EthnicityGroup"] = enriched_df["Ethnicity"].apply(
+            lambda x: EthnicMaincategories[x].value
+        )
+
+        enriched_df["EthnicitySubGroup"] = enriched_df["Ethnicity"].apply(
             lambda x: EthnicSubcategories[x].value
         )
 
@@ -926,6 +1043,7 @@ class Datacontainer:
                 [
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicitySubGroup",
                     "Sex",
                     "child_id",
                     "SENtype",
@@ -996,6 +1114,7 @@ class Datacontainer:
                 [
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicitySubGroup",
                     "Sex",
                     "child_id",
                     "SENtype",
@@ -1055,6 +1174,7 @@ class Datacontainer:
                 [
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicitySubGroup",
                     "Sex",
                     "child_id",
                     "SENtype",
@@ -1094,14 +1214,6 @@ class Datacontainer:
 
         enriched_df["CeaseDate_year"] = enriched_df["CeaseDate"].dt.year
 
-        # enriched_df["NamedPlanLength (years)"] = (
-        #     self.reference_period["end"] - enriched_df["StartDate"]
-        # ) / pd.Timedelta(days=365.25)
-
-        # enriched_df["NamedPlanLength (years)"] = enriched_df[
-        #     "NamedPlanLength (years)"
-        # ].apply(make_year_buckets)
-
         enriched_df["PlanRes"].fillna("Non-residential", inplace=True)
         enriched_df["PlanRes"] = enriched_df["PlanRes"].map(
             {"A": "38 to 51 weeks", "B": "52 weeks"}
@@ -1122,6 +1234,7 @@ class Datacontainer:
                 [
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicitySubGroup",
                     "Sex",
                     "child_id",
                     "SENSetting_mapped",
@@ -1218,21 +1331,21 @@ if input_file:
             "Select age buckets",
             (
                 [
-                    "a) Under 1 year",
-                    "b) 1 to 4 years",
-                    "c) 5 to 9 years",
-                    "d) 10 to 16 years",
-                    "e) 16 years and over",
+                    "a) Under 5 years",
+                    "b) 5 to 10 years",
+                    "c) 11 to 15 years",
+                    "d) 16 to 19 years",
+                    "e) 20 years and over",
                     "f) Age error",
                 ]
             ),
             default=(
                 [
-                    "a) Under 1 year",
-                    "b) 1 to 4 years",
-                    "c) 5 to 9 years",
-                    "d) 10 to 16 years",
-                    "e) 16 years and over",
+                    "a) Under 5 years",
+                    "b) 5 to 10 years",
+                    "c) 11 to 15 years",
+                    "d) 16 to 19 years",
+                    "e) 20 years and over",
                     "f) Age error",
                 ]
             ),
@@ -1246,8 +1359,8 @@ if input_file:
 
         ethnicity_selected = st.sidebar.multiselect(
             "Select ethnicities",
-            (sen2.enriched_persons["EthnicityGroup"].unique()),
-            default=(sen2.enriched_persons["EthnicityGroup"].unique()),
+            (sen2.enriched_persons["EthnicitySubGroup"].unique()),
+            default=(sen2.enriched_persons["EthnicitySubGroup"].unique()),
         )
 
         sen_setting_selected = st.sidebar.multiselect(
@@ -1323,11 +1436,11 @@ if input_file:
                 title="Age group - all children",
                 x_label="Age groups",
                 buckets=[
-                    "a) Under 1 year",
-                    "b) 1 to 4 years",
-                    "c) 5 to 9 years",
-                    "d) 10 to 16 years",
-                    "e) 16 years and over",
+                    "a) Under 5 years",
+                    "b) 5 to 10 years",
+                    "c) 11 to 15 years",
+                    "d) 16 to 19 years",
+                    "e) 20 years and over",
                 ],
             )
             st.plotly_chart(age_chart, use_container_width=True, theme=None)
@@ -1340,6 +1453,14 @@ if input_file:
                 x_label="Ethnicity",
             )
             st.plotly_chart(ethnicity_chart, use_container_width=True, theme=None)
+
+        ethnicity_subgroups_chart = make_bar(
+            sliced_enriched_persons,
+            "EthnicitySubGroup",
+            "Ethnicity Subgroups - all children",
+            x_label="Ethnicity",
+        )
+        st.plotly_chart(ethnicity_subgroups_chart, use_container_width=True, theme=None)
 
     with st.expander("Requests"):
         req_col1, req_col2, req_col3 = st.columns(3)
@@ -1373,11 +1494,11 @@ if input_file:
                 x_label="Age groups",
                 title="Requests by age",
                 buckets=[
-                    "a) Under 1 year",
-                    "b) 1 to 4 years",
-                    "c) 5 to 9 years",
-                    "d) 10 to 16 years",
-                    "e) 16 years and over",
+                    "a) Under 5 years",
+                    "b) 5 to 10 years",
+                    "c) 11 to 15 years",
+                    "d) 16 to 19 years",
+                    "e) 20 years and over",
                 ],
             )
             requests_by_age.update_layout(yaxis_title="Number of children")
@@ -1453,7 +1574,7 @@ if input_file:
         st.plotly_chart(request_sources, use_container_width=True, theme=None)
 
     with st.expander("Assessments"):
-        ass_col1, ass_col2, ass_col3, ass_col4 = st.columns(4)
+        ass_col1, ass_col2 = st.columns(2)
 
         with ass_col1:
             total_assessments = make_indicator(
@@ -1461,23 +1582,6 @@ if input_file:
             )
             st.plotly_chart(total_assessments, use_container_width=True, theme=None)
 
-        with ass_col2:
-            assessments_by_age = make_bar(
-                sliced_enriched_assessments,
-                "AgeBuckets",
-                title="Assessments by age",
-                x_label="Age group",
-                buckets=[
-                    "a) Under 1 year",
-                    "b) 1 to 4 years",
-                    "c) 5 to 9 years",
-                    "d) 10 to 16 years",
-                    "e) 16 years and over",
-                ],
-            )
-            st.plotly_chart(assessments_by_age, use_container_width=True, theme=None)
-
-        with ass_col3:
             assessment_tribunal = make_bar(
                 sliced_enriched_assessments,
                 "MediationOrTribunal",
@@ -1493,7 +1597,22 @@ if input_file:
             )
             st.plotly_chart(assessment_tribunal, use_container_width=True, theme=None)
 
-        with ass_col4:
+        with ass_col2:
+            assessments_by_age = make_bar(
+                sliced_enriched_assessments,
+                "AgeBuckets",
+                title="Assessments by age",
+                x_label="Age group",
+                buckets=[
+                    "a) Under 5 years",
+                    "b) 5 to 10 years",
+                    "c) 11 to 15 years",
+                    "d) 16 to 19 years",
+                    "e) 20 years and over",
+                ],
+            )
+            st.plotly_chart(assessments_by_age, use_container_width=True, theme=None)
+
             assessment_outcomes = make_bar(
                 sliced_enriched_assessments,
                 "AssessmentOutcome",
@@ -1694,24 +1813,43 @@ if input_file:
             )
         )
 
-        timeliness_unconsidered = make_bar(
+        timeliness_unconsidered = px.pie(
             timeliness_df,
-            "Timeliness - week 20 exceptions not considered",
+            names="Timeliness - week 20 exceptions not considered",
             title="Timeliness - week 20 including exceptions",
-            x_label="Timeliness",
-            color_column=None,
+            color_discrete_sequence=px.colors.qualitative.G10,
+        )
+        timeliness_unconsidered.update_traces(textinfo="value+percent")
+        timeliness_unconsidered.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
         )
 
-        timeliness_considered = make_bar(
+        timeliness_considered = px.pie(
             timeliness_df[
                 timeliness_df["Timeliness - week 20 exceptions considered"]
                 != "Exception granted"
             ],
-            "Timeliness - week 20 exceptions considered",
+            names="Timeliness - week 20 exceptions considered",
             title="Timeliness - week 20 excluding exceptions",
-            x_label="Timeliness",
-            color_column=None,
+            color_discrete_sequence=px.colors.qualitative.G10,
         )
+        timeliness_considered.update_traces(textinfo="value+percent")
+        timeliness_considered.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
+
         time_col1, time_col2 = st.columns(2)
 
         with time_col1:
@@ -1723,7 +1861,7 @@ if input_file:
             st.plotly_chart(timeliness_considered, use_container_width=True, theme=None)
 
     with st.expander("Active Plans"):
-        ap_col1, ap_col2, ap_col3, ap_col4 = st.columns(4)
+        ap_col1, ap_col2, ap_col3 = st.columns(3)
 
         with ap_col1:
 
@@ -1745,6 +1883,54 @@ if input_file:
             )
             st.plotly_chart(open_closed_ap, use_container_width=True, theme=None)
 
+            ap_review_outcomes = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
+                "ReviewOutcome",
+                x_label="Outcomes",
+                title="Open active plans - review outcomes",
+            )
+            ap_review_outcomes.update_layout(yaxis_title="Number of children")
+            st.plotly_chart(ap_review_outcomes, use_container_width=True, theme=None)
+
+        with ap_col2:
+            ap_residential = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
+                "RES",
+                x_label="Residential setting",
+                title="Open active plans - residential setting",
+            )
+            st.plotly_chart(ap_residential, use_container_width=True, theme=None)
+
+            resourced_provision_count = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
+                "ResourcedProvisionIndicator",
+                title="In resourced provision on census day",
+                x_label="Resourced provision indicator",
+            )
+            st.plotly_chart(
+                resourced_provision_count, use_container_width=True, theme=None
+            )
+
+        with ap_col3:
+            ap_wpb = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
+                "WPB",
+                x_label="Work-based learning activity",
+                title="Open active plans - work-based learning ",
+            )
+            st.plotly_chart(ap_wpb, use_container_width=True, theme=None)
+
+            sen_unit_count = make_bar(
+                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
+                "SENunitIndicator",
+                title="In SEN unit on census day",
+                x_label="SEN unit indicator",
+            )
+            st.plotly_chart(sen_unit_count, use_container_width=True, theme=None)
+
+        ap_2_col1, ap_2_col2 = st.columns(2)
+
+        with ap_2_col1:
             placements_df_ap_open = (
                 sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()]
                 .groupby(["child_id"])
@@ -1752,6 +1938,7 @@ if input_file:
                 .to_frame("Number of plans")
                 .reset_index()
             )
+
             multiple_placements_ap_open = px.pie(
                 placements_df_ap_open,
                 names="Number of plans",
@@ -1772,15 +1959,7 @@ if input_file:
                 multiple_placements_ap_open, use_container_width=True, theme=None
             )
 
-        with ap_col2:
-            ap_residential = make_bar(
-                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
-                "RES",
-                x_label="Residential setting",
-                title="Open active plans - residential setting",
-            )
-            st.plotly_chart(ap_residential, use_container_width=True, theme=None)
-
+        with ap_2_col2:
             # Children with multiple placements
             placements_df_ap = (
                 sliced_enriched_ap.groupby(["child_id"])
@@ -1808,43 +1987,7 @@ if input_file:
                 multiple_placements_ap, use_container_width=True, theme=None
             )
 
-        with ap_col3:
-            ap_wpb = make_bar(
-                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
-                "WPB",
-                x_label="Work-based learning activity",
-                title="Open active plans - work-based learning ",
-            )
-            st.plotly_chart(ap_wpb, use_container_width=True, theme=None)
-
-            sen_unit_count = make_bar(
-                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
-                "SENunitIndicator",
-                title="In SEN unit on census day",
-                x_label="SEN unit indicator",
-            )
-            st.plotly_chart(sen_unit_count, use_container_width=True, theme=None)
-
-        with ap_col4:
-            ap_review_outcomes = make_bar(
-                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
-                "ReviewOutcome",
-                x_label="Outcomes",
-                title="Open active plans - review outcomes",
-            )
-            ap_review_outcomes.update_layout(yaxis_title="Number of children")
-            st.plotly_chart(ap_review_outcomes, use_container_width=True, theme=None)
-
-            resourced_provision_count = make_bar(
-                sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].isna()],
-                "ResourcedProvisionIndicator",
-                title="In resourced provision on census day",
-                x_label="Resourced provision indicator",
-            )
-            st.plotly_chart(
-                resourced_provision_count, use_container_width=True, theme=None
-            )
-
+        # Not in columns
         ehcs_transferred = make_bar(
             sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
             "LA name",
