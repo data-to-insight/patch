@@ -1627,8 +1627,8 @@ if input_file:
             x_label="Month",
             buckets=months,
         )
-        st.plotly_chart(requests_months_bar, use_container_width=True, theme=None)        
-        
+        st.plotly_chart(requests_months_bar, use_container_width=True, theme=None)
+
         request_lengths = make_bar(
             sliced_enriched_requests,
             "RequestLengthBucket",
@@ -2162,7 +2162,13 @@ if input_file:
         col1, col2 = st.columns(2)
 
         with col1:
-            total_requests = make_indicator(sliced_enriched_ap[sliced_enriched_ap['LastReview'].notna() & (sliced_enriched_ap['LastReview'] != "Not applicable")], "Total Reviews")
+            total_requests = make_indicator(
+                sliced_enriched_ap[
+                    sliced_enriched_ap["LastReview"].notna()
+                    & (sliced_enriched_ap["LastReview"] != "Not applicable")
+                ],
+                "Total Reviews",
+            )
             st.plotly_chart(total_requests, use_container_width=True, theme=None)
 
         with col2:
@@ -2171,7 +2177,11 @@ if input_file:
                 "ReviewOutcome",
                 title="Outcome of most recent review",
                 x_label="Review Outcome",
-                buckets=["M - maintain the EHC plan", "C - cease the EHC plan", "A - Amend the EHC plan"]
+                buckets=[
+                    "M - maintain the EHC plan",
+                    "C - cease the EHC plan",
+                    "A - Amend the EHC plan",
+                ],
             )
             st.plotly_chart(review_outcomes, use_container_width=True, theme=None)
 
