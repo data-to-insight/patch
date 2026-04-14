@@ -521,7 +521,6 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
         )
         count_df = values_df.merge(count_df, how="outer", on=column)
         count_df["Number of children"] = count_df["Number of children"].fillna(0)
-        st.table(count_df)
 
         bar = go.Figure(
             px.bar(
@@ -1347,8 +1346,9 @@ class Datacontainer:
 
         enriched_df["RES"].fillna("Not applicable", inplace=True)
         enriched_df["WPB"].fillna("Not applicable", inplace=True)
-        enriched_df["ReviewOutcome"].fillna("Not applicable", inplace=True)
 
+        enriched_df["ReviewMeeting"].fillna("Not applicable", inplace=True)
+        enriched_df["ReviewOutcome"].fillna("Not applicable", inplace=True)
         enriched_df["LastReview"].fillna("Not applicable", inplace=True)
 
         enriched_df["TransferLA"] = enriched_df["TransferLA"].fillna("Not transferred")
@@ -1620,6 +1620,15 @@ if input_file:
             )
             st.plotly_chart(request_tribunal, use_container_width=True, theme=None)
 
+        requests_months_bar = make_bar(
+            sliced_enriched_requests,
+            "ReceivedDate_month",
+            title="Requests per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(requests_months_bar, use_container_width=True, theme=None)        
+        
         request_lengths = make_bar(
             sliced_enriched_requests,
             "RequestLengthBucket",
@@ -1700,6 +1709,15 @@ if input_file:
                 x_label="Outcomes",
             )
             st.plotly_chart(assessment_outcomes, use_container_width=True, theme=None)
+
+        assessments_months_bar = make_bar(
+            sliced_enriched_assessments,
+            "AssessmentOutcomeDate_month",
+            title="Assessments per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(assessments_months_bar, use_container_width=True, theme=None)
 
     with st.expander("Named Plans"):
         np_c1r1, np_c2r1, np_c3r1 = st.columns(3)
@@ -1819,6 +1837,32 @@ if input_file:
                 ],
             )
             st.plotly_chart(ceased_reasons, use_container_width=True, theme=None)
+
+        ehcps_starting_in_year = sliced_enriched_np[
+            (sliced_enriched_np["StartDate"] >= sen2.reference_period["start"])
+            & (sliced_enriched_np["StartDate"] <= sen2.reference_period["end"])
+        ]
+        ehcps_starting_months_bar = make_bar(
+            ehcps_starting_in_year,
+            "StartDate_month",
+            title="Plans starting per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(ehcps_starting_months_bar, use_container_width=True, theme=None)
+
+        ehcps_ceasing_in_year = sliced_enriched_np[
+            (sliced_enriched_np["CeaseDate"] >= sen2.reference_period["start"])
+            & (sliced_enriched_np["CeaseDate"] <= sen2.reference_period["end"])
+        ]
+        ehcps_ceasing_months_bar = make_bar(
+            ehcps_ceasing_in_year,
+            "CeaseDate_month",
+            title="Plans ceasing per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(ehcps_ceasing_months_bar, use_container_width=True, theme=None)
 
         sen_setting = make_bar(
             sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
@@ -2114,52 +2158,23 @@ if input_file:
         )
         st.plotly_chart(sen_settings, use_container_width=True, theme=None)
 
-    with st.expander("Monthly breakdowns"):
-        ehcps_starting_in_year = sliced_enriched_np[
-            (sliced_enriched_np["StartDate"] >= sen2.reference_period["start"])
-            & (sliced_enriched_np["StartDate"] <= sen2.reference_period["end"])
-        ]
-        ehcps_starting_months_bar = make_bar(
-            ehcps_starting_in_year,
-            "StartDate_month",
-            title="EHCPs starting per month",
-            x_label="Month",
-            buckets=months,
-        )
-        st.plotly_chart(ehcps_starting_months_bar, use_container_width=True, theme=None)
+    with st.expander("Reviews"):
+        col1, col2 = st.columns(2)
 
-        ehcps_ceasing_in_year = sliced_enriched_np[
-            (sliced_enriched_np["CeaseDate"] >= sen2.reference_period["start"])
-            & (sliced_enriched_np["CeaseDate"] <= sen2.reference_period["end"])
-        ]
-        ehcps_ceasing_months_bar = make_bar(
-            ehcps_ceasing_in_year,
-            "CeaseDate_month",
-            title="EHCPs ceasing per month",
-            x_label="Month",
-            buckets=months,
-        )
-        st.plotly_chart(ehcps_ceasing_months_bar, use_container_width=True, theme=None)
+        with col1:
+            total_requests = make_indicator(sliced_enriched_ap[sliced_enriched_ap['LastReview'].notna() & (sliced_enriched_ap['LastReview'] != "Not applicable")], "Total Reviews")
+            st.plotly_chart(total_requests, use_container_width=True, theme=None)
 
-        requests_months_bar = make_bar(
-            sliced_enriched_requests,
-            "ReceivedDate_month",
-            title="Requests per month",
-            x_label="Month",
-            buckets=months,
-        )
-        st.plotly_chart(requests_months_bar, use_container_width=True, theme=None)
-
-        assessments_months_bar = make_bar(
-            sliced_enriched_assessments,
-            "AssessmentOutcomeDate_month",
-            title="Assessments per month",
-            x_label="Month",
-            buckets=months,
-        )
-        st.plotly_chart(assessments_months_bar, use_container_width=True, theme=None)
-
-        st.write("DONE")
+        with col2:
+            review_outcomes = make_bar(
+                sliced_enriched_ap,
+                "ReviewOutcome",
+                title="Outcome of most recent review",
+                x_label="Review Outcome",
+                buckets=["M - maintain the EHC plan", "C - cease the EHC plan", "A - Amend the EHC plan"]
+            )
+            st.plotly_chart(review_outcomes, use_container_width=True, theme=None)
 
     with st.expander("CYP in selected drilldown:"):
+        st.table(sliced_enriched_ap.head())
         st.table(sliced_enriched_persons)
