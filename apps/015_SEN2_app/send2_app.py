@@ -295,7 +295,8 @@ def apply_filters(
     """Used to apply all filters to enriched tables"""
     df = df[
         df["Sex"].isin(sex_selected)
-        & df["AgeBuckets"].isin(age_selected)
+        & (df["Age"] >= age_selected[0])
+        & (df["Age"] <= age_selected[1])
         & (df["EthnicitySubGroup"].isin(ethnicity_selected))
         & (df["SENtype"].isin(sen_type_selected))
         & (df["SENSetting_mapped"].isin(sen_setting_selected))
@@ -1041,6 +1042,7 @@ class Datacontainer:
         enriched_df = enriched_df.merge(
             self.enriched_persons[
                 [
+                    "Age",
                     "AgeBuckets",
                     "EthnicityGroup",
                     "EthnicitySubGroup",
@@ -1112,6 +1114,7 @@ class Datacontainer:
         enriched_df = enriched_df.merge(
             self.enriched_persons[
                 [
+                    "Age",
                     "AgeBuckets",
                     "EthnicityGroup",
                     "EthnicitySubGroup",
@@ -1172,6 +1175,7 @@ class Datacontainer:
         enriched_df = enriched_df.merge(
             self.enriched_persons[
                 [
+                    "Age",
                     "AgeBuckets",
                     "EthnicityGroup",
                     "EthnicitySubGroup",
@@ -1232,6 +1236,7 @@ class Datacontainer:
         enriched_df = enriched_df.merge(
             self.enriched_persons[
                 [
+                    "Age",
                     "AgeBuckets",
                     "EthnicityGroup",
                     "EthnicitySubGroup",
@@ -1327,29 +1332,37 @@ if input_file:
             (sen2.enriched_persons["Sex"].unique()),
             default=(sen2.enriched_persons["Sex"].unique()),
         )
-        age_selected = st.sidebar.multiselect(
-            "Select age buckets",
-            (
-                [
-                    "a) Under 5 years",
-                    "b) 5 to 10 years",
-                    "c) 11 to 15 years",
-                    "d) 16 to 19 years",
-                    "e) 20 years and over",
-                    "f) Age error",
-                ]
-            ),
-            default=(
-                [
-                    "a) Under 5 years",
-                    "b) 5 to 10 years",
-                    "c) 11 to 15 years",
-                    "d) 16 to 19 years",
-                    "e) 20 years and over",
-                    "f) Age error",
-                ]
-            ),
+
+        age_selected = st.sidebar.slider(
+            "Select age range (on day of census)",
+            min_value=int(sen2.enriched_persons["Age"].min()),
+            max_value=int(sen2.enriched_persons["Age"].max()),
+            value=[0, int(sen2.enriched_persons["Age"].max())],
         )
+
+        # age_selected = st.sidebar.multiselect(
+        #     "Select age buckets",
+        #     (
+        #         [
+        #             "a) Under 5 years",
+        #             "b) 5 to 10 years",
+        #             "c) 11 to 15 years",
+        #             "d) 16 to 19 years",
+        #             "e) 20 years and over",
+        #             "f) Age error",
+        #         ]
+        #     ),
+        #     default=(
+        #         [
+        #             "a) Under 5 years",
+        #             "b) 5 to 10 years",
+        #             "c) 11 to 15 years",
+        #             "d) 16 to 19 years",
+        #             "e) 20 years and over",
+        #             "f) Age error",
+        #         ]
+        #     ),
+        # )
 
         sen_type_selected = st.sidebar.multiselect(
             "Select SEN types",
