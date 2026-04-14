@@ -1068,7 +1068,7 @@ class Datacontainer:
         enriched_df = enriched_df.merge(sen_types, on="child_id", how="left")
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
-            lambda x: SENTypes[x].value if pd.notnull(x) else "Not yet determined"
+            lambda x: SENTypes[x.upper()].value if pd.notnull(x) else "Not yet determined"
         )
         enriched_df["SENSetting_mapped"] = enriched_df.apply(map_sen_settings, axis=1)
 
@@ -1348,8 +1348,11 @@ class Datacontainer:
         enriched_df["WPB"].fillna("Not applicable", inplace=True)
 
         enriched_df["ReviewMeeting"].fillna("Not applicable", inplace=True)
-        enriched_df["ReviewOutcome"].fillna("Not applicable", inplace=True)
-        enriched_df["LastReview"].fillna("Not applicable", inplace=True)
+        enriched_df["ReviewOutcome"] = enriched_df["ReviewOutcome"].map({                    
+                    "M":"M - maintain the EHC plan",
+                    "C":"C - cease the EHC plan",
+                    "A":"A - Amend the EHC plan",})
+        enriched_df["LastReview"] = pd.to_datetime(enriched_df["LastReview"], format="%Y-%m-%d", errors="coerce")
 
         enriched_df["TransferLA"] = enriched_df["TransferLA"].fillna("Not transferred")
 
@@ -1359,7 +1362,7 @@ class Datacontainer:
         enriched_df["LA name"].fillna("Not transferred", inplace=True)
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
-            lambda x: SENTypes[x].value if pd.notnull(x) else "Not yet determined"
+            lambda x: SENTypes[x.upper()].value if pd.notnull(x) else "Not yet determined"
         )
 
         enriched_df["SENunitIndicator"] = enriched_df["SENunitIndicator"].apply(
@@ -2162,18 +2165,31 @@ if input_file:
         col1, col2 = st.columns(2)
 
         with col1:
-            total_requests = make_indicator(
+            total_reviews = make_indicator(
                 sliced_enriched_ap[
                     sliced_enriched_ap["LastReview"].notna()
                     & (sliced_enriched_ap["LastReview"] != "Not applicable")
                 ],
-                "Total Reviews",
+                "Total reviews",
             )
-            st.plotly_chart(total_requests, use_container_width=True, theme=None)
+            st.plotly_chart(total_reviews, use_container_width=True, theme=None)
+
+            total_reviews_year = make_indicator(
+                sliced_enriched_ap[
+                    sliced_enriched_ap["LastReview"].notna()
+                    & (sliced_enriched_ap["LastReview"] != "Not applicable")
+                    & (sliced_enriched_ap["LastReview"] >= sen2.reference_period["start"])
+                ],
+                "Total reviews in year",
+            )
+            st.plotly_chart(total_reviews_year, use_container_width=True, theme=None)
 
         with col2:
             review_outcomes = make_bar(
-                sliced_enriched_ap,
+                sliced_enriched_ap[
+                    sliced_enriched_ap["LastReview"].notna()
+                    & (sliced_enriched_ap["LastReview"] != "Not applicable")
+                ],
                 "ReviewOutcome",
                 title="Outcome of most recent review",
                 x_label="Review Outcome",
@@ -2184,6 +2200,23 @@ if input_file:
                 ],
             )
             st.plotly_chart(review_outcomes, use_container_width=True, theme=None)
+
+            review_outcomes_year = make_bar(
+                sliced_enriched_ap[
+                    sliced_enriched_ap["LastReview"].notna()
+                    & (sliced_enriched_ap["LastReview"] != "Not applicable")
+                    & (sliced_enriched_ap["LastReview"] >= sen2.reference_period["start"])
+                ],
+                "ReviewOutcome",
+                title="Outcome of most recent review",
+                x_label="Review Outcome",
+                buckets=[
+                    "M - maintain the EHC plan",
+                    "C - cease the EHC plan",
+                    "A - Amend the EHC plan",
+                ],
+            )
+            st.plotly_chart(review_outcomes_year, use_container_width=True, theme=None)
 
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_ap.head())
