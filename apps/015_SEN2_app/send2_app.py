@@ -947,6 +947,8 @@ class XMLtoDF:
             "ReviewMeeting",
             "ReviewOutcome",
             "LastReview",
+            "PhaseTransferDueDate",
+            "PhaseTransferFinalDate",
         ]
         placement_detail_elements = [
             "URN",
@@ -1068,7 +1070,9 @@ class Datacontainer:
         enriched_df = enriched_df.merge(sen_types, on="child_id", how="left")
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
-            lambda x: SENTypes[x.upper()].value if pd.notnull(x) else "Not yet determined"
+            lambda x: (
+                SENTypes[x.upper()].value if pd.notnull(x) else "Not yet determined"
+            )
         )
         enriched_df["SENSetting_mapped"] = enriched_df.apply(map_sen_settings, axis=1)
 
@@ -1348,11 +1352,16 @@ class Datacontainer:
         enriched_df["WPB"].fillna("Not applicable", inplace=True)
 
         enriched_df["ReviewMeeting"].fillna("Not applicable", inplace=True)
-        enriched_df["ReviewOutcome"] = enriched_df["ReviewOutcome"].map({                    
-                    "M":"M - maintain the EHC plan",
-                    "C":"C - cease the EHC plan",
-                    "A":"A - Amend the EHC plan",})
-        enriched_df["LastReview"] = pd.to_datetime(enriched_df["LastReview"], format="%Y-%m-%d", errors="coerce")
+        enriched_df["ReviewOutcome"] = enriched_df["ReviewOutcome"].map(
+            {
+                "M": "M - maintain the EHC plan",
+                "C": "C - cease the EHC plan",
+                "A": "A - Amend the EHC plan",
+            }
+        )
+        enriched_df["LastReview"] = pd.to_datetime(
+            enriched_df["LastReview"], format="%Y-%m-%d", errors="coerce"
+        )
 
         enriched_df["TransferLA"] = enriched_df["TransferLA"].fillna("Not transferred")
 
@@ -1362,7 +1371,9 @@ class Datacontainer:
         enriched_df["LA name"].fillna("Not transferred", inplace=True)
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
-            lambda x: SENTypes[x.upper()].value if pd.notnull(x) else "Not yet determined"
+            lambda x: (
+                SENTypes[x.upper()].value if pd.notnull(x) else "Not yet determined"
+            )
         )
 
         enriched_df["SENunitIndicator"] = enriched_df["SENunitIndicator"].apply(
@@ -1379,6 +1390,20 @@ class Datacontainer:
             )
         )
 
+        enriched_df["PhaseTransferDueDate"] = pd.to_datetime(
+            enriched_df["PhaseTransferDueDate"], format="%Y-%m-%d", errors="coerce"
+        )
+        enriched_df["PhaseTransferFinalDate"] = pd.to_datetime(
+            enriched_df["PhaseTransferFinalDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        enriched_df["PhaseTransferDue_year"] = enriched_df[
+            "PhaseTransferDueDate"
+        ].dt.year
+        enriched_df["PhaseTransferFinal_year"] = enriched_df[
+            "PhaseTransferFinalDate"
+        ].dt.year
+
         return enriched_df
 
 
@@ -1386,6 +1411,9 @@ class Datacontainer:
 # Main App
 ###########################
 st.title("SEN2 drilldown tool")
+st.markdown(
+    "See an [explanation of why the tool is safe to use](https://www.datatoinsight.org/patch) on D2I's website."
+)
 st.markdown(
     "[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/015_SEN2_app/sen2_app.py)"
@@ -2178,7 +2206,10 @@ if input_file:
                 sliced_enriched_ap[
                     sliced_enriched_ap["LastReview"].notna()
                     & (sliced_enriched_ap["LastReview"] != "Not applicable")
-                    & (sliced_enriched_ap["LastReview"] >= sen2.reference_period["start"])
+                    & (
+                        sliced_enriched_ap["LastReview"]
+                        >= sen2.reference_period["start"]
+                    )
                 ],
                 "Total reviews in year",
             )
@@ -2205,7 +2236,10 @@ if input_file:
                 sliced_enriched_ap[
                     sliced_enriched_ap["LastReview"].notna()
                     & (sliced_enriched_ap["LastReview"] != "Not applicable")
-                    & (sliced_enriched_ap["LastReview"] >= sen2.reference_period["start"])
+                    & (
+                        sliced_enriched_ap["LastReview"]
+                        >= sen2.reference_period["start"]
+                    )
                 ],
                 "ReviewOutcome",
                 title="Outcome of most recent review",
@@ -2217,6 +2251,27 @@ if input_file:
                 ],
             )
             st.plotly_chart(review_outcomes_year, use_container_width=True, theme=None)
+
+    with st.expander("Phase Transfers"):
+        phase_transfers_due_year = make_bar(
+            sliced_enriched_ap,
+            "PhaseTransferDue_year",
+            title="Phase transfers due by year",
+            x_label="Year",
+        )
+        st.plotly_chart(phase_transfers_due_year, use_container_width=True, theme=None)
+
+        phase_transfers_final_year = make_bar(
+            sliced_enriched_ap,
+            "PhaseTransferFinal_year",
+            title="Phase transfers final by year",
+            x_label="Year",
+        )
+        st.plotly_chart(
+            phase_transfers_final_year, use_container_width=True, theme=None
+        )
+
+        # plans issued in the year following a Phase transfer final date
 
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_ap.head())
