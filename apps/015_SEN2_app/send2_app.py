@@ -307,6 +307,7 @@ def apply_filters(
     sen_type_selected,
     sen_setting_selected,
     plan_length,
+    phase_transfer_years_selected,
 ):
     """Used to apply all filters to enriched tables"""
     df = df[
@@ -318,6 +319,7 @@ def apply_filters(
         & (df["SENSetting_mapped"].isin(sen_setting_selected))
         & (df["NamedPlanLength (days)"] >= plan_length[0])
         & (df["NamedPlanLength (days)"] <= plan_length[1])
+        & (df["PhaseTransferDue_year"].isin(phase_transfer_years_selected))
     ]
 
     return df
@@ -1052,7 +1054,40 @@ class Datacontainer:
         # Get just the primary needs and sen settings for slicing and map to descriptions
         sen_types = self.data.active_plans[
             self.data.active_plans["SENtypeRank"].astype("str") == "1"
-        ][["child_id", "SENtype", "EntryDate", "URN", "UKPRN", "SENSetting"]]
+        ][
+            [
+                "child_id",
+                "SENtype",
+                "EntryDate",
+                "URN",
+                "UKPRN",
+                "SENSetting",
+                "PhaseTransferDueDate",
+                "PhaseTransferFinalDate",
+            ]
+        ]
+        sen_types["PhaseTransferDueDate"] = pd.to_datetime(
+            sen_types["PhaseTransferDueDate"], format="%Y-%m-%d", errors="coerce"
+        )
+        sen_types["PhaseTransferFinalDate"] = pd.to_datetime(
+            sen_types["PhaseTransferFinalDate"], format="%Y-%m-%d", errors="coerce"
+        )
+
+        sen_types["PhaseTransferDue_year"] = sen_types["PhaseTransferDueDate"].dt.year
+        sen_types["PhaseTransferDue_year"] = sen_types["PhaseTransferDue_year"].fillna(
+            "Not given"
+        )
+
+        sen_types["PhaseTransferFinal_year"] = sen_types[
+            "PhaseTransferFinalDate"
+        ].dt.year
+        sen_types["PhaseTransferFinal_year"] = sen_types[
+            "PhaseTransferFinal_year"
+        ].fillna("Not given")
+        sen_types["PhaseTransferFinal_year"] = sen_types[
+            "PhaseTransferFinal_year"
+        ].astype("str")
+
         sen_types["EntryDate"] = pd.to_datetime(
             sen_types["EntryDate"], format="%Y-%m-%d"
         )
@@ -1065,6 +1100,8 @@ class Datacontainer:
                 "SENSetting",
                 "URN",
                 "UKPRN",
+                "PhaseTransferDue_year",
+                "PhaseTransferFinal_year",
             ]
         ]
         enriched_df = enriched_df.merge(sen_types, on="child_id", how="left")
@@ -1131,6 +1168,8 @@ class Datacontainer:
                     "SENtype",
                     "SENSetting_mapped",
                     "NamedPlanLength (days)",
+                    "PhaseTransferDue_year",
+                    "PhaseTransferFinal_year",
                 ]
             ],
             how="left",
@@ -1207,6 +1246,8 @@ class Datacontainer:
                     "SENtype",
                     "SENSetting_mapped",
                     "NamedPlanLength (days)",
+                    "PhaseTransferDue_year",
+                    "PhaseTransferFinal_year",
                 ]
             ],
             how="left",
@@ -1273,6 +1314,8 @@ class Datacontainer:
                     "SENSetting_mapped",
                     "NamedPlanLength (years)",
                     "NamedPlanLength (days)",
+                    "PhaseTransferDue_year",
+                    "PhaseTransferFinal_year",
                 ]
             ],
             how="left",
@@ -1338,6 +1381,8 @@ class Datacontainer:
                     "child_id",
                     "SENSetting_mapped",
                     "NamedPlanLength (days)",
+                    "PhaseTransferDue_year",
+                    "PhaseTransferFinal_year",
                 ]
             ],
             how="left",
@@ -1397,12 +1442,13 @@ class Datacontainer:
             enriched_df["PhaseTransferFinalDate"], format="%Y-%m-%d", errors="coerce"
         )
 
-        enriched_df["PhaseTransferDue_year"] = enriched_df[
-            "PhaseTransferDueDate"
-        ].dt.year
-        enriched_df["PhaseTransferFinal_year"] = enriched_df[
-            "PhaseTransferFinalDate"
-        ].dt.year
+        # enriched_df["PhaseTransferDue_year"] = enriched_df[
+        #     "PhaseTransferDueDate"
+        # ].dt.year
+
+        # enriched_df["PhaseTransferFinal_year"] = enriched_df[
+        #     "PhaseTransferFinalDate"
+        # ].dt.year
 
         return enriched_df
 
@@ -1487,6 +1533,12 @@ if input_file:
             value=[0, int(sen2.enriched_persons["NamedPlanLength (days)"].max())],
         )
 
+        phase_transfer_years_selected = st.sidebar.multiselect(
+            "Select phase transfer years",
+            (sen2.enriched_persons["PhaseTransferDue_year"].unique()),
+            default=(sen2.enriched_persons["PhaseTransferDue_year"].unique()),
+        )
+
     sliced_enriched_persons = apply_filters(
         sen2.enriched_persons,
         sex_selected,
@@ -1495,6 +1547,7 @@ if input_file:
         sen_type_selected,
         sen_setting_selected,
         plan_length,
+        phase_transfer_years_selected,
     )
     sliced_enriched_requests = apply_filters(
         sen2.enriched_requests,
@@ -1504,6 +1557,7 @@ if input_file:
         sen_type_selected,
         sen_setting_selected,
         plan_length,
+        phase_transfer_years_selected,
     )
     sliced_enriched_assessments = apply_filters(
         sen2.enriched_assessments,
@@ -1513,6 +1567,7 @@ if input_file:
         sen_type_selected,
         sen_setting_selected,
         plan_length,
+        phase_transfer_years_selected,
     )
     sliced_enriched_np = apply_filters(
         sen2.enriched_named_plan,
@@ -1522,6 +1577,7 @@ if input_file:
         sen_type_selected,
         sen_setting_selected,
         plan_length,
+        phase_transfer_years_selected,
     )
     sliced_enriched_ap = apply_filters(
         sen2.enriched_active_plans,
@@ -1531,6 +1587,7 @@ if input_file:
         sen_type_selected,
         sen_setting_selected,
         plan_length,
+        phase_transfer_years_selected,
     )
 
     with st.expander("All children in data (every child with a persons block)"):
@@ -2253,8 +2310,9 @@ if input_file:
             st.plotly_chart(review_outcomes_year, use_container_width=True, theme=None)
 
     with st.expander("Phase Transfers"):
+        deduped_transfers = sliced_enriched_ap.drop_duplicates(subset="child_id")
         phase_transfers_due_year = make_bar(
-            sliced_enriched_ap,
+            deduped_transfers,
             "PhaseTransferDue_year",
             title="Phase transfers due by year",
             x_label="Year",
@@ -2262,7 +2320,7 @@ if input_file:
         st.plotly_chart(phase_transfers_due_year, use_container_width=True, theme=None)
 
         phase_transfers_final_year = make_bar(
-            sliced_enriched_ap,
+            deduped_transfers,
             "PhaseTransferFinal_year",
             title="Phase transfers final by year",
             x_label="Year",
@@ -2271,8 +2329,5 @@ if input_file:
             phase_transfers_final_year, use_container_width=True, theme=None
         )
 
-        # plans issued in the year following a Phase transfer final date
-
     with st.expander("CYP in selected drilldown:"):
-        st.table(sliced_enriched_ap.head())
         st.table(sliced_enriched_persons)
