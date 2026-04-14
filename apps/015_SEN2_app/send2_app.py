@@ -513,42 +513,59 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
         # to merge groupby to, in order to have rows for counts of zero which are then filled.
         values_df = pd.DataFrame({column: buckets})
 
-        df_counts = (
-            df.groupby([column, color_column])
+        count_df = (
+            timeliness_df.groupby([color_column, column])
             .size()
             .to_frame("Number of children")
             .reset_index()
         )
-        df_counts = df_counts.merge(values_df, how="outer", on=column)
-        df_counts["Number of children"] = (
-            df_counts["Number of children"].fillna(0).astype("int")
+        count_df = values_df.merge(count_df, how="outer", on=column)
+        count_df["Number of children"] = count_df["Number of children"].fillna(0)
+        st.table(count_df)
+
+        bar = go.Figure(
+            px.bar(
+                title=title,
+                barmode="group",
+                color_discrete_sequence=px.colors.qualitative.G10,
+            )
         )
-        df_counts[color_column].fillna("", inplace=True)
-        df_sum = df_counts.groupby(column).sum()
-        bar = px.bar(
-            df_counts,
-            x=column,
-            y="Number of children",
-            title=title,
-            color=color_column,
-            barmode="group",
-            category_orders={column: buckets},
-            labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.G10,
+        bar.add_trace(
+            go.Bar(
+                x=pd.Series(count_df[column][count_df[color_column] == "Timely"]),
+                y=pd.Series(
+                    count_df["Number of children"][count_df[color_column] == "Timely"]
+                ),
+                name="Timely",
+                marker_color="#DC3912",
+                text=pd.Series(
+                    count_df["Number of children"][count_df[color_column] == "Timely"]
+                ),
+            )
+        )
+        bar.add_trace(
+            go.Bar(
+                x=pd.Series(count_df[column][count_df[color_column] == "Not timely"]),
+                y=pd.Series(
+                    count_df["Number of children"][
+                        count_df[color_column] == "Not timely"
+                    ]
+                ),
+                name="Not timely",
+                marker_color="#3366CC",
+                text=pd.Series(
+                    count_df["Number of children"][
+                        count_df[color_column] == "Not timely"
+                    ]
+                ),
+            )
+        )
+        bar.update_xaxes(categoryorder="array", categoryarray=months)
+        bar.update_layout(
+            xaxis={"title": {"text": "Month"}},
+            yaxis={"title": {"text": "Number of children"}},
         )
 
-        # Needed to add total stacked bar heights where we are using sex to split bars
-        # Makes a scatter using text lined up with the top of the bar chart
-        # bar.add_trace(
-        #     go.Scatter(
-        #         mode="text",
-        #         x=df_sum.index,
-        #         y=df_sum["Number of children"].tolist(),
-        #         text=[str(x) for x in df_sum["Number of children"].tolist()],
-        #         textposition="bottom center",
-        #         showlegend=False,
-        #     )
-        # )
     elif not color_column:
         # Used to make charts not split by Sex, and without specified x-buckets
         df_counts = (
