@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import datetime as dt
+import calendar
 
 import streamlit as st
 
@@ -21,6 +22,21 @@ from pyodide.http import open_url
 ###################
 
 st.set_page_config(layout="wide")
+
+months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
 
 
 class SENTypes(Enum):
@@ -451,7 +467,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
     counts on columns if needed. Also overlays data labels by adding a scatter trace as
     text."""
     # TODO refactor
-    if buckets:
+    if (buckets != None) & ("Timeliness" not in color_column):
         # Makes an empty dataframe with column names according to specified buckets
         # to merge groupby to, in order to have rows for counts of zero which are then filled.
         values_df = pd.DataFrame({column: buckets})
@@ -491,6 +507,48 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
                 showlegend=False,
             )
         )
+
+    elif "Timeliness" in color_column:
+        # Makes an empty dataframe with column names according to specified buckets
+        # to merge groupby to, in order to have rows for counts of zero which are then filled.
+        values_df = pd.DataFrame({column: buckets})
+
+        df_counts = (
+            df.groupby([column, color_column])
+            .size()
+            .to_frame("Number of children")
+            .reset_index()
+        )
+        df_counts = df_counts.merge(values_df, how="outer", on=column)
+        df_counts["Number of children"] = (
+            df_counts["Number of children"].fillna(0).astype("int")
+        )
+        df_counts[color_column].fillna("", inplace=True)
+        df_sum = df_counts.groupby(column).sum()
+        bar = px.bar(
+            df_counts,
+            x=column,
+            y="Number of children",
+            title=title,
+            color=color_column,
+            barmode="group",
+            category_orders={column: buckets},
+            labels={column: x_label},
+            color_discrete_sequence=px.colors.qualitative.G10,
+        )
+
+        # Needed to add total stacked bar heights where we are using sex to split bars
+        # Makes a scatter using text lined up with the top of the bar chart
+        # bar.add_trace(
+        #     go.Scatter(
+        #         mode="text",
+        #         x=df_sum.index,
+        #         y=df_sum["Number of children"].tolist(),
+        #         text=[str(x) for x in df_sum["Number of children"].tolist()],
+        #         textposition="bottom center",
+        #         showlegend=False,
+        #     )
+        # )
     elif not color_column:
         # Used to make charts not split by Sex, and without specified x-buckets
         df_counts = (
@@ -1010,6 +1068,8 @@ class Datacontainer:
             plan_lengths["CeaseDate"], format="%Y-%m-%d", errors="coerce"
         )
 
+        plan_lengths["StartDate (month)"] = plan_lengths["StartDate"].dt.month
+
         plan_lengths["CeaseDate"].fillna(self.reference_period["end"], inplace=True)
 
         plan_lengths["NamedPlanLength (days)"] = (
@@ -1105,6 +1165,10 @@ class Datacontainer:
             "No" if pd.isnull(col) else "Yes" for col in enriched_df["Exported"]
         ]
 
+        enriched_df["ReceivedDate_month"] = enriched_df["ReceivedDate"].apply(
+            lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT
+        )
+
         return enriched_df
 
     @property
@@ -1132,6 +1196,10 @@ class Datacontainer:
         enriched_df["AssessmentOutcomeDate"] = pd.to_datetime(
             enriched_df["AssessmentOutcomeDate"], format="%Y-%m-%d", errors="coerce"
         )
+
+        enriched_df["AssessmentOutcomeDate_month"] = enriched_df[
+            "AssessmentOutcomeDate"
+        ].apply(lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT)
 
         enriched_df["MediationOrTribunal"] = enriched_df.apply(
             lambda x: (
@@ -1211,12 +1279,18 @@ class Datacontainer:
         )
 
         enriched_df["StartDate_year"] = enriched_df["StartDate"].dt.year
+        enriched_df["StartDate_month"] = enriched_df["StartDate"].apply(
+            lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT
+        )
 
         enriched_df["CeaseDate"] = pd.to_datetime(
             enriched_df["CeaseDate"], format="%Y-%m-%d", errors="coerce"
         )
 
         enriched_df["CeaseDate_year"] = enriched_df["CeaseDate"].dt.year
+        enriched_df["CeaseDate_month"] = enriched_df["CeaseDate"].apply(
+            lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT
+        )
 
         enriched_df["PlanRes"].fillna("Non-residential", inplace=True)
         enriched_df["PlanRes"] = enriched_df["PlanRes"].map(
@@ -1339,30 +1413,6 @@ if input_file:
             max_value=int(sen2.enriched_persons["Age"].max()),
             value=[0, int(sen2.enriched_persons["Age"].max())],
         )
-
-        # age_selected = st.sidebar.multiselect(
-        #     "Select age buckets",
-        #     (
-        #         [
-        #             "a) Under 5 years",
-        #             "b) 5 to 10 years",
-        #             "c) 11 to 15 years",
-        #             "d) 16 to 19 years",
-        #             "e) 20 years and over",
-        #             "f) Age error",
-        #         ]
-        #     ),
-        #     default=(
-        #         [
-        #             "a) Under 5 years",
-        #             "b) 5 to 10 years",
-        #             "c) 11 to 15 years",
-        #             "d) 16 to 19 years",
-        #             "e) 20 years and over",
-        #             "f) Age error",
-        #         ]
-        #     ),
-        # )
 
         sen_type_selected = st.sidebar.multiselect(
             "Select SEN types",
@@ -1863,6 +1913,24 @@ if input_file:
             legend_title_font_color="black",
         )
 
+        timeliness_including_exceptions_months_bar = make_bar(
+            timeliness_df,
+            "StartDate_month",
+            title="Timeliness by month (exceptions included)",
+            color_column="Timeliness - week 20 exceptions not considered",
+            x_label="Month",
+            buckets=months,
+        )
+
+        timeliness_excluding_exceptions_months_bar = make_bar(
+            timeliness_df,
+            "StartDate_month",
+            title="Timeliness by month (exceptions excluded)",
+            color_column="Timeliness - week 20 exceptions considered",
+            x_label="Month",
+            buckets=months,
+        )
+
         time_col1, time_col2 = st.columns(2)
 
         with time_col1:
@@ -1872,6 +1940,18 @@ if input_file:
 
         with time_col2:
             st.plotly_chart(timeliness_considered, use_container_width=True, theme=None)
+
+        st.plotly_chart(
+            timeliness_including_exceptions_months_bar,
+            use_container_width=True,
+            theme=None,
+        )
+
+        st.plotly_chart(
+            timeliness_excluding_exceptions_months_bar,
+            use_container_width=True,
+            theme=None,
+        )
 
     with st.expander("Active Plans"):
         ap_col1, ap_col2, ap_col3 = st.columns(3)
@@ -2016,6 +2096,53 @@ if input_file:
             x_label="SEN setting",
         )
         st.plotly_chart(sen_settings, use_container_width=True, theme=None)
+
+    with st.expander("Monthly breakdowns"):
+        ehcps_starting_in_year = sliced_enriched_np[
+            (sliced_enriched_np["StartDate"] >= sen2.reference_period["start"])
+            & (sliced_enriched_np["StartDate"] <= sen2.reference_period["end"])
+        ]
+        ehcps_starting_months_bar = make_bar(
+            ehcps_starting_in_year,
+            "StartDate_month",
+            title="EHCPs starting per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(ehcps_starting_months_bar, use_container_width=True, theme=None)
+
+        ehcps_ceasing_in_year = sliced_enriched_np[
+            (sliced_enriched_np["CeaseDate"] >= sen2.reference_period["start"])
+            & (sliced_enriched_np["CeaseDate"] <= sen2.reference_period["end"])
+        ]
+        ehcps_ceasing_months_bar = make_bar(
+            ehcps_ceasing_in_year,
+            "CeaseDate_month",
+            title="EHCPs ceasing per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(ehcps_ceasing_months_bar, use_container_width=True, theme=None)
+
+        requests_months_bar = make_bar(
+            sliced_enriched_requests,
+            "ReceivedDate_month",
+            title="Requests per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(requests_months_bar, use_container_width=True, theme=None)
+
+        assessments_months_bar = make_bar(
+            sliced_enriched_assessments,
+            "AssessmentOutcomeDate_month",
+            title="Assessments per month",
+            x_label="Month",
+            buckets=months,
+        )
+        st.plotly_chart(assessments_months_bar, use_container_width=True, theme=None)
+
+        st.write("DONE")
 
     with st.expander("CYP in selected drilldown:"):
         st.table(sliced_enriched_persons)
