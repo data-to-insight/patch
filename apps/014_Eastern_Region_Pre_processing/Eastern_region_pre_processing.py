@@ -764,8 +764,8 @@ if (uploaded_files != None) & (mid_year_estimates != None):
         dfs[k]["Time Period"] = df["Month"].astype(str) + "_" + df["Year"].astype(str)
         dfs[k] = (
             df[
-                (~df["Child Unique ID"].str.contains("None"))
-                & (~df["Child Unique ID"].str.contains("filters"))
+                (~df["Child Unique ID"].astype("str").str.contains("None"))
+                & (~df["Child Unique ID"].astype("str").str.contains("filters"))
             ]
         ).copy()
 
