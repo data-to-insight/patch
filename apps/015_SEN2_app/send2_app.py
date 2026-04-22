@@ -2330,4 +2330,5 @@ if input_file:
         )
 
     with st.expander("CYP in selected drilldown:"):
-        st.table(sliced_enriched_persons)
+        st.write("Drilldown appears here")
+        # st.table(sliced_enriched_persons)
