@@ -392,7 +392,8 @@ def map_sen_settings(row):
         ]:
             return SENSettings[row].value
         else:
-            return "SEN setting not found"
+            # return "SEN setting not found"
+            return row["SENSetting"]
     else:
         return "SEN setting not found"
 
