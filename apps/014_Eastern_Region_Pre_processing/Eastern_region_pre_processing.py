@@ -34,7 +34,6 @@ def quarter_reference_date(df):
 
 
 def reference_date(df):
-    st.write(df)
     date_string = f"01/{int(df['Month'])}/{int(df['Year'])}"
     ref_date = pd.to_datetime(date_string, format="%d/%m/%Y").date()
     return ref_date
