@@ -4,6 +4,7 @@ import numpy as np
 from io import BytesIO
 
 import streamlit as st
+from pyodide.http import open_url
 
 # Set variables
 # #TODO In the pipeline version this must be updated to take actual reference dates.
@@ -12,6 +13,11 @@ reference_date_q1 = pd.to_datetime("19/09/2024", format="%d/%m/%Y")
 reference_date_q2 = pd.to_datetime("19/09/2024", format="%d/%m/%Y")
 reference_date_q3 = pd.to_datetime("19/09/2024", format="%d/%m/%Y")
 reference_date_q4 = pd.to_datetime("19/09/2024", format="%d/%m/%Y")
+
+
+mye2_persons_url = "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/014_Eastern_Region_Pre_processing/MYE2%20-%20Persons.csv"
+mye2_females_url = "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/014_Eastern_Region_Pre_processing/MYE2%20-%20Females.csv"
+mye2_males_url = "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/014_Eastern_Region_Pre_processing/MYE2%20-%20Males.csv"
 
 
 # Utility functions for pre-processing
@@ -28,7 +34,7 @@ def quarter_reference_date(df):
 
 
 def reference_date(df):
-    date_string = f"01/{df['Month']}/{df['Year']}"
+    date_string = f"01/{int(df['Month'])}/{int(df['Year'])}"
     ref_date = pd.to_datetime(date_string, format="%d/%m/%Y").date()
     return ref_date
 
@@ -704,17 +710,20 @@ st.title("Eastern Region Dashboard Pre-processing tool")
 uploaded_files = st.file_uploader(
     "Upload Annex A  CSV files here", accept_multiple_files=True
 )
-
-mid_year_estimates = st.file_uploader(
-    "Upload mid year population esitmates Excel file here", accept_multiple_files=False
-)
+mye2_persons = open_url(mye2_persons_url)
+mye2_females = open_url(mye2_females_url)
+mye2_males = open_url(mye2_males_url)
+# mid_year_estimates = st.file_uploader(
+#     "Upload mid year population esitmates Excel file here", accept_multiple_files=False
+# )
 st.write(
     "ONS mid year population esitmates can be found here: https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates"
 )
 st.write("As of the time of writing, the most recent population estimate was in 2023.")
 st.write("They are not embedded in the site as they change very regularly.")
 
-if (uploaded_files != None) & (mid_year_estimates != None):
+# if (uploaded_files != None) & (mid_year_estimates != None):
+if uploaded_files:
 
     st.write("Files uploaded sucessfully.")
 
@@ -733,28 +742,25 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     # Check which files are uploaded & standardize dict
     dfs = {}
     for k, v in upload_dfs.items():
-        if (
-            ("list_1" in k)
-            & ("list_10" not in k)
-            & ("list_11" not in k)
-            & ("list_12" not in k)
-        ):
+        if ("list_1" in k.lower()) | ("list 1" in k.lower()) & ("10" not in k) & (
+            "11" not in k
+        ) & ("12" not in k):
             dfs["list_1"] = v
-        if "list_2" in k:
+        if ("list_2" in k.lower()) | ("list 2" in k.lower()):
             dfs["list_2"] = v
-        if "list_3" in k:
+        if ("list_3" in k.lower()) | ("list 3" in k.lower()):
             dfs["list_3"] = v
-        if "list_4" in k:
+        if ("list_4" in k.lower()) | ("list 4" in k.lower()):
             dfs["list_4"] = v
-        if "list_5" in k:
+        if ("list_5" in k.lower()) | ("list 5" in k.lower()):
             dfs["list_5"] = v
-        if "list_6" in k:
+        if ("list_6" in k.lower()) | ("list 6" in k.lower()):
             dfs["list_6"] = v
-        if "list_7" in k:
+        if ("list_7" in k.lower()) | ("list 7" in k.lower()):
             dfs["list_7"] = v
-        if "list_8" in k:
+        if ("list_8" in k.lower()) | ("list 8" in k.lower()):
             dfs["list_8"] = v
-        if "list_9" in k:
+        if ("list_9" in k.lower()) | ("list 9" in k.lower()):
             dfs["list_9"] = v
 
     lists_uploaded = list(dfs.keys())
@@ -769,11 +775,11 @@ if (uploaded_files != None) & (mid_year_estimates != None):
             ]
         ).copy()
 
-    ons = pd.read_excel(
-        mid_year_estimates,
-        sheet_name=["MYE2 - Persons", "MYE2 - Females", "MYE2 - Males"],
-        skiprows=7,
-    )
+    ons = {
+        "MYE2 - Persons": pd.read_csv(mye2_persons, skiprows=7),
+        "MYE2 - Females": pd.read_csv(mye2_females, skiprows=7),
+        "MYE2 - Males": pd.read_csv(mye2_males, skiprows=7),
+    }
 
     # Pre-process ONS data
     ons["Metadata"] = ons["MYE2 - Persons"].iloc[:, 0:4].copy()
@@ -818,6 +824,10 @@ if (uploaded_files != None) & (mid_year_estimates != None):
     # Pre-process Annex A Data
     # Set reference dates in test data
     # TODO should not be needed with real pipeline outputs
+    # Cleans any empty rows being read into the df
+    for k, v in dfs.items():
+        dfs[k] = v[v["Child Unique ID"].notna()].copy()
+
     for df in dfs.values():
         # df["Reference Date"] = df.apply(quarter_reference_date, axis=1)
         df["Reference Date"] = df.apply(reference_date, axis=1)
