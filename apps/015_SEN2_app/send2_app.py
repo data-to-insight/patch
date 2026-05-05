@@ -376,7 +376,9 @@ def map_sen_settings(row):
             return f"URN match not found for {row['URN']}"
     elif pd.notnull(row["UKPRN"]):
         try:
-            return ukprn_lookup[float(row["UKPRN"])]
+            # Uncomment to match to UKPRN
+            # return ukprn_lookup[float(row["UKPRN"])]
+            return "In UKPRN placement"
         except:
             return f"UKPRN match not found for {row['UKPRN']}"
     elif pd.notnull(row["SENSetting"]):
@@ -465,7 +467,15 @@ def make_year_buckets(years):
         return "m) 12+ years"
 
 
-def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None):
+def make_bar(
+    df,
+    column,
+    title,
+    x_label="test",
+    color_column="Sex",
+    buckets=None,
+    color_sequence=px.colors.qualitative.G10,
+):
     """Used to make and format all bar charts in dashboard. Allows users to force 0
     counts on columns if needed. Also overlays data labels by adding a scatter trace as
     text."""
@@ -495,7 +505,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             color=color_column,
             category_orders={"Sex": ["M", "F"], column: buckets},
             labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.G10,
+            color_discrete_sequence=color_sequence,
         )
 
         # Needed to add total stacked bar heights where we are using sex to split bars
@@ -529,7 +539,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             px.bar(
                 title=title,
                 barmode="group",
-                color_discrete_sequence=px.colors.qualitative.G10,
+                color_discrete_sequence=color_sequence,
             )
         )
         bar.add_trace(
@@ -585,7 +595,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             text="Number of children",
             category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.G10,
+            color_discrete_sequence=color_sequence,
         )
 
     else:
@@ -608,7 +618,7 @@ def make_bar(df, column, title, x_label="test", color_column="Sex", buckets=None
             color=color_column,
             category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
-            color_discrete_sequence=px.colors.qualitative.G10,
+            color_discrete_sequence=color_sequence,
         )
         bar.add_trace(
             go.Scatter(
@@ -1078,6 +1088,13 @@ class Datacontainer:
         sen_types["PhaseTransferDue_year"] = sen_types["PhaseTransferDue_year"].fillna(
             "Not given"
         )
+        sen_types["PhaseTransferDue_month"] = sen_types["PhaseTransferDueDate"].dt.month
+        sen_types["PhaseTransferDue_month"] = sen_types["PhaseTransferDue_month"].apply(
+            lambda x: "Feb" if x == 2 else "March" if x == 3 else x
+        )
+        sen_types["PhaseTransferDue_month"] = sen_types[
+            "PhaseTransferDue_month"
+        ].fillna("Not given")
 
         sen_types["PhaseTransferFinal_year"] = sen_types[
             "PhaseTransferFinalDate"
@@ -1103,6 +1120,7 @@ class Datacontainer:
                 "UKPRN",
                 "PhaseTransferDue_year",
                 "PhaseTransferFinal_year",
+                "PhaseTransferDue_month",
             ]
         ]
         enriched_df = enriched_df.merge(sen_types, on="child_id", how="left")
@@ -1171,6 +1189,7 @@ class Datacontainer:
                     "NamedPlanLength (days)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
+                    "PhaseTransferDue_month",
                 ]
             ],
             how="left",
@@ -1249,6 +1268,7 @@ class Datacontainer:
                     "NamedPlanLength (days)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
+                    "PhaseTransferDue_month",
                 ]
             ],
             how="left",
@@ -1317,6 +1337,7 @@ class Datacontainer:
                     "NamedPlanLength (days)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
+                    "PhaseTransferDue_month",
                 ]
             ],
             how="left",
@@ -1384,6 +1405,7 @@ class Datacontainer:
                     "NamedPlanLength (days)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
+                    "PhaseTransferDue_month",
                 ]
             ],
             how="left",
@@ -1462,6 +1484,11 @@ st.markdown(
     "See an [explanation of why the tool is safe to use](https://www.datatoinsight.org/patch) on D2I's website."
 )
 st.markdown(
+    "After file upload the page may take a few minutes to update whilst processing the data. \
+    Even after the file upload bar finishes it will still take some time to process. \
+    Refresh the page if uploading a new file."
+)
+st.markdown(
     "[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/015_SEN2_app/sen2_app.py)"
 )
@@ -1480,18 +1507,20 @@ input_file = st.file_uploader("Upload SEN2 XML here")
 urn_lookup, ukprn_lookup, la_codes = read_lookups()
 
 if input_file:
-    tree = ET.parse(input_file)
-    root = tree.getroot()
-    data_files = convert_data(root)
+    with st.spinner("Processing data"):
+        tree = ET.parse(input_file)
+        root = tree.getroot()
+        data_files = convert_data(root)
 
-    @st.cache_data
-    def get_datacontainer(_data_files):
-        """This function exists to create a datacontainer object for the sen2 so we can cache it
-        with the st.cache_data decorator, this cant be done with the class directly."""
-        sen2_object = Datacontainer(_data_files)
-        return sen2_object
+        @st.cache_data
+        def get_datacontainer(_data_files):
+            """This function exists to create a datacontainer object for the sen2 so we can cache it
+            with the st.cache_data decorator, this cant be done with the class directly.
+            """
+            sen2_object = Datacontainer(_data_files)
+            return sen2_object
 
-    sen2 = get_datacontainer(data_files)
+        sen2 = get_datacontainer(data_files)
 
     with st.sidebar:
         st.write("Make selections here:")
@@ -1540,56 +1569,57 @@ if input_file:
             default=(sen2.enriched_persons["PhaseTransferDue_year"].unique()),
         )
 
-    sliced_enriched_persons = apply_filters(
-        sen2.enriched_persons,
-        sex_selected,
-        age_selected,
-        ethnicity_selected,
-        sen_type_selected,
-        sen_setting_selected,
-        plan_length,
-        phase_transfer_years_selected,
-    )
-    sliced_enriched_requests = apply_filters(
-        sen2.enriched_requests,
-        sex_selected,
-        age_selected,
-        ethnicity_selected,
-        sen_type_selected,
-        sen_setting_selected,
-        plan_length,
-        phase_transfer_years_selected,
-    )
-    sliced_enriched_assessments = apply_filters(
-        sen2.enriched_assessments,
-        sex_selected,
-        age_selected,
-        ethnicity_selected,
-        sen_type_selected,
-        sen_setting_selected,
-        plan_length,
-        phase_transfer_years_selected,
-    )
-    sliced_enriched_np = apply_filters(
-        sen2.enriched_named_plan,
-        sex_selected,
-        age_selected,
-        ethnicity_selected,
-        sen_type_selected,
-        sen_setting_selected,
-        plan_length,
-        phase_transfer_years_selected,
-    )
-    sliced_enriched_ap = apply_filters(
-        sen2.enriched_active_plans,
-        sex_selected,
-        age_selected,
-        ethnicity_selected,
-        sen_type_selected,
-        sen_setting_selected,
-        plan_length,
-        phase_transfer_years_selected,
-    )
+    with st.spinner("Processing selections"):
+        sliced_enriched_persons = apply_filters(
+            sen2.enriched_persons,
+            sex_selected,
+            age_selected,
+            ethnicity_selected,
+            sen_type_selected,
+            sen_setting_selected,
+            plan_length,
+            phase_transfer_years_selected,
+        )
+        sliced_enriched_requests = apply_filters(
+            sen2.enriched_requests,
+            sex_selected,
+            age_selected,
+            ethnicity_selected,
+            sen_type_selected,
+            sen_setting_selected,
+            plan_length,
+            phase_transfer_years_selected,
+        )
+        sliced_enriched_assessments = apply_filters(
+            sen2.enriched_assessments,
+            sex_selected,
+            age_selected,
+            ethnicity_selected,
+            sen_type_selected,
+            sen_setting_selected,
+            plan_length,
+            phase_transfer_years_selected,
+        )
+        sliced_enriched_np = apply_filters(
+            sen2.enriched_named_plan,
+            sex_selected,
+            age_selected,
+            ethnicity_selected,
+            sen_type_selected,
+            sen_setting_selected,
+            plan_length,
+            phase_transfer_years_selected,
+        )
+        sliced_enriched_ap = apply_filters(
+            sen2.enriched_active_plans,
+            sex_selected,
+            age_selected,
+            ethnicity_selected,
+            sen_type_selected,
+            sen_setting_selected,
+            plan_length,
+            phase_transfer_years_selected,
+        )
 
     with st.expander("All children in data (every child with a persons block)"):
         col1, col2, col3 = st.columns(3)
@@ -2232,7 +2262,10 @@ if input_file:
 
         # Not in columns
         ehcs_transferred = make_bar(
-            sliced_enriched_ap[sliced_enriched_ap["LeavingDate"].notna()],
+            sliced_enriched_ap[
+                sliced_enriched_ap["LeavingDate"].notna()
+                & (sliced_enriched_ap["LA name"] != "Not transferred")
+            ],
             "LA name",
             x_label="LA name",
             title="Open active plans - EHCs transferred in",
@@ -2317,18 +2350,10 @@ if input_file:
             "PhaseTransferDue_year",
             title="Phase transfers due by year",
             x_label="Year",
+            color_column="PhaseTransferDue_month",
+            color_sequence=px.colors.qualitative.Dark2,
         )
         st.plotly_chart(phase_transfers_due_year, use_container_width=True, theme=None)
-
-        phase_transfers_final_year = make_bar(
-            deduped_transfers,
-            "PhaseTransferFinal_year",
-            title="Phase transfers final by year",
-            x_label="Year",
-        )
-        st.plotly_chart(
-            phase_transfers_final_year, use_container_width=True, theme=None
-        )
 
     with st.expander("CYP in selected drilldown:"):
         st.write("Drilldown appears here")
