@@ -11,9 +11,11 @@ st.set_page_config(
 def render_page():
     st.write("# Welcome to the Home Page, {}!".format(st.session_state.name))
     st.write(st.session_state)
-    st.markdown("""
+    st.markdown(
+        """
         This is a test multi-page app
-        """)
+        """
+    )
 
 
 if "name" not in st.session_state:

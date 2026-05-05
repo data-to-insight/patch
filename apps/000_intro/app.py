@@ -9,7 +9,8 @@ st.markdown(
 st.title("PATCh: Create your own app")
 
 
-st.markdown("""
+st.markdown(
+    """
 ### PATCh
 
 For those interested in how PATCh apps work: every time you load a PATCh app, the webpage will use something called Pyodide to run
@@ -32,13 +33,16 @@ The official stlite repository is [🔗 here](https://github.com/whitphx/stlite)
 If you are new to Streamlit, read the Getting Started tutorial [🔗 here](https://docs.streamlit.io/library/get-started) first
 (don't worry, it only takes a few minutes 👍),
 but **you can skip the "Installation" section** because you are here 😎.
-""")
+"""
+)
 
 
 st.header("Streamlit Component Samples")
-st.markdown("""
+st.markdown(
+    """
     All these features are working on your browser!
-""")
+"""
+)
 
 name = st.text_input("Your name?")
 st.write("Hello,", name or "world", "!")
