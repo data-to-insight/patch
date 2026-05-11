@@ -1283,12 +1283,19 @@ class Datacontainer:
             "AssessmentOutcomeDate"
         ].apply(lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT)
 
+        enriched_df["AssessmentOutcome"].fillna("No value", inplace=True)
+        enriched_df["AssessmentMediation"].fillna("No value", inplace=True)
+        enriched_df["AssessmentTribunal"].fillna("No value", inplace=True)
+        enriched_df["OtherMediation"].fillna("No value", inplace=True)
+        enriched_df["OtherTribunal"].fillna("No value", inplace=True)
+
         enriched_df["MediationOrTribunal"] = enriched_df.apply(
             lambda x: (
-                "No"
-                if (pd.isnull(x["AssessmentOutcome"])) & (pd.isnull(x["AssessmentMediation"]))
-                else 
-                    ("Assessment Mediation"
+                # "No"
+                # if (pd.isnull(x["AssessmentOutcome"])) & (pd.isnull(x["AssessmentMediation"]))
+                # else
+                (
+                    "Assessment Mediation"
                     if (x["AssessmentOutcome"] != "H")
                     & (x["AssessmentMediation"] == "1")
                     else (
