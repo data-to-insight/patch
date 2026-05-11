@@ -1285,21 +1285,26 @@ class Datacontainer:
 
         enriched_df["MediationOrTribunal"] = enriched_df.apply(
             lambda x: (
-                "Assessment Mediation"
-                if (x["AssessmentOutcome"] != "H") & (x["AssessmentMediation"] == "1")
-                else (
-                    "Assessment Tribunal"
+                "No"
+                if (pd.isnull(x["AssessmentOutcome"])) & (pd.isnull(x["AssessmentMediation"]))
+                else 
+                    ("Assessment Mediation"
                     if (x["AssessmentOutcome"] != "H")
-                    & (x["AssessmentTribunal"] == "1")
+                    & (x["AssessmentMediation"] == "1")
                     else (
-                        "Other Mediation"
+                        "Assessment Tribunal"
                         if (x["AssessmentOutcome"] != "H")
-                        & (x["OtherMediation"] == "1")
+                        & (x["AssessmentTribunal"] == "1")
                         else (
-                            "Other Tribunal"
+                            "Other Mediation"
                             if (x["AssessmentOutcome"] != "H")
-                            & (x["OtherTribunal"] == "1")
-                            else "No"
+                            & (x["OtherMediation"] == "1")
+                            else (
+                                "Other Tribunal"
+                                if (x["AssessmentOutcome"] != "H")
+                                & (x["OtherTribunal"] == "1")
+                                else "No"
+                            )
                         )
                     )
                 )
