@@ -229,6 +229,91 @@ class HEALTHASSESSMENTCodes(Enum):
     _0 = "Child did not have their annual health assessment"
     _1 = "Child had their annual health assessment"
 
+class ACCOMCodes(Enum):
+    _0 = "Not in touch with the young person and do not know their accommodation, or the young person has died, or returned home to live with parents or someone with parental responsibility for a continuous period of 6 months or more."
+    _B1 = "With parent(s) or relative(s)"
+    _B2 = "With parent(s) or relative(s)"
+    _C1 = "Community home or other form of residential care such as an National Health Service (NHS) establishment"
+    _C2 = "Community home or other form of residential care such as an National Health Service (NHS) establishment"
+    _D1 = "Semi-independent, transitional accommodation (like a supported hostel, trainer flats); self contained accommodation with specialist personal assistance support (for example, for young people with disabilities, pregnant young women and single parents); and self-contained accommodation with floating support"
+    _D2 = "Semi-independent, transitional accommodation (like a supported hostel, trainer flats); selfcontained accommodation with specialist personal assistance support (for example, for young people with disabilities, pregnant young women and single parents); and self-contained accommodation with floating support"
+    _E1 = "Supported lodgings (accommodation, usually in a family home, where adult(s) in the “host family” provide formal advice and support)"
+    _E2 = "Supported lodgings (accommodation, usually in a family home, where adult(s) in the “host family” provide formal advice and support)"
+    _G1 = "Gone abroad"
+    _G2 = "Gone abroad"
+    _H1 = "Deported"
+    _H2 = "Deported"
+    _K1 = "Ordinary lodgings, without formal support"
+    _K2 = "Ordinary lodgings, without formal support"
+    _R1 = "Residence not known"
+    _R2 = "Residence not known"
+    _S1 = "No fixed abode / homeless"
+    _S2 = "No fixed abode / homeless"
+    _T1 = "Foyers and similar supported accommodation which combines the accommodation with opportunities for education, training or employment"
+    _T2 = "Foyers and similar supported accommodation which combines the accommodation with opportunities for education, training or employment"
+    _U1 = "Independent living, for example independent tenancy of flat, house or bedsit, including local authority or housing association tenancy, or accommodation provided by a college or university. Includes flat sharing"
+    _U2 = "Independent living, for example independent tenancy of flat, house or bedsit, including local authority or housing association tenancy, or accommodation provided by a college or university. Includes flat sharing"
+    _V1 = "Emergency accommodation (like a night shelter, direct access or emergency hostel)"
+    _V2 = "Emergency accommodation (like a night shelter, direct access or emergency hostel)"
+    _W1 = "Bed and breakfast"
+    _W2 = "Bed and breakfast"
+    _X1 = "In custody"
+    _X2 = "In custody"
+    _Y1 = "Other accommodation"
+    _Y2 = "Other accommodation"
+    _Z1 = "With former foster carer(s) - where the young person has been fostered and on turning 18 continues to remain with the same carer(s) who had fostered them immediately prior to their reaching legal adulthood, and where the plan for their care involves their remaining with this former foster family for the future. This code should not be used for 17-year-old care leavers. If the foster carer is also a relative this code should be used rather than ‘B - with parents or relatives’."
+    _Z2 = "With former foster carer(s) - where the young person has been fostered and on turning 18 continues to remain with the same carer(s) who had fostered them immediately prior to their reaching legal adulthood, and where the plan for their care involves their remaining with this former foster family for the future. This code should not be used for 17-year-old care leavers. If the foster carer is also a relative this code should be used rather than ‘B - with parents or relatives’."
+
+class ACTIVCodes(Enum):
+    _0 = "Not in touch with the young person and do not know their activity, or the young person has died, or returned home to live with parents or someone with parental responsibility for a continuous period of 6 months or more."
+    _F1 = "Young person engaged full time in higher education (for example studies beyond A level)"
+    _F2 = "Young person engaged full time in education other than higher education"
+    _F4 = "Young person engaged full time in an apprenticeship"
+    _F3 = "Young person engaged full time in training or employment"
+    _F5 = "Young person engaged full time in training or employment (not apprenticeship)"
+    _G4 = "Young person not in education, employment or training because of illness or disability"
+    _G5 = "Young person not in education, employment or training: other circumstances"
+    _G6 = "Young person not in education, employment or training due to pregnancy or parenting"
+    _P1 = "Young person engaged part time in higher education (for example studies beyond A level)"
+    _P2 = "Young person engaged part time in education other than higher education"
+    _P3 = "Young person engaged part time in training or employment"
+    _P4 = "Young person engaged part time in an apprenticeship"
+    _P5 = "Young person engaged part time in training or employment (not apprenticeship)"
+
+class INTOUCHCodes(Enum):
+    DIED = "Died after leaving care"
+    NO = "No – not in touch"
+    NREQ = "Young person no longer requires children’s social care services"
+    REFU = "Young person refuses contact"
+    RHOM = "Young person returned to live with parents or someone with parental responsibility for a continuous period of 6 months or more"
+    YES = "Yes – in touch"
+
+class LAPERMCodes(Enum):
+    _999 = "Information not available"
+    _NIR = "Northern Ireland"
+    _nnn = "A valid local authority code, or 999"
+    _NUK = "Outside of the UK"
+    _SCO = "Scotland"
+    _WAL = "Wales"
+    _nan = "N/A"
+
+class PREVPERMCodes(Enum):
+    P1 = "Adoption"
+    P2 = "Special guardianship order (SGO)"
+    P3 = "Residence order (RO) or child arrangements order (CAO) which sets out with whom the child is to live."
+    P4 = "Unknown"
+    Z1 = "Child has not previously had a permanence option"
+
+class REVIEWCODECodes(Enum):
+    PN0 = "Child aged under 4 at the time of the review"
+    PN1 = "Child physically attends and speaks for him or herself (Attendance)."
+    PN2 = "Child physically attends and an advocate speaks on his or her behalf. (Attendance views represented by advocate or independent reviewing officer (IRO))"
+    PN3 = "Child attends and conveys his or her view symbolically (non-verbally) (Attendance symbols)"
+    PN4 = "Child physically attends but does not speak for him or herself, does not convey his or her view symbolically (non-verbally) and does not ask an advocate to speak for him or her (Attendance without contribution)"
+    PN7 = "Child does not attend nor are his or her views conveyed to the review"
+    PN5 = "Child does not attend physically but briefs an advocate to speak for him or her (Views represented by advocate or independent reviewing officer (IRO) through texting, written format, phone, audio/video, viewpoint"
+    PN6 = "Child does not attend but conveys his or her feelings to the review by a facilitative medium (Texting the chair, written format, phone, audio/video, viewpoint)"
+
 
 ###########################
 # Util Functions
@@ -429,17 +514,69 @@ class Datacontainer:
     def enriched_oc3(self):
         enriched_df = self.data["oc3"].copy()
 
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+
+        enriched_df["IN_TOUCH"] = enriched_df["IN_TOUCH"].apply(
+            lambda x: INTOUCHCodes[x].value if pd.notnull(x) else "N/A"
+        )
+        enriched_df["ACTIV"] = enriched_df["ACTIV"].apply(
+            lambda x: ACTIVCodes[f"_{x}"].value if pd.notnull(x) else "N/A"
+        )
+        enriched_df["ACCOM"] = enriched_df["ACCOM"].apply(
+            lambda x: ACCOMCodes[f"_{x}"].value if pd.notnull(x) else "N/A"
+        )
         return enriched_df
 
     @property
     def enriched_prev_perm(self):
         enriched_df = self.data["prev_perm"].copy()
 
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+
+        enriched_df["PREV_PERM"] = enriched_df["PREV_PERM"].apply(
+            lambda x: PREVPERMCodes[x].value if pd.notnull(x) else "N/A"
+        )
+
+        enriched_df["LA_PERM"] = enriched_df["LA_PERM"].astype("str").str.split(".", expand=True)[0]
+        enriched_df["LA_PERM"] = enriched_df["LA_PERM"].apply(
+            lambda x: x if x.isnumeric() else (LAPERMCodes[f"_{x}"].value if pd.notnull(x) else "N/A")
+        )
+
+        return enriched_df
+
+    @property
+    def enriched_reviews(self):
+        enriched_df = self.data["reviews"].copy()
+
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
+        enriched_df["REVIEW_dt"] = convert_dates(enriched_df["REVIEW"])
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+
+        enriched_df["REVIEW_CODE"] = enriched_df["REVIEW_CODE"].apply(
+            lambda x: REVIEWCODECodes[x].value if pd.notnull(x) else "N/A"
+        )
+
         return enriched_df
 
     @property
     def enriched_uasc(self):
         enriched_df = self.data["uasc"].copy()
+
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
+        enriched_df["DUC_dt"] = convert_dates(enriched_df["DUC"])
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+
+        enriched_df["SEX"] = [
+            (
+                "Male"
+                if x in ["1", "M"]
+                else ("Female" if x in ["2", "F"] else "SEX code error")
+            )
+            for x in enriched_df["SEX"].astype("str")
+        ]
+
 
         return enriched_df
 
@@ -472,4 +609,4 @@ if input_file:
 
     ssda903 = Datacontainer(dfs)
 
-    st.table(ssda903.enriched_oc2.head())
+    st.table(ssda903.enriched_uasc.head())
