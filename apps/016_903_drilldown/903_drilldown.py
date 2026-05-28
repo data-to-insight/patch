@@ -1,7 +1,21 @@
+####
+# Notes
+####
+
+# Make a gapminder style visualisation for the 903, index for deprivation for axis? 
+# # Gapminder - Age axis and time in placement in another, age at which they joined care, can we follow a specific cohort and see what they are doing?
+# Graph of how entered care against time in care, and see how that journey goes
+# visualisation of where a child is moving
+# how did children come be looked after and where did they end up
+# instability around key points, can we find things that link to instability (eg looking at reasons placements ended)
+
 import pandas as pd
 import numpy as np
 import datetime as dt
 import calendar
+from math import asin, cos, radians, sin, sqrt
+ 
+
 
 import streamlit as st
 
@@ -390,6 +404,87 @@ def make_year_buckets(years):
         return "l) 11-12 years"
     else:
         return "m) 12+ years"
+
+def haversine(row):
+ 
+    # Haversine formula for determining distance between two coordinates given by latitude and longitude. Calculates great circle distance between two points.
+    # Imagine an isosceles triangle with one vertex on the centre of the Earth, two sides of length R (radius of Earth) and the other two vertices at the two
+    # lat/long coordinates. This formula calculates the spherical distance between these two points on the arc described by the Earth's surface.
+    # Probably overkill for this as we can approximate the UK to a flat plane (and postcode lat/long are approximate) but why not be accurate?
+    # (Open to moving this function to somewhere more sensible if required)
+
+    lat1 = row["LAT_HOME"]
+    lon1 = row["LONG_HOME"]
+    lat2 = row["LAT_PLACE"]
+    lon2 = row["LONG_PLACE"]
+
+    # Earth's radius in miles. For Earth radius in kilometers use 6372.8 km
+    R = 3959.87433
+    # Convert latitude and longitude values to radians
+    dLat = radians(lat2 - lat1)
+    dLon = radians(lon2 - lon1)
+    lat1 = radians(lat1)
+    lat2 = radians(lat2)
+
+    # Haversine formula
+    a = sin(dLat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dLon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    # Returns distance between points in miles (or km if R changed above)
+
+    return R * c
+
+def match_postcodes(df, postcodes):
+    episodes = df
+    # Match postcode to home and placement postcodes and calculate distance between them. Precision is probably no more than +/- 1 mile
+    # as only uses first 4 or 5 characters of postcode.
+    # Adds LAD and LA codes to each postcode.
+    # Important metrics are:
+    # placements > or < 20 miles from home
+    # in/out of home LA (**not LAD**)
+
+    # Merge in details for home postcode:
+    # pcd8_TRIM : first 4/5 characters of postcode
+    # lad25cd : Local Authority District (LAD) code
+    # lat : approximate postcode latitude
+    # long : approximate postcode longitude
+    # CTYUA24CD : Local Authority (LA) code
+    episodes_home = episodes.merge(
+        postcodes[["pcd8_TRIM", "lad25cd", "lat", "long", "CTYUA24CD"]],
+        how="left",
+        left_on="HOME_POST",
+        right_on="pcd8_TRIM",
+    )
+
+    # Rename merged columns
+    episodes_home = episodes_home.rename(
+        columns={
+            "pcd8_TRIM": "HOME_POSTCODE",
+            "lad25cd": "LAD_CODE_HOME",
+            "lat": "LAT_HOME",
+            "long": "LONG_HOME",
+            "CTYUA24CD": "LA_CODE_HOME",
+        }
+    )
+
+    # Repeats the above merge for placement postcode
+    episodes_home_and_placement = episodes_home.merge(
+        postcodes[["pcd8_TRIM", "lad25cd", "lat", "long", "CTYUA24CD"]],
+        how="left",
+        left_on="PL_POST",
+        right_on="pcd8_TRIM",
+    )
+
+    episodes_home_and_placement = episodes_home_and_placement.rename(
+        columns={
+            "pcd7_TRIM": "PLACE_POSTCODE",
+            "lad25cd": "LAD_CODE_PLACE",
+            "lat": "LAT_PLACE",
+            "long": "LONG_PLACE",
+            "CTYUA24CD": "LA_CODE_PLACE",
+        }
+    )
+
+    return episodes_home_and_placement
 
 
 ###########################
