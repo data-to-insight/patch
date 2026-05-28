@@ -1296,20 +1296,20 @@ class Datacontainer:
                 # else
                 (
                     "Assessment Mediation"
-                    if (x["AssessmentOutcome"] != "H")
-                    & (x["AssessmentMediation"] == "1")
+                    if ((x["AssessmentOutcome"] != "H")
+                    & (x["AssessmentMediation"] in ["1", "true"]))
                     else (
                         "Assessment Tribunal"
                         if (x["AssessmentOutcome"] != "H")
-                        & (x["AssessmentTribunal"] == "1")
+                        & (x["AssessmentTribunal"] in ["1", "true"])
                         else (
                             "Other Mediation"
                             if (x["AssessmentOutcome"] != "H")
-                            & (x["OtherMediation"] == "1")
+                            & (x["OtherMediation"] in ["1", "true"])
                             else (
                                 "Other Tribunal"
                                 if (x["AssessmentOutcome"] != "H")
-                                & (x["OtherTribunal"] == "1")
+                                & (x["OtherTribunal"] in ["1", "true"])
                                 else "No"
                             )
                         )
@@ -1319,10 +1319,12 @@ class Datacontainer:
             axis=1,
         )
 
+
+        enriched_df["Week20"].fillna("No value", inplace=True)
         enriched_df["Week20"] = enriched_df.apply(
             lambda x: (
                 "Yes"
-                if (x["AssessmentOutcome"] != "H") & (x["Week20"] == "1")
+                if ((x["AssessmentOutcome"] != "H") & (x["Week20"] in ["1", "true"])) 
                 else "No"
             ),
             axis=1,
