@@ -317,7 +317,24 @@ class REVIEWCODECodes(Enum):
 
 ###########################
 # Util Functions
-###########################
+############################
+def apply_filters(
+    df,
+    sex_selected,
+    age_selected,
+    ethnicity_selected,
+):
+    """Used to apply all filters to enriched tables"""
+    df = df[
+        df["SEX"].isin(sex_selected)
+        & (df["Age (on return date)"] >= age_selected[0])
+        & (df["Age (on return date)"] <= age_selected[1])
+        & (df["EthnicityGroup"].isin(ethnicity_selected))
+    ]
+
+    return df
+
+
 def read_903(df):
     dfs = pd.read_excel(df, sheet_name=None)
 
@@ -409,10 +426,17 @@ class Datacontainer:
         )
 
         enriched_df["UPN"] = enriched_df["UPN"].apply(
-            lambda x: UPNCodes[x].value if pd.notnull(x) else "N/A"
+            lambda x: UPNCodes[x].value if x in ["UN1", "UN2", "UN3", "UN4", "UN5"] else ("Has UPN" if pd.notnull(x) else "N/A")
         )
 
         enriched_df["MC_DOB_dt"] = convert_dates(enriched_df["MC_DOB"])
+
+        enriched_df["Age (on return date)"] = enriched_df.apply(
+            lambda x: relativedelta(dt1=pd.to_datetime(x["YEAR"], format="%Y"), dt2=x["DOB_dt"])
+            .normalized()
+            .years, axis=1
+        )    
+        enriched_df["AgeBuckets"] = enriched_df["Age (on return date)"].apply(calculate_age_buckets)
 
         return enriched_df
 
@@ -420,9 +444,12 @@ class Datacontainer:
     def enriched_episodes(self):
         enriched_df = self.data["episodes"].copy()
 
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
         enriched_df["DECOM_dt"] = convert_dates(enriched_df["DECOM"])
         enriched_df["DEC_dt"] = convert_dates(enriched_df["DEC"])
-        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        
 
         enriched_df["RNE"] = enriched_df["RNE"].apply(
             lambda x: RNECodes[x].value if pd.notnull(x) else "N/A"
@@ -452,10 +479,12 @@ class Datacontainer:
     def enriched_missing(self):
         enriched_df = self.data["missing"].copy()
 
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["MIS_START_dt"] = convert_dates(enriched_df["MIS_START"])
         enriched_df["MIS_END_dt"] = convert_dates(enriched_df["MIS_END"])
-        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
 
         enriched_df["MISSING"] = enriched_df["MISSING"].apply(
             lambda x: MISSINGCodes[x].value if pd.notnull(x) else "N/A"
@@ -467,8 +496,10 @@ class Datacontainer:
     def enriched_oc2(self):
         enriched_df = self.data["oc2"].copy()
 
-        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
 
         enriched_df["SDQ_REASON"] = enriched_df["SDQ_REASON"].apply(
             lambda x: SDQREASONCodes[x].value if pd.notnull(x) else "N/A"
@@ -514,8 +545,10 @@ class Datacontainer:
     def enriched_oc3(self):
         enriched_df = self.data["oc3"].copy()
 
-        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
 
         enriched_df["IN_TOUCH"] = enriched_df["IN_TOUCH"].apply(
             lambda x: INTOUCHCodes[x].value if pd.notnull(x) else "N/A"
@@ -532,8 +565,10 @@ class Datacontainer:
     def enriched_prev_perm(self):
         enriched_df = self.data["prev_perm"].copy()
 
-        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
+        enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
 
         enriched_df["PREV_PERM"] = enriched_df["PREV_PERM"].apply(
             lambda x: PREVPERMCodes[x].value if pd.notnull(x) else "N/A"
@@ -550,9 +585,11 @@ class Datacontainer:
     def enriched_reviews(self):
         enriched_df = self.data["reviews"].copy()
 
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["REVIEW_dt"] = convert_dates(enriched_df["REVIEW"])
-        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
 
         enriched_df["REVIEW_CODE"] = enriched_df["REVIEW_CODE"].apply(
             lambda x: REVIEWCODECodes[x].value if pd.notnull(x) else "N/A"
@@ -564,14 +601,16 @@ class Datacontainer:
     def enriched_uasc(self):
         enriched_df = self.data["uasc"].copy()
 
+        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
+        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["DUC_dt"] = convert_dates(enriched_df["DUC"])
-        enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
 
         enriched_df["SEX"] = [
             (
                 "Male"
-                if x in ["1", "M"]
+                if x in ["1", "M"]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
                 else ("Female" if x in ["2", "F"] else "SEX code error")
             )
             for x in enriched_df["SEX"].astype("str")
@@ -609,4 +648,38 @@ if input_file:
 
     ssda903 = Datacontainer(dfs)
 
-    st.table(ssda903.enriched_uasc.head())
+    with st.sidebar:
+            st.write("Make selections here:")
+
+            sex_selected = st.sidebar.multiselect(
+                "Select Sex",
+                (ssda903.enriched_header["SEX"].unique()),
+                default=(ssda903.enriched_header["SEX"].unique()),
+            )
+
+            age_selected = st.sidebar.slider(
+                "Select age range (on day of census)",
+                min_value=int(ssda903.enriched_header["Age (on return date)"].min()),
+                max_value=int(ssda903.enriched_header["Age (on return date)"].max()),
+                value=[0, int(ssda903.enriched_header["Age (on return date)"].max())],
+            )
+
+            
+            ethnicity_selected = st.sidebar.multiselect(
+                "Select ethnicities",
+                (ssda903.enriched_header["EthnicityGroup"].unique()),
+                default=(ssda903.enriched_header["EthnicityGroup"].unique()),
+            )
+
+
+
+    sliced_enriched_header = apply_filters(
+        ssda903.enriched_header,
+        sex_selected,
+        age_selected,
+        ethnicity_selected
+    )
+
+    st.table(sliced_enriched_header.head())
+
+
