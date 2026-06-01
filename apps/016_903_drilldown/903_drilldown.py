@@ -2,19 +2,21 @@
 # Notes
 ####
 
-# Make a gapminder style visualisation for the 903, index for deprivation for axis? 
+# Make a gapminder style visualisation for the 903, index for deprivation for axis?
 # # Gapminder - Age axis and time in placement in another, age at which they joined care, can we follow a specific cohort and see what they are doing?
 # Graph of how entered care against time in care, and see how that journey goes
 # visualisation of where a child is moving
 # how did children come be looked after and where did they end up
 # instability around key points, can we find things that link to instability (eg looking at reasons placements ended)
 
+# time in care vs number of episodes for gapminder
+# usefil: https://www.education.ox.ac.uk/rees-centre/news/from-messy-annex-a-to-impactful-child-journeys/
+
 import pandas as pd
 import numpy as np
 import datetime as dt
 import calendar
 from math import asin, cos, radians, sin, sqrt
- 
 
 
 import streamlit as st
@@ -36,6 +38,11 @@ from pyodide.http import open_url
 ###################
 
 st.set_page_config(layout="wide")
+
+postcodes_url = open_url(
+    "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/016_903_drilldown/full_postcode_list_v2%201.csv"
+)
+postcodes = pd.read_csv(postcodes_url)
 
 
 class EthnicSubcategories(Enum):
@@ -243,6 +250,7 @@ class HEALTHASSESSMENTCodes(Enum):
     _0 = "Child did not have their annual health assessment"
     _1 = "Child had their annual health assessment"
 
+
 class ACCOMCodes(Enum):
     _0 = "Not in touch with the young person and do not know their accommodation, or the young person has died, or returned home to live with parents or someone with parental responsibility for a continuous period of 6 months or more."
     _B1 = "With parent(s) or relative(s)"
@@ -278,13 +286,16 @@ class ACCOMCodes(Enum):
     _Z1 = "With former foster carer(s) - where the young person has been fostered and on turning 18 continues to remain with the same carer(s) who had fostered them immediately prior to their reaching legal adulthood, and where the plan for their care involves their remaining with this former foster family for the future. This code should not be used for 17-year-old care leavers. If the foster carer is also a relative this code should be used rather than ‘B - with parents or relatives’."
     _Z2 = "With former foster carer(s) - where the young person has been fostered and on turning 18 continues to remain with the same carer(s) who had fostered them immediately prior to their reaching legal adulthood, and where the plan for their care involves their remaining with this former foster family for the future. This code should not be used for 17-year-old care leavers. If the foster carer is also a relative this code should be used rather than ‘B - with parents or relatives’."
 
+
 class ACTIVCodes(Enum):
     _0 = "Not in touch with the young person and do not know their activity, or the young person has died, or returned home to live with parents or someone with parental responsibility for a continuous period of 6 months or more."
     _F1 = "Young person engaged full time in higher education (for example studies beyond A level)"
     _F2 = "Young person engaged full time in education other than higher education"
     _F4 = "Young person engaged full time in an apprenticeship"
     _F3 = "Young person engaged full time in training or employment"
-    _F5 = "Young person engaged full time in training or employment (not apprenticeship)"
+    _F5 = (
+        "Young person engaged full time in training or employment (not apprenticeship)"
+    )
     _G4 = "Young person not in education, employment or training because of illness or disability"
     _G5 = "Young person not in education, employment or training: other circumstances"
     _G6 = "Young person not in education, employment or training due to pregnancy or parenting"
@@ -292,7 +303,10 @@ class ACTIVCodes(Enum):
     _P2 = "Young person engaged part time in education other than higher education"
     _P3 = "Young person engaged part time in training or employment"
     _P4 = "Young person engaged part time in an apprenticeship"
-    _P5 = "Young person engaged part time in training or employment (not apprenticeship)"
+    _P5 = (
+        "Young person engaged part time in training or employment (not apprenticeship)"
+    )
+
 
 class INTOUCHCodes(Enum):
     DIED = "Died after leaving care"
@@ -301,6 +315,7 @@ class INTOUCHCodes(Enum):
     REFU = "Young person refuses contact"
     RHOM = "Young person returned to live with parents or someone with parental responsibility for a continuous period of 6 months or more"
     YES = "Yes – in touch"
+
 
 class LAPERMCodes(Enum):
     _999 = "Information not available"
@@ -311,12 +326,14 @@ class LAPERMCodes(Enum):
     _WAL = "Wales"
     _nan = "N/A"
 
+
 class PREVPERMCodes(Enum):
     P1 = "Adoption"
     P2 = "Special guardianship order (SGO)"
     P3 = "Residence order (RO) or child arrangements order (CAO) which sets out with whom the child is to live."
     P4 = "Unknown"
     Z1 = "Child has not previously had a permanence option"
+
 
 class REVIEWCODECodes(Enum):
     PN0 = "Child aged under 4 at the time of the review"
@@ -405,8 +422,9 @@ def make_year_buckets(years):
     else:
         return "m) 12+ years"
 
+
 def haversine(row):
- 
+
     # Haversine formula for determining distance between two coordinates given by latitude and longitude. Calculates great circle distance between two points.
     # Imagine an isosceles triangle with one vertex on the centre of the Earth, two sides of length R (radius of Earth) and the other two vertices at the two
     # lat/long coordinates. This formula calculates the spherical distance between these two points on the arc described by the Earth's surface.
@@ -432,6 +450,7 @@ def haversine(row):
     # Returns distance between points in miles (or km if R changed above)
 
     return R * c
+
 
 def match_postcodes(df, postcodes):
     episodes = df
@@ -476,7 +495,7 @@ def match_postcodes(df, postcodes):
 
     episodes_home_and_placement = episodes_home_and_placement.rename(
         columns={
-            "pcd7_TRIM": "PLACE_POSTCODE",
+            "pcd8_TRIM": "PLACE_POSTCODE",
             "lad25cd": "LAD_CODE_PLACE",
             "lat": "LAT_PLACE",
             "long": "LONG_PLACE",
@@ -521,17 +540,26 @@ class Datacontainer:
         )
 
         enriched_df["UPN"] = enriched_df["UPN"].apply(
-            lambda x: UPNCodes[x].value if x in ["UN1", "UN2", "UN3", "UN4", "UN5"] else ("Has UPN" if pd.notnull(x) else "N/A")
+            lambda x: (
+                UPNCodes[x].value
+                if x in ["UN1", "UN2", "UN3", "UN4", "UN5"]
+                else ("Has UPN" if pd.notnull(x) else "N/A")
+            )
         )
 
         enriched_df["MC_DOB_dt"] = convert_dates(enriched_df["MC_DOB"])
 
         enriched_df["Age (on return date)"] = enriched_df.apply(
-            lambda x: relativedelta(dt1=pd.to_datetime(x["YEAR"], format="%Y"), dt2=x["DOB_dt"])
+            lambda x: relativedelta(
+                dt1=pd.to_datetime(x["YEAR"], format="%Y"), dt2=x["DOB_dt"]
+            )
             .normalized()
-            .years, axis=1
-        )    
-        enriched_df["AgeBuckets"] = enriched_df["Age (on return date)"].apply(calculate_age_buckets)
+            .years,
+            axis=1,
+        )
+        enriched_df["AgeBuckets"] = enriched_df["Age (on return date)"].apply(
+            calculate_age_buckets
+        )
 
         return enriched_df
 
@@ -540,11 +568,25 @@ class Datacontainer:
         enriched_df = self.data["episodes"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
-
         enriched_df["DECOM_dt"] = convert_dates(enriched_df["DECOM"])
         enriched_df["DEC_dt"] = convert_dates(enriched_df["DEC"])
-        
+
+        enriched_df.sort_values(["CHILD", "DECOM_dt"], inplace=True)
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
+        enriched_df.bfill(inplace=True)
 
         enriched_df["RNE"] = enriched_df["RNE"].apply(
             lambda x: RNECodes[x].value if pd.notnull(x) else "N/A"
@@ -568,6 +610,10 @@ class Datacontainer:
             lambda x: REASONPLACECHANGECodes[x].value if pd.notnull(x) else "N/A"
         )
 
+        # Number of episodes
+        enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
+        enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
+
         return enriched_df
 
     @property
@@ -575,7 +621,20 @@ class Datacontainer:
         enriched_df = self.data["missing"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
 
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["MIS_START_dt"] = convert_dates(enriched_df["MIS_START"])
@@ -592,7 +651,20 @@ class Datacontainer:
         enriched_df = self.data["oc2"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
 
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
 
@@ -641,7 +713,20 @@ class Datacontainer:
         enriched_df = self.data["oc3"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
 
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
 
@@ -661,7 +746,20 @@ class Datacontainer:
         enriched_df = self.data["prev_perm"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
 
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
 
@@ -669,9 +767,15 @@ class Datacontainer:
             lambda x: PREVPERMCodes[x].value if pd.notnull(x) else "N/A"
         )
 
-        enriched_df["LA_PERM"] = enriched_df["LA_PERM"].astype("str").str.split(".", expand=True)[0]
+        enriched_df["LA_PERM"] = (
+            enriched_df["LA_PERM"].astype("str").str.split(".", expand=True)[0]
+        )
         enriched_df["LA_PERM"] = enriched_df["LA_PERM"].apply(
-            lambda x: x if x.isnumeric() else (LAPERMCodes[f"_{x}"].value if pd.notnull(x) else "N/A")
+            lambda x: (
+                x
+                if x.isnumeric()
+                else (LAPERMCodes[f"_{x}"].value if pd.notnull(x) else "N/A")
+            )
         )
 
         return enriched_df
@@ -681,7 +785,20 @@ class Datacontainer:
         enriched_df = self.data["reviews"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
 
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["REVIEW_dt"] = convert_dates(enriched_df["REVIEW"])
@@ -697,7 +814,20 @@ class Datacontainer:
         enriched_df = self.data["uasc"].copy()
 
         enriched_df["YEAR"] = pd.to_datetime(enriched_df["YEAR"], format="%Y").dt.year
-        enriched_df = enriched_df.merge(self.enriched_header[["CHILD", "YEAR", "Age (on return date)", "AgeBuckets", "EthnicityGroup", "SEX"]], how="left", on=["CHILD", "YEAR"])
+        enriched_df = enriched_df.merge(
+            self.enriched_header[
+                [
+                    "CHILD",
+                    "YEAR",
+                    "Age (on return date)",
+                    "AgeBuckets",
+                    "EthnicityGroup",
+                    "SEX",
+                ]
+            ],
+            how="left",
+            on=["CHILD", "YEAR"],
+        )
 
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["DUC_dt"] = convert_dates(enriched_df["DUC"])
@@ -705,12 +835,11 @@ class Datacontainer:
         enriched_df["SEX"] = [
             (
                 "Male"
-                if x in ["1", "M"]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+                if x in ["1", "M"]
                 else ("Female" if x in ["2", "F"] else "SEX code error")
             )
             for x in enriched_df["SEX"].astype("str")
         ]
-
 
         return enriched_df
 
@@ -744,37 +873,99 @@ if input_file:
     ssda903 = Datacontainer(dfs)
 
     with st.sidebar:
-            st.write("Make selections here:")
+        st.write("Make selections here:")
 
-            sex_selected = st.sidebar.multiselect(
-                "Select Sex",
-                (ssda903.enriched_header["SEX"].unique()),
-                default=(ssda903.enriched_header["SEX"].unique()),
-            )
+        sex_selected = st.sidebar.multiselect(
+            "Select Sex",
+            (ssda903.enriched_header["SEX"].unique()),
+            default=(ssda903.enriched_header["SEX"].unique()),
+        )
 
-            age_selected = st.sidebar.slider(
-                "Select age range (on day of census)",
-                min_value=int(ssda903.enriched_header["Age (on return date)"].min()),
-                max_value=int(ssda903.enriched_header["Age (on return date)"].max()),
-                value=[0, int(ssda903.enriched_header["Age (on return date)"].max())],
-            )
+        age_selected = st.sidebar.slider(
+            "Select age range (on day of census)",
+            min_value=int(ssda903.enriched_header["Age (on return date)"].min()),
+            max_value=int(ssda903.enriched_header["Age (on return date)"].max()),
+            value=[0, int(ssda903.enriched_header["Age (on return date)"].max())],
+        )
 
-            
-            ethnicity_selected = st.sidebar.multiselect(
-                "Select ethnicities",
-                (ssda903.enriched_header["EthnicityGroup"].unique()),
-                default=(ssda903.enriched_header["EthnicityGroup"].unique()),
-            )
-
-
+        ethnicity_selected = st.sidebar.multiselect(
+            "Select ethnicities",
+            (ssda903.enriched_header["EthnicityGroup"].unique()),
+            default=(ssda903.enriched_header["EthnicityGroup"].unique()),
+        )
 
     sliced_enriched_header = apply_filters(
-        ssda903.enriched_header,
-        sex_selected,
-        age_selected,
-        ethnicity_selected
+        ssda903.enriched_header, sex_selected, age_selected, ethnicity_selected
     )
 
-    st.table(sliced_enriched_header.head())
+    sliced_enriched_episodes = ssda903.enriched_episodes  # apply_filters(
+    #     ssda903.enriched_episodes,
+    #     sex_selected,
+    #     age_selected,
+    #     ethnicity_selected
+    # )
 
+    with st.expander("Gapminder"):
 
+        def episodes_count(df):
+            all_child_df = pd.DataFrame()
+            df.sort_values("DECOM_dt", inplace=True, ascending=True)
+
+            children = list(df["CHILD"].unique())
+
+            df["Number of Episodes"] = df.groupby("CHILD").cumcount()
+            df["Number of Episodes"] = df["Number of Episodes"] + 1
+
+            for child in children:
+                child_df = pd.DataFrame()
+                child_df = df[df["CHILD"] == child]
+                first_decom_year = pd.to_datetime(
+                    child_df["DECOM_dt"], dayfirst=True
+                ).dt.year.iloc[0]
+                # first_decom_year = pd.to_datetime(child_df["YEAR"], format="%Y").dt.year.iloc[0]
+                child_df["first_decom_year"] = first_decom_year
+                year_latest = pd.to_datetime(
+                    df["YEAR_latest"], format="%Y"
+                ).dt.year.iloc[0]
+                years = range(first_decom_year, year_latest + 1)
+                dates_df = pd.DataFrame(
+                    {"YEAR": years, "CHILD": [child for year in years]}
+                )
+
+                child_df = child_df.merge(
+                    dates_df, on=["YEAR", "CHILD"], how="outer"
+                ).ffill()
+
+                all_child_df = pd.concat([all_child_df, child_df])
+
+            return all_child_df
+
+        df = episodes_count(
+            sliced_enriched_episodes[
+                sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])
+            ]
+        )
+
+        fig = px.scatter(
+            df,
+            x="Age (on return date)",
+            y="Number of Episodes",
+            animation_frame="YEAR",
+            animation_group="CHILD",
+            color="SEX",
+            hover_name="CHILD",  # facet_col="",
+        )
+        st.plotly_chart(fig)
+        st.table(
+            df[
+                [
+                    "CHILD",
+                    "DECOM_dt",
+                    "YEAR",
+                    "first_decom_year",
+                    "Number of Episodes",
+                    "Age (on return date)",
+                ]
+            ]
+        )
+        # st.table(sliced_enriched_episodes[sliced_enriched_episodes["CHILD"].isin(["L10143796"])])
