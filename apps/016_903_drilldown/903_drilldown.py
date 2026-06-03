@@ -17,6 +17,7 @@ import numpy as np
 import datetime as dt
 import calendar
 from math import asin, cos, radians, sin, sqrt
+import matplotlib.pyplot as plt
 
 
 import streamlit as st
@@ -43,6 +44,14 @@ postcodes_url = open_url(
     "https://raw.githubusercontent.com/data-to-insight/patch/refs/heads/main/apps/016_903_drilldown/full_postcode_list_v2%201.csv"
 )
 postcodes = pd.read_csv(postcodes_url)
+
+journey_events = {'decom': {'episodes':'DECOM'},
+          'dec': {'episodes':'DEC'},
+          'mis_start': {'missing':'MIS_START'},
+          'mis_end': {'missing':'MIS_END'},
+          'review': {'reviews':'REVIEW'},
+          }
+
 
 
 class EthnicSubcategories(Enum):
@@ -505,6 +514,99 @@ def match_postcodes(df, postcodes):
 
     return episodes_home_and_placement
 
+def build_903record(dfs_dict, events=journey_events):
+    '''
+    Based on open source work by Social Finance for the AnnexA here: 
+    https://github.com/CSCDP/child-event-journeys/blob/master/functions/__init__.py
+    Creates a flat file with three columns:
+    1) child unique id
+    2) Date
+    3) Type
+    Based on events in 903 lists defined in the events argument
+    '''
+
+    # Create empty dataframe in which we'll drop our events
+    df_list = []
+
+    # Loop over our dictionary to populate the log
+    for event in events:
+        contents = events[event]
+        list_number = list(contents.keys())[0]
+        date_column = contents[list_number]
+        
+        # Load Annex A list
+        df = dfs_dict[list_number] 
+        
+        # Get date column information
+        df.columns = [col.lower().strip() for col in df.columns]
+        date_column_lower = date_column.lower()
+        if date_column_lower in df.columns:
+            df = df[df[date_column_lower].notnull()]
+            df['Type'] = event
+            df['Date'] = df[date_column_lower]
+            df_list.append(df)
+        else:
+            print('>>>>>  Could not find column {} in {}'.format(date_column, list_number))
+    
+    # Pull all events into a unique dataframe annexarecord
+    ssda903record = pd.concat(df_list, sort=False)
+    
+    # Clean annexarecord
+    # Define categories to be able to sort events
+    ordered_categories = ["decom",
+                      "dec",
+                      "mis_start",
+                      "mis_end",
+                      "review",
+]
+    ssda903record.Type = ssda903record.Type.astype('category')
+    ssda903record.Type.cat.set_categories([c for c in ordered_categories if c in ssda903record.Type.unique()], inplace=True, ordered=True)
+    # Ensure dates are in the correct format
+    ssda903record.Date = pd.to_datetime(ssda903record.Date)
+    
+    return ssda903record
+
+def joined_string(series):
+    """
+    Based on open source work by Social Finance for the AnnexA here: 
+    https://github.com/CSCDP/child-event-journeys/blob/master/functions/__init__.py
+    Turns all elements from a series into a string, joining elements with "->"
+    """
+    list_elements = series.tolist()
+    return " -> ".join(list_elements)
+
+def create_journeys(df):
+    """
+    Based on open source work by Social Finance for the AnnexA here: 
+    https://github.com/CSCDP/child-event-journeys/blob/master/functions/__init__.py
+    """
+    df = df[~df["Date"].isnull()]
+    df = df[~df["Type"].isnull()]
+    df = df.sort_values(['Date', 'Type'])
+    
+    # Add new column showing each event in format [00-00-0000/event]
+    df["TimeEvent"] = df.Date.astype(str) + "/" + df.Type.astype(str)
+
+    
+    # Create both long and reduced journeys
+    grouped = df.groupby("child")
+    journey_long = grouped['TimeEvent'].apply(joined_string)
+    
+    # Create new dataframe with both long and reduced journeys
+    journeys_df = pd.DataFrame({'Child journey': journey_long}, index=journey_long.index)
+    
+    
+
+    # # Save to Excel
+    # writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+    # # Journeys
+    # journeys_df.to_excel(writer, sheet_name='Child journeys')
+    # # Events abbreviation
+    # pd.DataFrame({'Event': list(events_map.keys()), 'Reduced': list(events_map.values())}).to_excel(writer, sheet_name='Legend', index=None)
+    # writer.save()
+    
+    return journeys_df
+
 
 ###########################
 # Datacontainer
@@ -518,6 +620,16 @@ class Datacontainer:
 
     def __init__(self, data_dict: dict):
         self.data = data_dict
+
+    @property
+    def end_of_latest_return(self):
+        df = self.data["header"].copy()
+
+        latest_year = df["YEAR"].max()
+
+        end_of_latest_return = pd.to_datetime(f"{latest_year}/03/31")
+
+        return end_of_latest_return
 
     @property
     def enriched_header(self):
@@ -577,6 +689,7 @@ class Datacontainer:
                 [
                     "CHILD",
                     "YEAR",
+                    "DOB_dt",
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
@@ -936,15 +1049,24 @@ if input_file:
                     dates_df, on=["YEAR", "CHILD"], how="outer"
                 ).ffill()
 
+                child_df["Age (on return date)"] = child_df.apply(
+                    lambda x: relativedelta(
+                        dt1=pd.to_datetime(x["YEAR"], format="%Y"), dt2=x["DOB_dt"]
+                    )
+                    .normalized()
+                    .years,
+                    axis=1,
+                )
+
                 all_child_df = pd.concat([all_child_df, child_df])
 
             return all_child_df
 
-        df = episodes_count(
-            sliced_enriched_episodes[
-                sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])
-            ]
-        )
+        df = sliced_enriched_episodes#episodes_count(
+        #     sliced_enriched_episodes[
+        #         sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])
+        #     ]
+        # )
 
         fig = px.scatter(
             df,
@@ -962,10 +1084,68 @@ if input_file:
                     "CHILD",
                     "DECOM_dt",
                     "YEAR",
-                    "first_decom_year",
+                    # "first_decom_year",
                     "Number of Episodes",
                     "Age (on return date)",
                 ]
             ]
         )
-        # st.table(sliced_enriched_episodes[sliced_enriched_episodes["CHILD"].isin(["L10143796"])])
+        st.table(sliced_enriched_episodes[sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])])
+
+    with st.expander("Journeys visualisation"):
+        child = "L10143796"
+
+        record_dfs = {"episodes":ssda903.enriched_episodes[ssda903.enriched_episodes["CHILD"] == child],
+                      "missing":ssda903.enriched_missing[ssda903.enriched_missing["CHILD"] == child],
+                      "reviews":ssda903.enriched_reviews[ssda903.enriched_reviews["CHILD"] == child]}
+        
+        record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
+        record_dfs["missing"]["MIS_END"].fillna(ssda903.end_of_latest_return, inplace=True)
+
+        st.dataframe(record_dfs["episodes"])
+
+
+        episodes_data = record_dfs["episodes"][["DECOM", "DEC"]].copy()
+        episodes_data.rename(columns={"DECOM":"Start",
+                                     "DEC":"Finish"}, inplace=True)
+        episodes_data["Task"] = "Episodes"
+
+        missing_data = record_dfs["missing"][["MIS_START", "MIS_END"]].copy()
+        missing_data.rename(columns={"MIS_START":"Start",
+                                     "MIS_END":"Finish"}, inplace=True)
+        missing_data["Task"] = "Missing"
+
+        review_data = record_dfs["reviews"][["REVIEW"]].copy()
+        review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
+        review_data.rename(columns={"REVIEW":"Start",}, inplace=True)
+        review_data["Task"] = "Reviews"
+
+        timelines_data = pd.concat([episodes_data, missing_data, review_data])
+
+
+
+        # barh_data = {}
+        # barh_data["episodes"] = list(record_dfs["episodes"][["DECOM", "DEC"]].itertuples(index=False))
+        # st.write(barh_data["episodes"])
+
+        # df = pd.DataFrame([
+        #     dict(Task="Episodes", Start='2009-01-01', Finish='2009-02-28', Resource="Alex"),
+        #     dict(Task="Job B", Start='2009-03-05', Finish='2009-04-15', Resource="Alex"),
+        #     dict(Task="Job C", Start='2009-02-20', Finish='2009-05-30', Resource="Max")
+        # ])
+
+        fig = px.timeline(timelines_data, x_start="Start", x_end="Finish", y="Task", color="Task")
+        st.plotly_chart(fig)
+        # ssda903_record = build_903record(dfs)
+
+        # journeys = create_journeys(ssda903_record)
+        # st.dataframe(journeys.head())
+
+        # sub_df = journeys[journeys.index == child]
+        # sub_df["Child journey"] =  sub_df["Child journey"].str.split("->")
+        # new_df = pd.DataFrame({"decom", "dec", "missing", "review"})
+
+        # for event in sub_df["Child journey"]:
+        #     date, event = event.split("/")
+        
+
