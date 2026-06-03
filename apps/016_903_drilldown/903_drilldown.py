@@ -1093,49 +1093,43 @@ if input_file:
         st.table(sliced_enriched_episodes[sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])])
 
     with st.expander("Journeys visualisation"):
-        child = "L10143796"
+        child = st.selectbox("Select child by ID",
+                             options = list(sliced_enriched_header["CHILD"].unique()))
 
         record_dfs = {"episodes":ssda903.enriched_episodes[ssda903.enriched_episodes["CHILD"] == child],
                       "missing":ssda903.enriched_missing[ssda903.enriched_missing["CHILD"] == child],
-                      "reviews":ssda903.enriched_reviews[ssda903.enriched_reviews["CHILD"] == child]}
+                      "reviews":ssda903.enriched_reviews[ssda903.enriched_reviews["CHILD"] == child],
+                      "header":sliced_enriched_header[sliced_enriched_header["CHILD"] == child]}
         
         record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
         record_dfs["missing"]["MIS_END"].fillna(ssda903.end_of_latest_return, inplace=True)
 
-        st.dataframe(record_dfs["episodes"])
-
-
-        episodes_data = record_dfs["episodes"][["DECOM", "DEC"]].copy()
+        episodes_data = record_dfs["episodes"].copy()
         episodes_data.rename(columns={"DECOM":"Start",
-                                     "DEC":"Finish"}, inplace=True)
+                                     "DEC":"Finish",
+                                     }, inplace=True)
         episodes_data["Task"] = "Episodes"
 
-        missing_data = record_dfs["missing"][["MIS_START", "MIS_END"]].copy()
+        missing_data = record_dfs["missing"].copy()
         missing_data.rename(columns={"MIS_START":"Start",
-                                     "MIS_END":"Finish"}, inplace=True)
+                                     "MIS_END":"Finish",
+                                     }, inplace=True)
         missing_data["Task"] = "Missing"
 
-        review_data = record_dfs["reviews"][["REVIEW"]].copy()
+        review_data = record_dfs["reviews"][["REVIEW", "REVIEW_CODE"]].copy()
         review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
-        review_data.rename(columns={"REVIEW":"Start",}, inplace=True)
+        review_data["Finish"] = review_data["Finish"] + pd.DateOffset(days=1)
+        review_data.rename(columns={"REVIEW":"Start",
+                                    }, inplace=True)
         review_data["Task"] = "Reviews"
 
         timelines_data = pd.concat([episodes_data, missing_data, review_data])
 
 
-
-        # barh_data = {}
-        # barh_data["episodes"] = list(record_dfs["episodes"][["DECOM", "DEC"]].itertuples(index=False))
-        # st.write(barh_data["episodes"])
-
-        # df = pd.DataFrame([
-        #     dict(Task="Episodes", Start='2009-01-01', Finish='2009-02-28', Resource="Alex"),
-        #     dict(Task="Job B", Start='2009-03-05', Finish='2009-04-15', Resource="Alex"),
-        #     dict(Task="Job C", Start='2009-02-20', Finish='2009-05-30', Resource="Max")
-        # ])
-
-        fig = px.timeline(timelines_data, x_start="Start", x_end="Finish", y="Task", color="Task")
+        fig = px.timeline(timelines_data, x_start="Start", x_end="Finish", y="Task", color="Task", hover_data=["RNE", "LS", "PLACE", "PLACE_PROVIDER", "MISSING", "REVIEW_CODE"])
         st.plotly_chart(fig)
+    
+        st.table(record_dfs["header"])
         # ssda903_record = build_903record(dfs)
 
         # journeys = create_journeys(ssda903_record)
