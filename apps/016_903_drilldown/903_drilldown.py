@@ -12,6 +12,10 @@
 # time in care vs number of episodes for gapminder
 # usefil: https://www.education.ox.ac.uk/rees-centre/news/from-messy-annex-a-to-impactful-child-journeys/
 
+# Descriptive stats
+# Slicers
+# Placement types or legal status as colors in journeys chart
+
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -382,7 +386,7 @@ def read_903(df):
 
 
 def convert_dates(column):
-    column_dt = pd.to_datetime(column, format="%d/%m/%Y", errors="coerce").dt.date
+    column_dt = pd.to_datetime(column, format="%d/%m/%Y", errors="coerce")#.dt.date
     return column_dt
 
 
@@ -945,16 +949,62 @@ class Datacontainer:
         enriched_df["DOB_dt"] = convert_dates(enriched_df["DOB"])
         enriched_df["DUC_dt"] = convert_dates(enriched_df["DUC"])
 
-        enriched_df["SEX"] = [
-            (
-                "Male"
-                if x in ["1", "M"]
-                else ("Female" if x in ["2", "F"] else "SEX code error")
-            )
-            for x in enriched_df["SEX"].astype("str")
-        ]
-
         return enriched_df
+
+    @property
+    def gapminder_df(self):
+        all_child_df = pd.DataFrame()
+        df = self.enriched_episodes.copy()
+        children = df["CHILD"].unique()
+
+        df["DEC_cleaned"] = df["DEC_dt"].apply(lambda x: x if pd.notnull(x) else self.end_of_latest_return)
+
+        df.sort_values("DECOM_dt", inplace=True, ascending=True)
+        df["Number of Episodes"] = df.groupby("CHILD").cumcount()
+        df["Number of Episodes"] = df["Number of Episodes"] + 1
+
+        df["First DECOM"] = df.apply(lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1)
+        df["Last DEC"] = df.apply(lambda x: df.sort_values("DEC_cleaned", ascending=False)[df["CHILD"] == x["CHILD"]]["DEC_cleaned"].iloc[0], axis=1)
+        
+        
+        for child in children:
+            child_df = pd.DataFrame()
+            child_df = df[df["CHILD"] == child]
+            dates = pd.date_range(start=child_df["First DECOM"].iloc[0], end=child_df["Last DEC"].iloc[0])
+            dates_df = pd.DataFrame(
+                {"Days": dates, "CHILD": [child for date in dates]}
+            )
+            dates_df["Days"] = dates_df["Days"]
+
+            child_df = child_df.merge(
+                dates_df, on=["CHILD"], how="outer"
+            ).ffill()
+
+            child_df["Age (on day)"] = child_df.apply(lambda x: (x["Days"] - x["DOB_dt"])/pd.Timedelta(days=365.25), axis=1)
+            child_df["Time in care (on day)"] = child_df.apply(lambda x: (x["Days"] - x["First DECOM"])/pd.Timedelta(days=1), axis=1)
+            #     
+            # child_df["Age (on day)"] = child_df.apply(
+            #     lambda x: relativedelta(
+            #         dt1=x["Days"], dt2=x["DOB_dt"]
+            #     )
+            #     .normalized()
+            #     .years,
+            #     axis=1,
+            # )
+
+            # child_df["Time in care (on day)"] = child_df.apply(
+            #     # lambda x: relativedelta(
+            #     #     dt1=x["Days"], dt2=x["First DECOM"]
+            #     # )
+            #     # .normalized(),
+            #     lambda x: x["Days"] - x["First DECOM"],
+            #     axis=1,
+            # )
+        
+        all_child_df = pd.concat([all_child_df, child_df])
+        return all_child_df
+
+        
 
 
 ###########################
@@ -1019,78 +1069,8 @@ if input_file:
     # )
 
     with st.expander("Gapminder"):
+            st.table(ssda903.gapminder_df.head())
 
-        def episodes_count(df):
-            all_child_df = pd.DataFrame()
-            df.sort_values("DECOM_dt", inplace=True, ascending=True)
-
-            children = list(df["CHILD"].unique())
-
-            df["Number of Episodes"] = df.groupby("CHILD").cumcount()
-            df["Number of Episodes"] = df["Number of Episodes"] + 1
-
-            for child in children:
-                child_df = pd.DataFrame()
-                child_df = df[df["CHILD"] == child]
-                first_decom_year = pd.to_datetime(
-                    child_df["DECOM_dt"], dayfirst=True
-                ).dt.year.iloc[0]
-                # first_decom_year = pd.to_datetime(child_df["YEAR"], format="%Y").dt.year.iloc[0]
-                child_df["first_decom_year"] = first_decom_year
-                year_latest = pd.to_datetime(
-                    df["YEAR_latest"], format="%Y"
-                ).dt.year.iloc[0]
-                years = range(first_decom_year, year_latest + 1)
-                dates_df = pd.DataFrame(
-                    {"YEAR": years, "CHILD": [child for year in years]}
-                )
-
-                child_df = child_df.merge(
-                    dates_df, on=["YEAR", "CHILD"], how="outer"
-                ).ffill()
-
-                child_df["Age (on return date)"] = child_df.apply(
-                    lambda x: relativedelta(
-                        dt1=pd.to_datetime(x["YEAR"], format="%Y"), dt2=x["DOB_dt"]
-                    )
-                    .normalized()
-                    .years,
-                    axis=1,
-                )
-
-                all_child_df = pd.concat([all_child_df, child_df])
-
-            return all_child_df
-
-        df = sliced_enriched_episodes#episodes_count(
-        #     sliced_enriched_episodes[
-        #         sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])
-        #     ]
-        # )
-
-        fig = px.scatter(
-            df,
-            x="Age (on return date)",
-            y="Number of Episodes",
-            animation_frame="YEAR",
-            animation_group="CHILD",
-            color="SEX",
-            hover_name="CHILD",  # facet_col="",
-        )
-        st.plotly_chart(fig)
-        st.table(
-            df[
-                [
-                    "CHILD",
-                    "DECOM_dt",
-                    "YEAR",
-                    # "first_decom_year",
-                    "Number of Episodes",
-                    "Age (on return date)",
-                ]
-            ]
-        )
-        st.table(sliced_enriched_episodes[sliced_enriched_episodes["CHILD"].isin(["L10132132", "L10143796"])])
 
     with st.expander("Journeys visualisation"):
         child = st.selectbox("Select child by ID",
@@ -1099,6 +1079,7 @@ if input_file:
         record_dfs = {"episodes":ssda903.enriched_episodes[ssda903.enriched_episodes["CHILD"] == child],
                       "missing":ssda903.enriched_missing[ssda903.enriched_missing["CHILD"] == child],
                       "reviews":ssda903.enriched_reviews[ssda903.enriched_reviews["CHILD"] == child],
+                      "uasc":ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
                       "header":sliced_enriched_header[sliced_enriched_header["CHILD"] == child]}
         
         record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
@@ -1123,23 +1104,19 @@ if input_file:
                                     }, inplace=True)
         review_data["Task"] = "Reviews"
 
+        uasc_data = record_dfs["uasc"].copy()
+        uasc_data.rename(columns={"DUC":"Finish",
+                                     }, inplace=True)
+        uasc_data["Start"] = review_data["Finish"] - pd.DateOffset(days=1)
+        missing_data["Task"] = "Missing"
+
         timelines_data = pd.concat([episodes_data, missing_data, review_data])
 
 
         fig = px.timeline(timelines_data, x_start="Start", x_end="Finish", y="Task", color="Task", hover_data=["RNE", "LS", "PLACE", "PLACE_PROVIDER", "MISSING", "REVIEW_CODE"])
         st.plotly_chart(fig)
     
-        st.table(record_dfs["header"])
-        # ssda903_record = build_903record(dfs)
+        st.table(record_dfs["header"][["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]])
 
-        # journeys = create_journeys(ssda903_record)
-        # st.dataframe(journeys.head())
-
-        # sub_df = journeys[journeys.index == child]
-        # sub_df["Child journey"] =  sub_df["Child journey"].str.split("->")
-        # new_df = pd.DataFrame({"decom", "dec", "missing", "review"})
-
-        # for event in sub_df["Child journey"]:
-        #     date, event = event.split("/")
         
 
