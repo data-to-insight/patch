@@ -2,19 +2,7 @@
 # Notes
 ####
 
-# Make a gapminder style visualisation for the 903, index for deprivation for axis?
-# # Gapminder - Age axis and time in placement in another, age at which they joined care, can we follow a specific cohort and see what they are doing?
-# Graph of how entered care against time in care, and see how that journey goes
-# visualisation of where a child is moving
-# how did children come be looked after and where did they end up
-# instability around key points, can we find things that link to instability (eg looking at reasons placements ended)
-
-# time in care vs number of episodes for gapminder
-# usefil: https://www.education.ox.ac.uk/rees-centre/news/from-messy-annex-a-to-impactful-child-journeys/
-
-# Descriptive stats
-# Slicers
-# Placement types or legal status as colors in journeys chart
+# Demographic breakdowns of LA data, schools data and Alison's cohorts
 
 import pandas as pd
 import numpy as np
@@ -992,7 +980,10 @@ class Datacontainer:
             axis=1,
         )
 
-        for child in children[:100]:
+        val = 0
+        dfs_dict = {}
+        for child in children:
+            val += 1
             child_df = df[df["CHILD"] == child]
             dates = pd.date_range(
                 start=child_df["First DECOM"].iloc[0],
@@ -1000,22 +991,28 @@ class Datacontainer:
                 freq="M",
             )
             dates_df = pd.DataFrame({"Days": dates, "CHILD": [child for date in dates]})
-            dates_df["Days_string"] = [
-                str(str(x).split(" ")[0]).replace("-", "") for x in dates_df["Days"]
-            ]
+            # dates_df["Days_string"] = [
+            #     str(str(x).split(" ")[0]).replace("-", "") for x in dates_df["Days"]
+            # ]
 
             child_df = child_df.merge(dates_df, on=["CHILD"], how="outer").ffill()
 
-            child_df = child_df[(child_df["Days"] >= child_df["DECOM_dt"]) & (child_df["Days"] <= child_df["DEC_dt"])].copy()
+            # child_df = child_df[(child_df["Days"] >= child_df["DECOM_dt"]) & (child_df["Days"] <= child_df["DEC_dt"])].copy()
+            dfs_dict[val] = child_df
 
-            all_child_df = pd.concat([all_child_df, child_df])
+            # all_child_df = pd.concat([all_child_df, child_df])
 
-            all_child_df["Age (on day)"] = all_child_df.apply(
-                lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
-            )
-            all_child_df["Time in care (on day)"] = all_child_df.apply(
-                lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
-            )
+        all_child_df = pd.concat(dfs_dict.values())    
+        all_child_df["Days_string"] = [
+                str(str(x).split(" ")[0]).replace("-", "") for x in all_child_df["Days"]
+            ]
+        all_child_df = all_child_df[(all_child_df["Days"] >= all_child_df["DECOM_dt"]) & (all_child_df["Days"] <= all_child_df["DEC_dt"])].copy()
+        all_child_df["Age (on day)"] = all_child_df.apply(
+            lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
+        )
+        all_child_df["Time in care (on day)"] = all_child_df.apply(
+            lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
+        )
         return all_child_df
 
 #@st.cache_data
