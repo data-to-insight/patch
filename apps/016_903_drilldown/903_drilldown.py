@@ -378,7 +378,7 @@ def apply_filters(
 
     return df
 
-
+#@st.cache_data
 def read_903(df):
     dfs = pd.read_excel(df, sheet_name=None)
 
@@ -992,7 +992,7 @@ class Datacontainer:
             axis=1,
         )
 
-        for child in children[:10]:
+        for child in children[:100]:
             child_df = df[df["CHILD"] == child]
             dates = pd.date_range(
                 start=child_df["First DECOM"].iloc[0],
@@ -1000,7 +1000,6 @@ class Datacontainer:
                 freq="M",
             )
             dates_df = pd.DataFrame({"Days": dates, "CHILD": [child for date in dates]})
-            # dates_df["Days_string"] = [f"{x.year}{x.month}{x.day}" for x in dates_df["Days"]]
             dates_df["Days_string"] = [
                 str(str(x).split(" ")[0]).replace("-", "") for x in dates_df["Days"]
             ]
@@ -1008,16 +1007,6 @@ class Datacontainer:
             child_df = child_df.merge(dates_df, on=["CHILD"], how="outer").ffill()
 
             child_df = child_df[(child_df["Days"] >= child_df["DECOM_dt"]) & (child_df["Days"] <= child_df["DEC_dt"])].copy()
-
-            # child_df["Age (on day)"] = child_df.apply(
-            #     lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
-            # )
-            # child_df["Time in care (on day)"] = child_df.apply(
-            #     lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
-            # )
-
-            # child_df.drop_duplicates("Days_string",inplace=True)
-
 
             all_child_df = pd.concat([all_child_df, child_df])
 
@@ -1029,6 +1018,14 @@ class Datacontainer:
             )
         return all_child_df
 
+#@st.cache_data
+def convert_data(_dfs: pd.DataFrame):
+    """Used to make input data python readable and to enable caching.
+    Runs Datacontainer to read in SSDA903 as an object containing enriched and cleaned data.
+    """
+    datafiles = Datacontainer(_dfs)
+
+    return datafiles
 
 ###########################
 # Main App
@@ -1056,7 +1053,8 @@ input_file = st.file_uploader("Upload processed 903 .xlsx here")
 if input_file:
     dfs = read_903(input_file)
 
-    ssda903 = Datacontainer(dfs)
+    ssda903 = convert_data(dfs)
+    # ssda903 = Datacontainer(dfs)
 
     with st.sidebar:
         st.write("Make selections here:")
@@ -1103,11 +1101,13 @@ if input_file:
             animation_group="CHILD",
             range_y=[0, 5000],
             range_x=[0, 25],
-            hover_name="CHILD"     
+            hover_name="CHILD",
+            color="EthnicityGroup"     
         )
         st.plotly_chart(plot)
 
-        st.table(test_df[test_df["CHILD"] == "L10197839"])
+
+        # st.table(test_df[test_df["CHILD"] == "L10197839"])
 
     with st.expander("Journeys visualisation"):
         child = st.selectbox(
