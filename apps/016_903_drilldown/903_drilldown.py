@@ -49,13 +49,13 @@ postcodes_url = open_url(
 )
 postcodes = pd.read_csv(postcodes_url)
 
-journey_events = {'decom': {'episodes':'DECOM'},
-          'dec': {'episodes':'DEC'},
-          'mis_start': {'missing':'MIS_START'},
-          'mis_end': {'missing':'MIS_END'},
-          'review': {'reviews':'REVIEW'},
-          }
-
+journey_events = {
+    "decom": {"episodes": "DECOM"},
+    "dec": {"episodes": "DEC"},
+    "mis_start": {"missing": "MIS_START"},
+    "mis_end": {"missing": "MIS_END"},
+    "review": {"reviews": "REVIEW"},
+}
 
 
 class EthnicSubcategories(Enum):
@@ -386,7 +386,7 @@ def read_903(df):
 
 
 def convert_dates(column):
-    column_dt = pd.to_datetime(column, format="%d/%m/%Y", errors="coerce")#.dt.date
+    column_dt = pd.to_datetime(column, format="%d/%m/%Y", errors="coerce")  # .dt.date
     return column_dt
 
 
@@ -518,16 +518,17 @@ def match_postcodes(df, postcodes):
 
     return episodes_home_and_placement
 
+
 def build_903record(dfs_dict, events=journey_events):
-    '''
-    Based on open source work by Social Finance for the AnnexA here: 
+    """
+    Based on open source work by Social Finance for the AnnexA here:
     https://github.com/CSCDP/child-event-journeys/blob/master/functions/__init__.py
     Creates a flat file with three columns:
     1) child unique id
     2) Date
     3) Type
     Based on events in 903 lists defined in the events argument
-    '''
+    """
 
     # Create empty dataframe in which we'll drop our events
     df_list = []
@@ -537,69 +538,77 @@ def build_903record(dfs_dict, events=journey_events):
         contents = events[event]
         list_number = list(contents.keys())[0]
         date_column = contents[list_number]
-        
+
         # Load Annex A list
-        df = dfs_dict[list_number] 
-        
+        df = dfs_dict[list_number]
+
         # Get date column information
         df.columns = [col.lower().strip() for col in df.columns]
         date_column_lower = date_column.lower()
         if date_column_lower in df.columns:
             df = df[df[date_column_lower].notnull()]
-            df['Type'] = event
-            df['Date'] = df[date_column_lower]
+            df["Type"] = event
+            df["Date"] = df[date_column_lower]
             df_list.append(df)
         else:
-            print('>>>>>  Could not find column {} in {}'.format(date_column, list_number))
-    
+            print(
+                ">>>>>  Could not find column {} in {}".format(date_column, list_number)
+            )
+
     # Pull all events into a unique dataframe annexarecord
     ssda903record = pd.concat(df_list, sort=False)
-    
+
     # Clean annexarecord
     # Define categories to be able to sort events
-    ordered_categories = ["decom",
-                      "dec",
-                      "mis_start",
-                      "mis_end",
-                      "review",
-]
-    ssda903record.Type = ssda903record.Type.astype('category')
-    ssda903record.Type.cat.set_categories([c for c in ordered_categories if c in ssda903record.Type.unique()], inplace=True, ordered=True)
+    ordered_categories = [
+        "decom",
+        "dec",
+        "mis_start",
+        "mis_end",
+        "review",
+    ]
+    ssda903record.Type = ssda903record.Type.astype("category")
+    ssda903record.Type.cat.set_categories(
+        [c for c in ordered_categories if c in ssda903record.Type.unique()],
+        inplace=True,
+        ordered=True,
+    )
     # Ensure dates are in the correct format
     ssda903record.Date = pd.to_datetime(ssda903record.Date)
-    
+
     return ssda903record
+
 
 def joined_string(series):
     """
-    Based on open source work by Social Finance for the AnnexA here: 
+    Based on open source work by Social Finance for the AnnexA here:
     https://github.com/CSCDP/child-event-journeys/blob/master/functions/__init__.py
     Turns all elements from a series into a string, joining elements with "->"
     """
     list_elements = series.tolist()
     return " -> ".join(list_elements)
 
+
 def create_journeys(df):
     """
-    Based on open source work by Social Finance for the AnnexA here: 
+    Based on open source work by Social Finance for the AnnexA here:
     https://github.com/CSCDP/child-event-journeys/blob/master/functions/__init__.py
     """
     df = df[~df["Date"].isnull()]
     df = df[~df["Type"].isnull()]
-    df = df.sort_values(['Date', 'Type'])
-    
+    df = df.sort_values(["Date", "Type"])
+
     # Add new column showing each event in format [00-00-0000/event]
     df["TimeEvent"] = df.Date.astype(str) + "/" + df.Type.astype(str)
 
-    
     # Create both long and reduced journeys
     grouped = df.groupby("child")
-    journey_long = grouped['TimeEvent'].apply(joined_string)
-    
+    journey_long = grouped["TimeEvent"].apply(joined_string)
+
     # Create new dataframe with both long and reduced journeys
-    journeys_df = pd.DataFrame({'Child journey': journey_long}, index=journey_long.index)
-    
-    
+    journeys_df = pd.DataFrame(
+        {"Child journey": journey_long}, index=journey_long.index
+    )
 
     # # Save to Excel
     # writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
@@ -608,7 +617,7 @@ def create_journeys(df):
     # # Events abbreviation
     # pd.DataFrame({'Event': list(events_map.keys()), 'Reduced': list(events_map.values())}).to_excel(writer, sheet_name='Legend', index=None)
     # writer.save()
-    
+
     return journeys_df
 
 
@@ -954,57 +963,71 @@ class Datacontainer:
     @property
     def gapminder_df(self):
         all_child_df = pd.DataFrame()
-        df = self.enriched_episodes.copy()
+
+        head = self.enriched_header.copy()
+        epis = self.data["episodes"].copy()
+        df = epis.merge(head, on=["CHILD"], how="left")
         children = df["CHILD"].unique()
 
-        df["DEC_cleaned"] = df["DEC_dt"].apply(lambda x: x if pd.notnull(x) else self.end_of_latest_return)
+        df["DECOM_dt"] = convert_dates(df["DECOM"])
+        df["DEC_dt"] = convert_dates(df["DEC"])
+
+        df["DEC_cleaned"] = df["DEC_dt"].apply(
+            lambda x: x if pd.notnull(x) else self.end_of_latest_return
+        )
 
         df.sort_values("DECOM_dt", inplace=True, ascending=True)
         df["Number of Episodes"] = df.groupby("CHILD").cumcount()
         df["Number of Episodes"] = df["Number of Episodes"] + 1
 
-        df["First DECOM"] = df.apply(lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1)
-        df["Last DEC"] = df.apply(lambda x: df.sort_values("DEC_cleaned", ascending=False)[df["CHILD"] == x["CHILD"]]["DEC_cleaned"].iloc[0], axis=1)
-        
-        
-        for child in children:
-            child_df = pd.DataFrame()
+
+
+        df["First DECOM"] = df.apply(
+            lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1
+        )
+        df["Last DEC"] = df.apply(
+            lambda x: df.sort_values("DEC_cleaned", ascending=False)[
+                df["CHILD"] == x["CHILD"]
+            ]["DEC_cleaned"].iloc[0],
+            axis=1,
+        )
+
+        for child in children[:10]:
             child_df = df[df["CHILD"] == child]
-            dates = pd.date_range(start=child_df["First DECOM"].iloc[0], end=child_df["Last DEC"].iloc[0])
-            dates_df = pd.DataFrame(
-                {"Days": dates, "CHILD": [child for date in dates]}
+            dates = pd.date_range(
+                start=child_df["First DECOM"].iloc[0],
+                end=child_df["Last DEC"].iloc[0],
+                freq="M",
             )
-            dates_df["Days"] = dates_df["Days"]
+            dates_df = pd.DataFrame({"Days": dates, "CHILD": [child for date in dates]})
+            # dates_df["Days_string"] = [f"{x.year}{x.month}{x.day}" for x in dates_df["Days"]]
+            dates_df["Days_string"] = [
+                str(str(x).split(" ")[0]).replace("-", "") for x in dates_df["Days"]
+            ]
 
-            child_df = child_df.merge(
-                dates_df, on=["CHILD"], how="outer"
-            ).ffill()
+            child_df = child_df.merge(dates_df, on=["CHILD"], how="outer").ffill()
 
-            child_df["Age (on day)"] = child_df.apply(lambda x: (x["Days"] - x["DOB_dt"])/pd.Timedelta(days=365.25), axis=1)
-            child_df["Time in care (on day)"] = child_df.apply(lambda x: (x["Days"] - x["First DECOM"])/pd.Timedelta(days=1), axis=1)
-            #     
+            child_df = child_df[(child_df["Days"] >= child_df["DECOM_dt"]) & (child_df["Days"] <= child_df["DEC_dt"])].copy()
+
             # child_df["Age (on day)"] = child_df.apply(
-            #     lambda x: relativedelta(
-            #         dt1=x["Days"], dt2=x["DOB_dt"]
-            #     )
-            #     .normalized()
-            #     .years,
-            #     axis=1,
+            #     lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
             # )
-
             # child_df["Time in care (on day)"] = child_df.apply(
-            #     # lambda x: relativedelta(
-            #     #     dt1=x["Days"], dt2=x["First DECOM"]
-            #     # )
-            #     # .normalized(),
-            #     lambda x: x["Days"] - x["First DECOM"],
-            #     axis=1,
+            #     lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
             # )
-        
-        all_child_df = pd.concat([all_child_df, child_df])
-        return all_child_df
 
-        
+            # child_df.drop_duplicates("Days_string",inplace=True)
+
+
+            all_child_df = pd.concat([all_child_df, child_df])
+
+            all_child_df["Age (on day)"] = all_child_df.apply(
+                lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
+            )
+            all_child_df["Time in care (on day)"] = all_child_df.apply(
+                lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
+            )
+        return all_child_df
 
 
 ###########################
@@ -1069,54 +1092,109 @@ if input_file:
     # )
 
     with st.expander("Gapminder"):
-            st.table(ssda903.gapminder_df.head())
+        test_df = ssda903.gapminder_df.sort_values("Days_string")
 
+        plot = px.scatter(
+            test_df,
+            x="Age (on day)",
+            y="Time in care (on day)",
+            size="Number of Episodes",
+            animation_frame="Days_string",
+            animation_group="CHILD",
+            range_y=[0, 5000],
+            range_x=[0, 25],
+            hover_name="CHILD"     
+        )
+        st.plotly_chart(plot)
+
+        st.table(test_df[test_df["CHILD"] == "L10197839"])
 
     with st.expander("Journeys visualisation"):
-        child = st.selectbox("Select child by ID",
-                             options = list(sliced_enriched_header["CHILD"].unique()))
+        child = st.selectbox(
+            "Select child by ID", options=list(sliced_enriched_header["CHILD"].unique())
+        )
 
-        record_dfs = {"episodes":ssda903.enriched_episodes[ssda903.enriched_episodes["CHILD"] == child],
-                      "missing":ssda903.enriched_missing[ssda903.enriched_missing["CHILD"] == child],
-                      "reviews":ssda903.enriched_reviews[ssda903.enriched_reviews["CHILD"] == child],
-                      "uasc":ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
-                      "header":sliced_enriched_header[sliced_enriched_header["CHILD"] == child]}
-        
+        record_dfs = {
+            "episodes": ssda903.enriched_episodes[
+                ssda903.enriched_episodes["CHILD"] == child
+            ],
+            "missing": ssda903.enriched_missing[
+                ssda903.enriched_missing["CHILD"] == child
+            ],
+            "reviews": ssda903.enriched_reviews[
+                ssda903.enriched_reviews["CHILD"] == child
+            ],
+            "uasc": ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
+            "header": sliced_enriched_header[sliced_enriched_header["CHILD"] == child],
+        }
+
         record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
-        record_dfs["missing"]["MIS_END"].fillna(ssda903.end_of_latest_return, inplace=True)
+        record_dfs["missing"]["MIS_END"].fillna(
+            ssda903.end_of_latest_return, inplace=True
+        )
 
         episodes_data = record_dfs["episodes"].copy()
-        episodes_data.rename(columns={"DECOM":"Start",
-                                     "DEC":"Finish",
-                                     }, inplace=True)
+        episodes_data.rename(
+            columns={
+                "DECOM": "Start",
+                "DEC": "Finish",
+            },
+            inplace=True,
+        )
         episodes_data["Task"] = "Episodes"
 
         missing_data = record_dfs["missing"].copy()
-        missing_data.rename(columns={"MIS_START":"Start",
-                                     "MIS_END":"Finish",
-                                     }, inplace=True)
+        missing_data.rename(
+            columns={
+                "MIS_START": "Start",
+                "MIS_END": "Finish",
+            },
+            inplace=True,
+        )
         missing_data["Task"] = "Missing"
 
         review_data = record_dfs["reviews"][["REVIEW", "REVIEW_CODE"]].copy()
         review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
         review_data["Finish"] = review_data["Finish"] + pd.DateOffset(days=1)
-        review_data.rename(columns={"REVIEW":"Start",
-                                    }, inplace=True)
+        review_data.rename(
+            columns={
+                "REVIEW": "Start",
+            },
+            inplace=True,
+        )
         review_data["Task"] = "Reviews"
 
         uasc_data = record_dfs["uasc"].copy()
-        uasc_data.rename(columns={"DUC":"Finish",
-                                     }, inplace=True)
+        uasc_data.rename(
+            columns={
+                "DUC": "Finish",
+            },
+            inplace=True,
+        )
         uasc_data["Start"] = review_data["Finish"] - pd.DateOffset(days=1)
         missing_data["Task"] = "Missing"
 
         timelines_data = pd.concat([episodes_data, missing_data, review_data])
 
-
-        fig = px.timeline(timelines_data, x_start="Start", x_end="Finish", y="Task", color="Task", hover_data=["RNE", "LS", "PLACE", "PLACE_PROVIDER", "MISSING", "REVIEW_CODE"])
+        fig = px.timeline(
+            timelines_data,
+            x_start="Start",
+            x_end="Finish",
+            y="Task",
+            color="Task",
+            hover_data=[
+                "RNE",
+                "LS",
+                "PLACE",
+                "PLACE_PROVIDER",
+                "MISSING",
+                "REVIEW_CODE",
+            ],
+        )
         st.plotly_chart(fig)
-    
-        st.table(record_dfs["header"][["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]])
 
-        
-
+        st.table(
+            record_dfs["header"][
+                ["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]
+            ]
+        )
