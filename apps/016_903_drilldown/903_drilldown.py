@@ -3,6 +3,9 @@
 ####
 
 # Demographic breakdowns of LA data, schools data and Alison's cohorts
+# for every decom count the number of rows with a decom within 12 months of that
+
+# change plot time to start of first year of data
 
 import pandas as pd
 import numpy as np
@@ -366,7 +369,8 @@ def apply_filters(
 
     return df
 
-#@st.cache_data
+
+# @st.cache_data
 def read_903(df):
     dfs = pd.read_excel(df, sheet_name=None)
 
@@ -968,8 +972,6 @@ class Datacontainer:
         df["Number of Episodes"] = df.groupby("CHILD").cumcount()
         df["Number of Episodes"] = df["Number of Episodes"] + 1
 
-
-
         df["First DECOM"] = df.apply(
             lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1
         )
@@ -1002,11 +1004,14 @@ class Datacontainer:
 
             # all_child_df = pd.concat([all_child_df, child_df])
 
-        all_child_df = pd.concat(dfs_dict.values())    
+        all_child_df = pd.concat(dfs_dict.values())
         all_child_df["Days_string"] = [
-                str(str(x).split(" ")[0]).replace("-", "") for x in all_child_df["Days"]
-            ]
-        all_child_df = all_child_df[(all_child_df["Days"] >= all_child_df["DECOM_dt"]) & (all_child_df["Days"] <= all_child_df["DEC_dt"])].copy()
+            str(str(x).split(" ")[0]).replace("-", "") for x in all_child_df["Days"]
+        ]
+        all_child_df = all_child_df[
+            (all_child_df["Days"] >= all_child_df["DECOM_dt"])
+            & (all_child_df["Days"] <= all_child_df["DEC_dt"])
+        ].copy()
         all_child_df["Age (on day)"] = all_child_df.apply(
             lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
         )
@@ -1015,7 +1020,8 @@ class Datacontainer:
         )
         return all_child_df
 
-#@st.cache_data
+
+# @st.cache_data
 def convert_data(_dfs: pd.DataFrame):
     """Used to make input data python readable and to enable caching.
     Runs Datacontainer to read in SSDA903 as an object containing enriched and cleaned data.
@@ -1023,6 +1029,7 @@ def convert_data(_dfs: pd.DataFrame):
     datafiles = Datacontainer(_dfs)
 
     return datafiles
+
 
 ###########################
 # Main App
@@ -1086,112 +1093,148 @@ if input_file:
     #     ethnicity_selected
     # )
 
-    with st.expander("Gapminder"):
-        test_df = ssda903.gapminder_df.sort_values("Days_string")
+    # with st.expander("Gapminder"):
+    #     test_df = ssda903.gapminder_df.sort_values("Days_string")
 
-        plot = px.scatter(
-            test_df,
-            x="Age (on day)",
-            y="Time in care (on day)",
-            size="Number of Episodes",
-            animation_frame="Days_string",
-            animation_group="CHILD",
-            range_y=[0, 5000],
-            range_x=[0, 25],
-            hover_name="CHILD",
-            color="EthnicityGroup"     
+    #     plot = px.scatter(
+    #         test_df,
+    #         x="Age (on day)",
+    #         y="Time in care (on day)",
+    #         size="Number of Episodes",
+    #         animation_frame="Days_string",
+    #         animation_group="CHILD",
+    #         range_y=[0, 5000],
+    #         range_x=[0, 25],
+    #         hover_name="CHILD",
+    #         color="EthnicityGroup"
+    #     )
+    #     st.plotly_chart(plot)
+
+    #     # st.table(test_df[test_df["CHILD"] == "L10197839"])
+
+    # with st.expander("Journeys visualisation"):
+    #     child = st.selectbox(
+    #         "Select child by ID", options=list(sliced_enriched_header["CHILD"].unique())
+    #     )
+
+    #     record_dfs = {
+    #         "episodes": ssda903.enriched_episodes[
+    #             ssda903.enriched_episodes["CHILD"] == child
+    #         ],
+    #         "missing": ssda903.enriched_missing[
+    #             ssda903.enriched_missing["CHILD"] == child
+    #         ],
+    #         "reviews": ssda903.enriched_reviews[
+    #             ssda903.enriched_reviews["CHILD"] == child
+    #         ],
+    #         "uasc": ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
+    #         "header": sliced_enriched_header[sliced_enriched_header["CHILD"] == child],
+    #     }
+
+    #     record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
+    #     record_dfs["missing"]["MIS_END"].fillna(
+    #         ssda903.end_of_latest_return, inplace=True
+    #     )
+
+    #     episodes_data = record_dfs["episodes"].copy()
+    #     episodes_data.rename(
+    #         columns={
+    #             "DECOM": "Start",
+    #             "DEC": "Finish",
+    #         },
+    #         inplace=True,
+    #     )
+    #     episodes_data["Task"] = "Episodes"
+
+    #     missing_data = record_dfs["missing"].copy()
+    #     missing_data.rename(
+    #         columns={
+    #             "MIS_START": "Start",
+    #             "MIS_END": "Finish",
+    #         },
+    #         inplace=True,
+    #     )
+    #     missing_data["Task"] = "Missing"
+
+    #     review_data = record_dfs["reviews"][["REVIEW", "REVIEW_CODE"]].copy()
+    #     review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
+    #     review_data["Finish"] = review_data["Finish"] + pd.DateOffset(days=1)
+    #     review_data.rename(
+    #         columns={
+    #             "REVIEW": "Start",
+    #         },
+    #         inplace=True,
+    #     )
+    #     review_data["Task"] = "Reviews"
+
+    #     uasc_data = record_dfs["uasc"].copy()
+    #     uasc_data.rename(
+    #         columns={
+    #             "DUC": "Finish",
+    #         },
+    #         inplace=True,
+    #     )
+    #     uasc_data["Start"] = review_data["Finish"] - pd.DateOffset(days=1)
+    #     missing_data["Task"] = "Missing"
+
+    #     timelines_data = pd.concat([episodes_data, missing_data, review_data])
+
+    #     fig = px.timeline(
+    #         timelines_data,
+    #         x_start="Start",
+    #         x_end="Finish",
+    #         y="Task",
+    #         color="Task",
+    #         hover_data=[
+    #             "RNE",
+    #             "LS",
+    #             "PLACE",
+    #             "PLACE_PROVIDER",
+    #             "MISSING",
+    #             "REVIEW_CODE",
+    #         ],
+    #     )
+    #     st.plotly_chart(fig)
+
+    #     st.table(
+    #         record_dfs["header"][
+    #             ["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]
+    #         ]
+    #     )
+
+    with st.expander("Stability calculator"):
+        instability_df = ssda903.enriched_episodes[["CHILD", "DECOM_dt"]].copy()
+
+        # def instability_calculator(sub_df, main_df, timeframe_months=12):
+        #     df = main_df[
+        #         (main_df["CHILD"] == sub_df["CHILD"])
+        #         & (
+        #             main_df["DECOM_dt"]
+        #             <= sub_df["DECOM_dt"] + pd.DateOffset(months=timeframe_months)
+        #         )
+        #     ]
+
+        #     return len(df)
+
+        # instability_df["Number of placements in following 12 months"] = instability_df[
+        #     ["CHILD", "DECOM_dt"]
+        # ].apply(instability_calculator, args=(instability_df, 12), axis=1)
+
+        instability_df["Number of placements in following 12 months"] = (
+            instability_df.apply(
+                lambda x: len(
+                    instability_df[
+                        (instability_df["CHILD"] == x["CHILD"])
+                        & (
+                            instability_df["DECOM_dt"]
+                            <= x["DECOM_dt"] + pd.DateOffset(months=12)
+                        )
+                        & (instability_df["DECOM_dt"] >= x["DECOM_dt"])
+                    ]
+                ),
+                axis=1,
+            )
         )
-        st.plotly_chart(plot)
 
 
-        # st.table(test_df[test_df["CHILD"] == "L10197839"])
-
-    with st.expander("Journeys visualisation"):
-        child = st.selectbox(
-            "Select child by ID", options=list(sliced_enriched_header["CHILD"].unique())
-        )
-
-        record_dfs = {
-            "episodes": ssda903.enriched_episodes[
-                ssda903.enriched_episodes["CHILD"] == child
-            ],
-            "missing": ssda903.enriched_missing[
-                ssda903.enriched_missing["CHILD"] == child
-            ],
-            "reviews": ssda903.enriched_reviews[
-                ssda903.enriched_reviews["CHILD"] == child
-            ],
-            "uasc": ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
-            "header": sliced_enriched_header[sliced_enriched_header["CHILD"] == child],
-        }
-
-        record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
-        record_dfs["missing"]["MIS_END"].fillna(
-            ssda903.end_of_latest_return, inplace=True
-        )
-
-        episodes_data = record_dfs["episodes"].copy()
-        episodes_data.rename(
-            columns={
-                "DECOM": "Start",
-                "DEC": "Finish",
-            },
-            inplace=True,
-        )
-        episodes_data["Task"] = "Episodes"
-
-        missing_data = record_dfs["missing"].copy()
-        missing_data.rename(
-            columns={
-                "MIS_START": "Start",
-                "MIS_END": "Finish",
-            },
-            inplace=True,
-        )
-        missing_data["Task"] = "Missing"
-
-        review_data = record_dfs["reviews"][["REVIEW", "REVIEW_CODE"]].copy()
-        review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
-        review_data["Finish"] = review_data["Finish"] + pd.DateOffset(days=1)
-        review_data.rename(
-            columns={
-                "REVIEW": "Start",
-            },
-            inplace=True,
-        )
-        review_data["Task"] = "Reviews"
-
-        uasc_data = record_dfs["uasc"].copy()
-        uasc_data.rename(
-            columns={
-                "DUC": "Finish",
-            },
-            inplace=True,
-        )
-        uasc_data["Start"] = review_data["Finish"] - pd.DateOffset(days=1)
-        missing_data["Task"] = "Missing"
-
-        timelines_data = pd.concat([episodes_data, missing_data, review_data])
-
-        fig = px.timeline(
-            timelines_data,
-            x_start="Start",
-            x_end="Finish",
-            y="Task",
-            color="Task",
-            hover_data=[
-                "RNE",
-                "LS",
-                "PLACE",
-                "PLACE_PROVIDER",
-                "MISSING",
-                "REVIEW_CODE",
-            ],
-        )
-        st.plotly_chart(fig)
-
-        st.table(
-            record_dfs["header"][
-                ["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]
-            ]
-        )
+        st.table(instability_df.head())
