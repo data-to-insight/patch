@@ -370,6 +370,255 @@ def apply_filters(
     return df
 
 
+def make_bar(
+    df,
+    column,
+    title,
+    x_label="test",
+    color_column="SEX",
+    buckets=None,
+    total_cohort=None,
+    color_sequence=px.colors.qualitative.G10,
+):
+    """Used to make and format all bar charts in dashboard. Allows users to force 0
+    counts on columns if needed. Also overlays data labels by adding a scatter trace as
+    text."""
+    # TODO refactor
+    if (buckets != None) & ("Timeliness" not in color_column):
+        # Makes an empty dataframe with column names according to specified buckets
+        # to merge groupby to, in order to have rows for counts of zero which are then filled.
+        values_df = pd.DataFrame({column: buckets})
+
+        df_counts = (
+            df.groupby([column, color_column])
+            .size()
+            .to_frame("Number of children")
+            .reset_index()
+        )
+        df_counts = df_counts.merge(values_df, how="outer", on=column)
+        df_counts["Number of children"] = (
+            df_counts["Number of children"].fillna(0).astype("int")
+        )
+        df_counts[color_column].fillna("", inplace=True)
+        df_sum = df_counts.groupby(column).sum()
+        bar = px.bar(
+            df_counts,
+            x=column,
+            y="Number of children",
+            title=title,
+            color=color_column,
+            category_orders={"Sex": ["M", "F"], column: buckets},
+            labels={column: x_label},
+            color_discrete_sequence=color_sequence,
+        )
+
+        # Needed to add total stacked bar heights where we are using sex to split bars
+        # Makes a scatter using text lined up with the top of the bar chart
+        bar.add_trace(
+            go.Scatter(
+                mode="text",
+                x=df_sum.index,
+                y=df_sum["Number of children"].tolist(),
+                text=[str(x) for x in df_sum["Number of children"].tolist()],
+                textposition="bottom center",
+                showlegend=False,
+            )
+        )
+
+    elif "Timeliness" in color_column:
+        # Makes an empty dataframe with column names according to specified buckets
+        # to merge groupby to, in order to have rows for counts of zero which are then filled.
+        values_df = pd.DataFrame({column: buckets})
+
+        count_df = (
+            timeliness_df.groupby([color_column, column])
+            .size()
+            .to_frame("Number of children")
+            .reset_index()
+        )
+        count_df = values_df.merge(count_df, how="outer", on=column)
+        count_df["Number of children"] = count_df["Number of children"].fillna(0)
+
+        bar = go.Figure(
+            px.bar(
+                title=title,
+                barmode="group",
+                color_discrete_sequence=color_sequence,
+            )
+        )
+        bar.add_trace(
+            go.Bar(
+                x=pd.Series(count_df[column][count_df[color_column] == "Timely"]),
+                y=pd.Series(
+                    count_df["Number of children"][count_df[color_column] == "Timely"]
+                ),
+                name="Timely",
+                marker_color="#DC3912",
+                text=pd.Series(
+                    count_df["Number of children"][count_df[color_column] == "Timely"]
+                ),
+            )
+        )
+        bar.add_trace(
+            go.Bar(
+                x=pd.Series(count_df[column][count_df[color_column] == "Not timely"]),
+                y=pd.Series(
+                    count_df["Number of children"][
+                        count_df[color_column] == "Not timely"
+                    ]
+                ),
+                name="Not timely",
+                marker_color="#3366CC",
+                text=pd.Series(
+                    count_df["Number of children"][
+                        count_df[color_column] == "Not timely"
+                    ]
+                ),
+            )
+        )
+        bar.update_xaxes(categoryorder="array", categoryarray=months)
+        bar.update_layout(
+            xaxis={"title": {"text": "Month"}},
+            yaxis={"title": {"text": "Number of children"}},
+        )
+
+    elif not color_column:
+        # Used to make charts not split by Sex, and without specified x-buckets
+        df_counts = (
+            df.groupby([column]).size().to_frame("Number of children").reset_index()
+        )
+
+        # Needed to add total stacked bar heights where we are using sex to split bars
+        # Makes a scatter using text lined up with the top of the bar chart
+        bar = px.bar(
+            df_counts,
+            x=column,
+            y="Number of children",
+            title=title,
+            color=color_column,
+            text="Number of children",
+            category_orders={"Sex": ["M", "F"]},
+            labels={column: x_label},
+            color_discrete_sequence=color_sequence,
+        )
+
+    else:
+        # Used to make charts with a specified sex value but no need to specify buckets.
+        df_counts = (
+            df.groupby([column])
+            .size()
+            .to_frame("Number of children")
+            .reset_index()
+        )
+        df_counts['Percentage of children'] = df_counts["Number of children"] / len(df) * 100
+        df_counts['Percentage of children'] = df_counts['Percentage of children'].astype("int")
+        df_counts["Cohort"] = "Stability cohort"
+
+        total_cohort_counts = (
+            total_cohort.groupby([column])
+            .size()
+            .to_frame("Number of children")
+            .reset_index()
+        )
+        total_cohort_counts['Percentage of children'] = total_cohort_counts["Number of children"] / len(total_cohort) * 100
+        total_cohort_counts['Percentage of children'] = total_cohort_counts['Percentage of children'].astype("int")
+        total_cohort_counts["Cohort"] = "All 903"
+
+        # Needed to add total stacked bar heights where we are using sex to split bars
+        # Makes a scatter using text lined up with the top of the bar chart above
+        # df_sum = df_counts.groupby(column).sum()
+        # cohort_sum = total_cohort_counts.groupby(column).sum()
+
+        all_counts = pd.concat([df_counts, total_cohort_counts])
+        # all_sum = pd.concat([df_sum, cohort_sum])
+
+        bar = px.bar(
+            all_counts,
+            x=column,
+            y='Percentage of children',
+            #y="Number of children",
+            title=title,
+            color='Cohort',
+            barmode="group",
+            # category_orders={"Sex": ["M", "F"]},
+            labels={column: x_label},
+            color_discrete_sequence=color_sequence,
+        )
+        # bar.add_trace(
+        #     go.Scatter(
+        #         mode="text",
+        #         x=all_sum.index,
+        #         #y=df_sum["Number of children"].tolist(),
+        #         y=all_sum["Percentage of children"].tolist(),
+        #         # text=[str(x) for x in df_sum["Number of children"].tolist()],
+        #         text=[str(x) for x in df_sum["Percentage of children"].tolist()],
+        #         textposition="bottom center",
+        #         showlegend=False,
+        #     )
+        # )
+
+    bar.update_layout(
+        template="seaborn",
+        plot_bgcolor="lightgrey",
+        paper_bgcolor="lightgrey",
+        font_color="black",
+        title_font_color="black",
+        legend_font_color="black",
+        legend_title_font_color="black",
+    )
+    return bar
+
+
+def make_indicator(df, title):
+    """Used to make and format indicators to display overall, male, and female counts for given columns.
+    Will return no number if there are none of a given sex."""
+    indicator = make_subplots(
+        rows=3,
+        cols=1,
+        specs=[
+            [{"type": "indicator"}],
+            [{"type": "indicator"}],
+            [{"type": "indicator"}],
+        ],
+    )
+
+    indicator.update_layout(
+        paper_bgcolor="lightgray", font=dict(size=18, color="black")
+    )
+
+    indicator.add_trace(
+        go.Indicator(
+            mode="number",
+            value=len(df),
+            title={"text": title},
+        ),
+        row=1,
+        col=1,
+    )
+
+    if len(df[df["SEX"] == "Male"]) > 0:
+        indicator.add_trace(
+            go.Indicator(
+                mode="number",
+                value=len(df[df["SEX"] == "Male"]),
+                title={"text": f"{title} - Male"},
+            ),
+            row=2,
+            col=1,
+        )
+    if len(df[df["SEX"] == "Female"]) > 0:
+        indicator.add_trace(
+            go.Indicator(
+                mode="number",
+                value=len(df[df["SEX"] == "Female"]),
+                title={"text": f"{title} - Female"},
+            ),
+            row=3,
+            col=1,
+        )
+
+    return indicator
+
 # @st.cache_data
 def read_903(df):
     dfs = pd.read_excel(df, sheet_name=None)
@@ -732,6 +981,22 @@ class Datacontainer:
         enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
         enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
 
+        enriched_df["Number of placements in following 12 months"] = (
+            enriched_df.apply(
+                lambda x: len(
+                    enriched_df[
+                        (enriched_df["CHILD"] == x["CHILD"])
+                        & (
+                            enriched_df["DECOM_dt"]
+                            <= x["DECOM_dt"] + pd.DateOffset(months=12)
+                        )
+                        & (enriched_df["DECOM_dt"] >= x["DECOM_dt"])
+                    ]
+                ),
+                axis=1,
+            )
+        )
+
         return enriched_df
 
     @property
@@ -761,6 +1026,8 @@ class Datacontainer:
         enriched_df["MISSING"] = enriched_df["MISSING"].apply(
             lambda x: MISSINGCodes[x].value if pd.notnull(x) else "N/A"
         )
+
+
 
         return enriched_df
 
@@ -1202,39 +1469,31 @@ if input_file:
     #         ]
     #     )
 
-    with st.expander("Stability calculator"):
-        instability_df = ssda903.enriched_episodes[["CHILD", "DECOM_dt"]].copy()
+    with st.expander("High Instability"):
+        instability_df = ssda903.enriched_episodes.copy()
+        
+        highly_unstable_df = instability_df[(instability_df["Number of placements in following 12 months"] >= 5) & instability_df["DEC_dt"].notna()]
 
-        # def instability_calculator(sub_df, main_df, timeframe_months=12):
-        #     df = main_df[
-        #         (main_df["CHILD"] == sub_df["CHILD"])
-        #         & (
-        #             main_df["DECOM_dt"]
-        #             <= sub_df["DECOM_dt"] + pd.DateOffset(months=timeframe_months)
-        #         )
-        #     ]
+        highly_unstable_col1, highly_unstable_col2 = st.columns(2)
 
-        #     return len(df)
-
-        # instability_df["Number of placements in following 12 months"] = instability_df[
-        #     ["CHILD", "DECOM_dt"]
-        # ].apply(instability_calculator, args=(instability_df, 12), axis=1)
-
-        instability_df["Number of placements in following 12 months"] = (
-            instability_df.apply(
-                lambda x: len(
-                    instability_df[
-                        (instability_df["CHILD"] == x["CHILD"])
-                        & (
-                            instability_df["DECOM_dt"]
-                            <= x["DECOM_dt"] + pd.DateOffset(months=12)
-                        )
-                        & (instability_df["DECOM_dt"] >= x["DECOM_dt"])
-                    ]
-                ),
-                axis=1,
+        with highly_unstable_col1:
+            total_highly_unstable = make_indicator(
+                highly_unstable_df.drop_duplicates("CHILD"), "Total children with at least one highly unstable 12 month period"
             )
-        )
+            st.plotly_chart(total_highly_unstable, use_container_width=True)
+        
+        with highly_unstable_col2:
+            highly_unstable_ethnicity = make_bar(
+                highly_unstable_df.drop_duplicates("CHILD"),
+                "EthnicityGroup",
+                title="Children still in care who have had highly unstable placements",
+                x_label="Ethnicity",
+                total_cohort=instability_df,
+                # buckets=[
+                #     "M - maintain the EHC plan",
+                #     "C - cease the EHC plan",
+                #     "A - Amend the EHC plan",
+                # ],
+            )
+            st.plotly_chart(highly_unstable_ethnicity, use_container_width=True, theme=None)
 
-
-        st.table(instability_df.head())
