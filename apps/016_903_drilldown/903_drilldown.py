@@ -2,8 +2,9 @@
 # Notes
 ####
 
-# Demographic breakdowns of LA data, schools data and Alison's cohorts
-# for every decom count the number of rows with a decom within 12 months of that
+# Dropdown to choose stability type
+# Some descriptive statistics about instability types (which years is it bad in etc.)
+# Allow slicing instability by year
 
 # change plot time to start of first year of data
 
@@ -505,13 +506,14 @@ def make_bar(
     else:
         # Used to make charts with a specified sex value but no need to specify buckets.
         df_counts = (
-            df.groupby([column])
-            .size()
-            .to_frame("Number of children")
-            .reset_index()
+            df.groupby([column]).size().to_frame("Number of children").reset_index()
         )
-        df_counts['Percentage of children'] = df_counts["Number of children"] / len(df) * 100
-        df_counts['Percentage of children'] = df_counts['Percentage of children'].astype("int")
+        df_counts["Percentage of children"] = (
+            df_counts["Number of children"] / len(df) * 100
+        )
+        df_counts["Percentage of children"] = df_counts[
+            "Percentage of children"
+        ].astype("int")
         df_counts["Cohort"] = "Stability cohort"
 
         total_cohort_counts = (
@@ -520,8 +522,12 @@ def make_bar(
             .to_frame("Number of children")
             .reset_index()
         )
-        total_cohort_counts['Percentage of children'] = total_cohort_counts["Number of children"] / len(total_cohort) * 100
-        total_cohort_counts['Percentage of children'] = total_cohort_counts['Percentage of children'].astype("int")
+        total_cohort_counts["Percentage of children"] = (
+            total_cohort_counts["Number of children"] / len(total_cohort) * 100
+        )
+        total_cohort_counts["Percentage of children"] = total_cohort_counts[
+            "Percentage of children"
+        ].astype("int")
         total_cohort_counts["Cohort"] = "All 903"
 
         # Needed to add total stacked bar heights where we are using sex to split bars
@@ -535,10 +541,10 @@ def make_bar(
         bar = px.bar(
             all_counts,
             x=column,
-            y='Percentage of children',
-            #y="Number of children",
+            y="Percentage of children",
+            # y="Number of children",
             title=title,
-            color='Cohort',
+            color="Cohort",
             barmode="group",
             # category_orders={"Sex": ["M", "F"]},
             labels={column: x_label},
@@ -618,6 +624,7 @@ def make_indicator(df, title):
         )
 
     return indicator
+
 
 # @st.cache_data
 def read_903(df):
@@ -981,20 +988,18 @@ class Datacontainer:
         enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
         enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
 
-        enriched_df["Number of placements in following 12 months"] = (
-            enriched_df.apply(
-                lambda x: len(
-                    enriched_df[
-                        (enriched_df["CHILD"] == x["CHILD"])
-                        & (
-                            enriched_df["DECOM_dt"]
-                            <= x["DECOM_dt"] + pd.DateOffset(months=12)
-                        )
-                        & (enriched_df["DECOM_dt"] >= x["DECOM_dt"])
-                    ]
-                ),
-                axis=1,
-            )
+        enriched_df["Number of placements in following 12 months"] = enriched_df.apply(
+            lambda x: len(
+                enriched_df[
+                    (enriched_df["CHILD"] == x["CHILD"])
+                    & (
+                        enriched_df["DECOM_dt"]
+                        <= x["DECOM_dt"] + pd.DateOffset(months=12)
+                    )
+                    & (enriched_df["DECOM_dt"] >= x["DECOM_dt"])
+                ]
+            ),
+            axis=1,
         )
 
         return enriched_df
@@ -1026,8 +1031,6 @@ class Datacontainer:
         enriched_df["MISSING"] = enriched_df["MISSING"].apply(
             lambda x: MISSINGCodes[x].value if pd.notnull(x) else "N/A"
         )
-
-
 
         return enriched_df
 
@@ -1470,24 +1473,87 @@ if input_file:
     #     )
 
     with st.expander("High Instability"):
+        st.write(
+            "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. For example, if a child's CIN code before hteir most unstable 12 month period is 'neglect' that will be their value in the CIN chart below."
+        )
         instability_df = ssda903.enriched_episodes.copy()
-        
-        highly_unstable_df = instability_df[(instability_df["Number of placements in following 12 months"] >= 5) & instability_df["DEC_dt"].notna()]
+
+        highly_unstable_df = instability_df[
+            (instability_df["Number of placements in following 12 months"] >= 5)
+            & instability_df["DEC_dt"].notna()
+        ]
+        # most_unstbale placement is the one that preceeds a child's most unstable period
+        most_unstable_placement = highly_unstable_df.sort_values(
+            "Number of placements in following 12 months"
+        ).drop_duplicates("CHILD", keep="first")
 
         highly_unstable_col1, highly_unstable_col2 = st.columns(2)
 
         with highly_unstable_col1:
             total_highly_unstable = make_indicator(
-                highly_unstable_df.drop_duplicates("CHILD"), "Total children with at least one highly unstable 12 month period"
+                most_unstable_placement,
+                "Total children with at least one highly unstable 12 month period",
             )
             st.plotly_chart(total_highly_unstable, use_container_width=True)
-        
+
+            # Age
+            highly_unstable_age = make_bar(
+                most_unstable_placement,
+                "AgeBuckets",
+                title="Children still in care who have had highly unstable placements",
+                x_label="Age group",
+                total_cohort=instability_df,
+            )
+            st.plotly_chart(highly_unstable_age, use_container_width=True, theme=None)
+
+            # Sex
+            highly_unstable_sex = make_bar(
+                most_unstable_placement,
+                "SEX",
+                title="Children still in care who have had highly unstable placements",
+                x_label="Sex",
+                total_cohort=instability_df,
+            )
+            st.plotly_chart(highly_unstable_sex, use_container_width=True, theme=None)
+
+            # RNE
+            highly_unstable_rne = make_bar(
+                most_unstable_placement,
+                "RNE",
+                title="Children still in care who have had highly unstable placements",
+                x_label="RNE",
+                total_cohort=instability_df,
+            )
+            st.plotly_chart(highly_unstable_rne, use_container_width=True, theme=None)
+
         with highly_unstable_col2:
             highly_unstable_ethnicity = make_bar(
-                highly_unstable_df.drop_duplicates("CHILD"),
+                most_unstable_placement,
                 "EthnicityGroup",
                 title="Children still in care who have had highly unstable placements",
                 x_label="Ethnicity",
+                total_cohort=instability_df,
+            )
+            st.plotly_chart(
+                highly_unstable_ethnicity, use_container_width=True, theme=None
+            )
+
+            # LS
+            highly_unstable_ls = make_bar(
+                most_unstable_placement,
+                "LS",
+                title="Children still in care who have had highly unstable placements",
+                x_label="LS",
+                total_cohort=instability_df,
+            )
+            st.plotly_chart(highly_unstable_ls, use_container_width=True, theme=None)
+
+            # CIN
+            highly_unstable_cin = make_bar(
+                most_unstable_placement,
+                "CIN",
+                title="Children still in care who have had highly unstable placements",
+                x_label="CIN",
                 total_cohort=instability_df,
                 # buckets=[
                 #     "M - maintain the EHC plan",
@@ -1495,5 +1561,19 @@ if input_file:
                 #     "A - Amend the EHC plan",
                 # ],
             )
-            st.plotly_chart(highly_unstable_ethnicity, use_container_width=True, theme=None)
+            st.plotly_chart(highly_unstable_cin, use_container_width=True, theme=None)
 
+            # Place
+            highly_unstable_place = make_bar(
+                most_unstable_placement,
+                "PLACE",
+                title="Children still in care who have had highly unstable placements",
+                x_label="Place",
+                total_cohort=instability_df,
+                # buckets=[
+                #     "M - maintain the EHC plan",
+                #     "C - cease the EHC plan",
+                #     "A - Amend the EHC plan",
+                # ],
+            )
+            st.plotly_chart(highly_unstable_place, use_container_width=True, theme=None)
