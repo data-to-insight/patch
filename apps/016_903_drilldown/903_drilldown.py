@@ -4,7 +4,9 @@
 
 # Dropdown to choose stability type
 # Some descriptive statistics about instability types (which years is it bad in etc.)
+# eg by year how many children have unstable placements starting that year of each block
 # Allow slicing instability by year
+# Dynamic chart titling
 
 # change plot time to start of first year of data
 
@@ -944,6 +946,13 @@ class Datacontainer:
         enriched_df["DECOM_dt"] = convert_dates(enriched_df["DECOM"])
         enriched_df["DEC_dt"] = convert_dates(enriched_df["DEC"])
 
+        children_still_in_care = list(
+            enriched_df[enriched_df["DEC"].isna()]["CHILD"].unique()
+        )
+        enriched_df["Still in care"] = enriched_df["CHILD"].apply(
+            lambda x: "Yes" if x in children_still_in_care else "No"
+        )
+
         enriched_df.sort_values(["CHILD", "DECOM_dt"], inplace=True)
         enriched_df = enriched_df.merge(
             self.enriched_header[
@@ -1477,13 +1486,78 @@ if input_file:
             "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. For example, if a child's CIN code before hteir most unstable 12 month period is 'neglect' that will be their value in the CIN chart below."
         )
         instability_df = ssda903.enriched_episodes.copy()
+        # Finds all children who still have an open episode so we can select only children with or without open episodes of care
+        children_still_in_care = instability_df[
+            instability_df["Still in care"] == "Yes"
+        ]["CHILD"].unique()
 
-        highly_unstable_df = instability_df[
+        highly_unstable = instability_df[
             (instability_df["Number of placements in following 12 months"] >= 5)
-            & instability_df["DEC_dt"].notna()
         ]
-        # most_unstbale placement is the one that preceeds a child's most unstable period
-        most_unstable_placement = highly_unstable_df.sort_values(
+
+        highly_unstable_in_care = highly_unstable[
+            highly_unstable["CHILD"].isin(children_still_in_care)
+        ]
+        highly_unstable_closed = highly_unstable[
+            ~highly_unstable["CHILD"].isin(children_still_in_care)
+        ]
+
+        # Finds all children who have had 5 or more placements in any 12 month period so we can remove them from searches for other stability levels
+        highly_unstable_children = highly_unstable["CHILD"].unique()
+        not_highly_unstable = instability_df[
+            ~instability_df["CHILD"].isin(highly_unstable_children)
+        ]
+
+        moderately_unstable = not_highly_unstable[
+            (not_highly_unstable["Number of placements in following 12 months"] >= 3)
+            & (not_highly_unstable["Number of placements in following 12 months"] <= 4)
+        ]
+
+        moderately_unstable_still_in_care = moderately_unstable[
+            moderately_unstable["CHILD"].isin(children_still_in_care)
+        ]
+        moderately_unstable_closed = moderately_unstable[
+            ~moderately_unstable["CHILD"].isin(children_still_in_care)
+        ]
+
+        stable = instability_df[
+            (~instability_df["CHILD"].isin(highly_unstable_children))
+            & (~instability_df["CHILD"].isin(moderately_unstable["CHILD"].unique()))
+        ]
+
+        # stable_children = instability_df[instability_df["CHILD"].isin(stable)]
+        stable_still_in_care = instability_df[
+            instability_df["CHILD"].isin(children_still_in_care)
+        ]
+        stable_closed = instability_df[
+            ~instability_df["CHILD"].isin(children_still_in_care)
+        ]
+
+        # Dropdown used to select stability level to view plots by
+        chosen_stability_level = st.selectbox(
+            "Select stability level for breakdown",
+            (
+                "Highly unstable - still in care",
+                "Highly unstable - closed",
+                "Moderately unstable - still in care",
+                "Moderately unstable - closed",
+                "Stable - still in care",
+                "Stable - closed",
+            ),
+        )
+        stability_dict = {
+            "Highly unstable - still in care": highly_unstable_in_care,
+            "Highly unstable - closed": highly_unstable_closed,
+            "Moderately unstable - still in care": moderately_unstable_still_in_care,
+            "Moderately unstable - closed": moderately_unstable_closed,
+            "Stable - still in care": stable_still_in_care,
+            "Stable - closed": stable_closed,
+        }
+        stability_df = stability_dict[chosen_stability_level]
+
+        # most_unstable placement is the one that preceeds a child's most unstable period for the chosen
+        # stability level
+        most_unstable_placement = stability_df.sort_values(
             "Number of placements in following 12 months"
         ).drop_duplicates("CHILD", keep="first")
 
@@ -1555,11 +1629,6 @@ if input_file:
                 title="Children still in care who have had highly unstable placements",
                 x_label="CIN",
                 total_cohort=instability_df,
-                # buckets=[
-                #     "M - maintain the EHC plan",
-                #     "C - cease the EHC plan",
-                #     "A - Amend the EHC plan",
-                # ],
             )
             st.plotly_chart(highly_unstable_cin, use_container_width=True, theme=None)
 
@@ -1570,10 +1639,5 @@ if input_file:
                 title="Children still in care who have had highly unstable placements",
                 x_label="Place",
                 total_cohort=instability_df,
-                # buckets=[
-                #     "M - maintain the EHC plan",
-                #     "C - cease the EHC plan",
-                #     "A - Amend the EHC plan",
-                # ],
             )
             st.plotly_chart(highly_unstable_place, use_container_width=True, theme=None)
