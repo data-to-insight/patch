@@ -767,7 +767,10 @@ if uploaded_files:
     st.write(f"Lists uploaded {lists_uploaded}")
 
     for k, df in dfs.items():
-        dfs[k]["Time Period"] = df["Month"].astype(str) + "_" + df["Year"].astype(str)
+        month = df["Month"].astype(str).str.split('.').str[0]
+        year = df["Year"].astype(str).str.split('.').str[0]
+        # dfs[k]["Time Period"] = df["Month"].astype(str).str.split('.').str[0] + " " + df["Year"].astype(str).str.split('.').str[0]
+        dfs[k]["Time Period"] = month+ " " + year
         dfs[k] = (
             df[
                 (~df["Child Unique ID"].astype("str").str.contains("None"))
@@ -894,6 +897,8 @@ if uploaded_files:
         eh_ethnicity = ethnic_background_metric(
             dfs["list_2"], "Early Help Assessments - Ethnicities"
         )
+
+
         st.write("Completed calculations for Early Help Assessments")
 
     # Referrals
@@ -982,6 +987,8 @@ if uploaded_files:
         assessment_durations_bins = timelines_with_bins(
             assessments_with_days, "Assessments - Assessments Durations", day_bins
         )
+
+        measures["Assessments - Child seen in Assessment - Percent"] = percent_of_col_with_value(dfs["list_4"], col="Child Seen During Continuous Assessment")
         st.write("Completed calculations for Assessments")
 
     # Section 47s
@@ -1129,8 +1136,11 @@ if uploaded_files:
             open_cin[open_cin["Date Child Was Last Seen"].notna()],
             "Date Child Was Last Seen",
             "CIN Closure Date",
-            "CIN plans - Time since SW (open plans)",
+            "CIN plans - Time since last seen (open plans)",
             working_days=False,
+        )
+        open_cin_last_seen_bins = timelines_with_bins(
+            open_cin_sw_date_with_days, "CIN plans - Time Since Last Seen (open plans)", last_seen_bins
         )
         # Comparing primary need of open CIN
         open_cin_need = category_metrics(
@@ -1293,6 +1303,7 @@ if uploaded_files:
             "CPP - Last review (open plans)",
             review_bins,
         )
+        measures["CPPs - Open CPP Subject to child Protection Order - Percent"] = percent_of_col_with_value(cpps_currently_open, col="Subject to Emergency Protection Order or Protected Under Police Powers in Last Six Months (Y/N)")
         st.write("Calculations completed for CPPs Currently Open.")
 
     # # CLA started ceased 6 months
@@ -1337,6 +1348,12 @@ if uploaded_files:
         cla_ended_gender = age_gender_metric(
             cla_ended_6mths, " CLA  - Age breakdown (Ended within 6 months)"
         )
+        cla_started_ethnicity = ethnic_background_metric(
+            cla_started_6mths, "CLA -  Ethnicities (Started within 6 months)"
+        )
+        cla_ended_enthnicity = ethnic_background_metric(
+            cla_ended_6mths, "CLA -  Ethnicities (Ended within 6 months)"
+        )
         measures["CLA - UASC (Started within 6 months) - Percent"] = (
             percent_of_col_with_value(
                 cla_started_6mths,
@@ -1357,7 +1374,7 @@ if uploaded_files:
         cla_ceased_6mths_reason = category_metrics(
             cla_ended_6mths,
             "Reason Ceased to be Looked After",
-            "CLA - Reason (Started within 6 months)",
+            "CLA - Reason (Ended within 6 months)",
         )
         st.write("Calculations completed for CLA Started and Ceased within 6 months.")
 
@@ -1545,11 +1562,14 @@ if uploaded_files:
                 col="Was the child offered a Return Interview after their last missing episode (Y/N)?",
             )
         )
-        cla_absent = dfs["list_8"][
-            dfs["list_8"][
+        # cla_absent = dfs["list_8"][
+        #     dfs["list_8"][
+        #         "Number of Episodes the Child has been 'Absent' from their Placement in the last 12 months"
+        #     ].notna()
+        # ]
+        dfs["list_8"][
                 "Number of Episodes the Child has been 'Absent' from their Placement in the last 12 months"
-            ].notna()
-        ]
+            ].fillna(0, inplace=True)
         dfs["list_8"]["Has absent episode?"] = dfs["list_8"][
             "Number of Episodes the Child has been 'Absent' from their Placement in the last 12 months"
         ].apply(lambda x: "No" if (x < 1) | pd.notnull(x) else "Yes")
@@ -1704,7 +1724,7 @@ if uploaded_files:
         ethnicities_to_merge.extend([s47_ethnicity])
     if "list_6" in lists_uploaded:
         categoricals_to_concat.extend(
-            [cin_ceased_reasons, cin_closed_bins, open_cin_bins]
+            [cin_ceased_reasons, cin_closed_bins, open_cin_bins, open_cin_need, open_cin_last_seen_bins]
         )
         age_gender_to_merge.extend([open_cin_age_gender])
         ethnicities_to_merge.extend([open_cin_ethnicity])
@@ -1712,6 +1732,7 @@ if uploaded_files:
         categoricals_to_concat.extend(
             [
                 cpp_initial_category_of_abuse,
+                open_ccp_latest_abuse,
                 cpp_ended_bins,
                 cpp_open_bins,
                 cpp_open_last_seen_bins,
@@ -1731,13 +1752,15 @@ if uploaded_files:
                 cla_last_review_bins,
                 cla_last_seen_bins,
                 cla_over_30_months_bins,
+                cla_started_6mths_need,
+                cla_ceased_6mths_reason
             ]
         )
         multiples_to_merge.extend([multiple_cla, multiple_cla_missing])
         age_gender_to_merge.extend(
             [cla_started_gender, cla_ended_gender, cla_open_gender]
         )
-        ethnicities_to_merge.extend([open_cla_ethnicity])
+        ethnicities_to_merge.extend([cla_started_ethnicity, cla_ended_enthnicity, open_cla_ethnicity])
     if "list_9" in lists_uploaded:
         categoricals_to_concat.extend(
             [
@@ -1863,95 +1886,98 @@ if uploaded_files:
 
         tables[key] = table
 
-    for key, table in tables.items():
-        if key == "Count rate percentage measures":
-            cols_to_melt = list(table.columns)
-            cols_to_melt = cols_to_melt[:2]
+    st.table(tables["Age Gender breakdowns"])
 
-            table = table.melt(
-                id_vars=cols_to_melt, var_name="Measure", value_name="Value"
-            )
+    # for key, table in tables.items():
+    #     if key == "Count rate percentage measures":
+    #         cols_to_melt = list(table.columns)
+    #         cols_to_melt = cols_to_melt[:2]
 
-        elif key in [
-            "Age Gender breakdowns",
-            "Ethnicity breakdowns",
-            "Multiple event measures",
-            "Durations measures (days)",
-            "Durations table (short term)",
-            "Durations table (mid term)",
-        ]:
-            cols_to_melt = list(table.columns)
-            cols_to_melt = cols_to_melt[:3]
+    #         table = table.melt(
+    #             id_vars=cols_to_melt, var_name="Measure", value_name="Value"
+    #         )
 
-            table = table.melt(
-                id_vars=cols_to_melt, var_name="Measure", value_name="Value"
-            )
+    #     elif key in [
+    #         "Age Gender breakdowns",
+    #         "Ethnicity breakdowns",
+    #         "Multiple event measures",
+    #         "Durations measures (days)",
+    #         "Durations table (short term)",
+    #         "Durations table (mid term)",
+    #     ]:
+    #         cols_to_melt = list(table.columns)
+    #         cols_to_melt = cols_to_melt[:3]
 
-        if key == "Age Gender breakdowns":
-            table["Value"].fillna(0, inplace=True)
+    #         table = table.melt(
+    #             id_vars=cols_to_melt, var_name="Measure", value_name="Value"
+    #         )
 
-        if key in [
-            "Durations measures (days)",
-            "Durations table (short term)",
-            "Durations table (mid term)",
-        ]:
-            cols_to_melt = list(table.columns)
-            del cols_to_melt[2]
+    #     if key == "Age Gender breakdowns":
+    #         table["Value"].fillna(0, inplace=True)
 
-            table = table.melt(
-                id_vars=cols_to_melt, var_name="Duration Type", value_name="Duration"
-            )
-            table = table[
-                ["LA", "Time Period", "Measure", "Duration Type", "Duration", "Value"]
-            ]
-            table.drop("Duration Type", axis=1, inplace=True)
-            table.rename(columns={"Duration": "Duration (Days)"}, inplace=True)
+    #     if key in [
+    #         "Durations measures (days)",
+    #         "Durations table (short term)",
+    #         "Durations table (mid term)",
+    #     ]:
+    #         cols_to_melt = list(table.columns)
+    #         del cols_to_melt[2]
 
-        if key != "Categorical measures":
-            table[["Category", "Measure", "Measure Type"]] = table["Measure"].str.split(
-                "-", expand=True
-            )
+    #         table = table.melt(
+    #             id_vars=cols_to_melt, var_name="Duration Type", value_name="Duration"
+    #         )
+    #         table = table[
+    #             ["LA", "Time Period", "Measure", "Duration Type", "Duration", "Value"]
+    #         ]
+    #         table.drop("Duration Type", axis=1, inplace=True)
+    #         table.rename(columns={"Duration": "Duration (Days)"}, inplace=True)
 
-        if key == "Categorical measures":
-            cols_to_melt = list(table.columns)
-            cols_to_melt = cols_to_melt[:3]
-            cols_to_melt.append("Measure Category")
-            table = table.rename(columns={"Value": "Measure Category"})
-            table = table.melt(
-                id_vars=cols_to_melt, var_name="Measure Type", value_name="Value"
-            )
+    #     if key != "Categorical measures":
+    #         table[["Category", "Measure", "Measure Type"]] = table["Measure"].str.split(
+    #             "-", expand=True
+    #         )
 
-            table[["Category", "Measure"]] = table["Category"].str.split(
-                "-", expand=True
-            )
+    #     if key == "Categorical measures":
+    #         cols_to_melt = list(table.columns)
+    #         cols_to_melt = cols_to_melt[:3]
+    #         cols_to_melt.append("Measure Category")
+    #         table = table.rename(columns={"Value": "Measure Category"})
+    #         table = table.melt(
+    #             id_vars=cols_to_melt, var_name="Measure Type", value_name="Value"
+    #         )
 
-        if key == "Ethnicity breakdowns":
-            table = table.rename(columns={"Ethnicity": "Measure Category"})
+    #         table[["Category", "Measure"]] = table["Category"].str.split(
+    #             "-", expand=True
+    #         )
 
-        tables[key] = table
+    #     if key == "Ethnicity breakdowns":
+    #         table = table.rename(columns={"Ethnicity": "Measure Category"})
 
-    for k, df in tables.items():
-        print(k)
-        df_obj = df.select_dtypes("object")
-        df[df_obj.columns] = df_obj.apply(lambda x: x.str.strip())
-        df["Measure Type"] = df["Measure Type"].apply(lambda x: x.capitalize())
+    #     tables[key] = table
 
-        tables[k] = df
+    # for k, df in tables.items():
+    #     print(k)
+    #     df_obj = df.select_dtypes("object")
+    #     df[df_obj.columns] = df_obj.apply(lambda x: x.str.strip())
+    #     df["Measure Type"] = df["Measure Type"].apply(lambda x: x.capitalize())
 
-    final_tables = {}
-    final_tables["Categorical Measures"] = pd.concat(
-        [
-            tables["Categorical measures"],
-            tables["Ethnicity breakdowns"],
-            tables["Multiple event measures"],
-        ]
-    )
+    #     tables[k] = df
 
-    final_tables["Numerical measures"] = tables["Count rate percentage measures"]
+    # final_tables = {}
+    # final_tables["Categorical Measures"] = pd.concat(
+    #     [
+    #         tables["Categorical measures"],
+    #         tables["Ethnicity breakdowns"],
+    #         tables["Multiple event measures"],
+    #     ]
+    # )
 
-    final_tables["Age Gender breakdowns"] = tables["Age Gender breakdowns"]
+    # final_tables["Numerical measures"] = tables["Count rate percentage measures"]
 
-    output = to_excel(final_tables)
+    # final_tables["Age Gender breakdowns"] = tables["Age Gender breakdowns"]
+
+    # output = to_excel(final_tables)
+    output = to_excel(tables)
 
     if output != None:
         st.download_button(
