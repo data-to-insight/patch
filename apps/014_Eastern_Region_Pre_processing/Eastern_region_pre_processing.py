@@ -773,6 +773,7 @@ if uploaded_files:
         dfs[k]["Time Period"] = month+ " " + year
         dfs[k] = (
             df[
+                
                 (~df["Child Unique ID"].astype("str").str.contains("None"))
                 & (~df["Child Unique ID"].astype("str").str.contains("filters"))
             ]
