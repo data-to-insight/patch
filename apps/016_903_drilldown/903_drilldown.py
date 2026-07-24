@@ -14,6 +14,8 @@
 # descriptive statistics of chosen placement lengths eg show me all 3 month or less placements: what were the children like, what were the placements/needs/etc
 
 # change plot time to start of first year of data
+# change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+
+# titles: chiuldren who have experiences *highly unstable care*, and the age at which their most unstable year began
 
 import pandas as pd
 import numpy as np
@@ -1016,6 +1018,10 @@ class Datacontainer:
             axis=1,
         )
 
+        # Placement year stability 
+        enriched_df["Placements per return year"] = enriched_df.groupby(["CHILD", "YEAR"]).cumcount()
+        enriched_df["Placements per return year"] = enriched_df["Placements per return year"] + 1
+
         return enriched_df
 
     @property
@@ -1390,7 +1396,7 @@ if input_file:
             range_y=[0, 5000],
             range_x=[0, 25],
             hover_name="CHILD",
-            color="EthnicityGroup"
+            color="EthnicityGroup",
         )
         st.plotly_chart(plot)
 
@@ -1486,7 +1492,7 @@ if input_file:
             ]
         )
 
-    with st.expander("High Instability"):
+    with st.expander("Instability"):
         st.write(
             "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. For example, if a child's CIN code before hteir most unstable 12 month period is 'neglect' that will be their value in the CIN chart below."
         )
@@ -1646,3 +1652,21 @@ if input_file:
                 total_cohort=instability_df,
             )
             st.plotly_chart(highly_unstable_place, use_container_width=True, theme=None)
+
+    with st.expander("Stability by 903 reutrn years"):
+        st.write(
+            "Rather than finding the most unstable periods of a child's care period like the section above, this section finds the stability levels based on 903 return periods."
+        )
+        return_year_placements = ssda903.enriched_episodes.copy()
+
+        return_year_placements.sort_values(["CHILD", "Placements per return year"], inplace=True, ascending=False)
+        return_year_placements.drop_duplicates(["CHILD", "YEAR"], inplace=True)
+
+        return_year_placements = return_year_placements.groupby(["YEAR", "Placements per return year"]).size().to_frame("Number of children with number of placements").reset_index()
+        return_year_placements["Placements per return year (percent)"] = return_year_placements['Placements per return year'] / return_year_placements.groupby('YEAR')['Placements per return year'].transform('sum')
+        return_year_placements["Placements per return year (percent)"] = return_year_placements["Placements per return year (percent)"] * 100
+        return_year_placements["Placements per return year"] = return_year_placements["Placements per return year"].astype(str)
+
+        placements_per_year_bar = px.bar(return_year_placements, x="YEAR", y="Placements per return year (percent)", color="Placements per return year", title="Number of placements per child by return year")
+
+        st.plotly_chart(placements_per_year_bar)
