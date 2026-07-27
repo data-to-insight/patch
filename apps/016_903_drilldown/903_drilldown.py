@@ -3,9 +3,9 @@
 ####
 
 
-# fix total time in care at start of most unstable period chart
 # add schools data
 # descriptive statistics of chosen placement lengths eg show me all 3 month or less placements: what were the children like, what were the placements/needs/etc
+# decide where to slice total_cohort_df - keep in ALL placements OR only each childs most unstable 12 month period
 
 # change plot time to start of first year of data
 # change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+
@@ -1018,16 +1018,21 @@ class Datacontainer:
 
         enriched_df["Placement length"] = enriched_df.apply(lambda x: relativedelta(
                         dt1=x["DECOM_dt"], dt2=x["DEC_dt"]
-                    ).normalized().days, axis=1)
+                    ).normalized(), axis=1)
+        # enriched_df["Placement length"] = enriched_df["Placement length"] / pd.Timedelta(days=1)
 
 
         #Finding the time delta between current decom and first decom
         first_episode_df = enriched_df[enriched_df["Number of Episodes"] == 1].copy()
         first_episode_df["First DECOM"] = first_episode_df["DECOM_dt"]
-        enriched_df = enriched_df.merge(first_episode_df[["CHILD", "First DECOM"]], how="left", on="CHILD")            
-        enriched_df["Time difference current DECOM and first episode"] = enriched_df.apply(lambda x: relativedelta(
-                        dt1=x["DECOM_dt"], dt2=x["First DECOM"]
-                    ).normalized().days, axis=1)
+        enriched_df = enriched_df.merge(first_episode_df[["CHILD", "First DECOM"]], how="left", on="CHILD")     
+        enriched_df["Time difference current DECOM and first episode"] =   enriched_df["DECOM_dt"] - enriched_df["First DECOM"]    
+        enriched_df["Time difference current DECOM and first episode"] = enriched_df["Time difference current DECOM and first episode"] / pd.Timedelta(days=1) 
+
+        # enriched_df["Time difference current DECOM and first episode"] = enriched_df.apply(lambda x: relativedelta(
+        #                 dt1=x["DECOM_dt"], dt2=x["First DECOM"]
+        #             ).normalized(), axis=1)
+        # enriched_df["Time difference current DECOM and first episode"] = enriched_df["Time difference current DECOM and first episode"] / pd.Timedelta(days=1)
         return enriched_df
 
     @property
@@ -1512,13 +1517,13 @@ if input_file:
         in_out_care_selected = st.multiselect("Current care status:", ["Still in care", "Closed"], default=["Still in care", "Closed"])
         stability_levels_selected = st.multiselect("Breakdowns to include children with placements that are:", ["c) Highly unstable (5+ placements)", "b) Unstable (3-4 placements)", "a) Stable 2 or fewer placements"], default=["c) Highly unstable (5+ placements)", "b) Unstable (3-4 placements)"])
         stability_df = ssda903.enriched_episodes.copy()
-        total_cohort_df = stability_df.copy()
+        # total_cohort_df = stability_df.copy()
 
         # most_unstable placement is the one that preceeds a child's most unstable period 
         stability_df = stability_df.sort_values(
             "Number of placements in following 12 months", ascending=False
         ).drop_duplicates("CHILD", keep="first")
-        # total_cohort_df = stability_df.copy()
+        total_cohort_df = stability_df.copy()
 
         stability_df["YEAR"] = stability_df["YEAR"].astype("str")
         stability_year_select = st.multiselect("Years for most unstable placement:", sorted(stability_df["YEAR"].unique()), sorted(stability_df["YEAR"].unique()))
@@ -1627,7 +1632,7 @@ if input_file:
         time_in_care = px.histogram(stability_df, 
                                          x="Time difference current DECOM and first episode", 
                                          title="Time in care at the start of most unstable period for selected stability levels",
-                                         labels={"Time difference current DECOM and first episode":"Time difference current DECOM and first episode (Days)"})
+                                         labels={"Time difference current DECOM and first episode":"Time difference between the start of most unstable DECOM for selected stability levels and first episode (Days)"})
         time_in_care.update_layout(
                 template="seaborn",
                 plot_bgcolor="lightgrey",
