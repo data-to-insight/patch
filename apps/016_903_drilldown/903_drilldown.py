@@ -1796,6 +1796,15 @@ if input_file:
             color="Placements per return year",
             title="Number of placements per child by return year",
         )
+        placements_per_year_bar.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
         st.plotly_chart(placements_per_year_bar, use_container_width=True, theme=None)
 
         stability_by_year_bar = px.bar(
@@ -1805,6 +1814,15 @@ if input_file:
             color="Stability Level",
             title="Number of placements per child by return year",
         )
+        stability_by_year_bar.update_layout(
+                    template="seaborn",
+                    plot_bgcolor="lightgrey",
+                    paper_bgcolor="lightgrey",
+                    font_color="black",
+                    title_font_color="black",
+                    legend_font_color="black",
+                    legend_title_font_color="black",
+                )
         st.plotly_chart(stability_by_year_bar, use_container_width=True, theme=None)
 
     with st.expander("Breakdowns by placement length"):
