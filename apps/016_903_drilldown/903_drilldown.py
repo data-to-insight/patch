@@ -4,10 +4,23 @@
 
 
 # add schools data
-# descriptive statistics of chosen placement lengths eg show me all 3 month or less placements: what were the children like, what were the placements/needs/etc
+# chose most recent most unstable period (toggle to choose first OR most recent?)
+
+# What defines a period of stability? If a placement is over 12 months long that can define a beginning period of stability.
+# be specific that we are looking at periods of stability, not children themselves, and what features the children had at those points
+
+# column to specify a placement is within a periods of stability
+
+# Change all 903 data to be a yearly average proportion over the all the data per year (eg average number of ages 0-5 for all years)
 # decide where to slice total_cohort_df - keep in ALL placements OR only each childs most unstable 12 month period
 
-# change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+
+# add percentage difference in red and blue bars as a measure as it can be hard to see what differences are 
+
+# Of children who became looked after in a given year with other given characteristics, what did they look like? What did the next 12 months look like? (cutoff before end of data) - do this?
+
+# Split in to multiple tools?
+
+# change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+?
 
 import pandas as pd
 import numpy as np
@@ -1964,6 +1977,7 @@ if input_file:
                 "Number of Episodes": "Episode number for placements of selected length"
             },
         )
+
         placement_number_hist.update_layout(
             template="seaborn",
             plot_bgcolor="lightgrey",
