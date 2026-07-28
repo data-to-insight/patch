@@ -7,7 +7,6 @@
 # descriptive statistics of chosen placement lengths eg show me all 3 month or less placements: what were the children like, what were the placements/needs/etc
 # decide where to slice total_cohort_df - keep in ALL placements OR only each childs most unstable 12 month period
 
-# change plot time to start of first year of data
 # change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+
 
 import pandas as pd
@@ -639,6 +638,7 @@ def convert_dates(column):
     column_dt = pd.to_datetime(column, format="%d/%m/%Y", errors="coerce")  # .dt.date
     return column_dt
 
+
 def calculate_age_buckets(age):
     """Used to calculate age buckets for calculated ages in DataContainer"""
     if age < 5:
@@ -946,7 +946,6 @@ class Datacontainer:
         enriched_df["DEC_dt"] = convert_dates(enriched_df["DEC"])
         enriched_df["DEC_dt"].fillna(self.end_of_latest_return)
 
-
         children_still_in_care = list(
             enriched_df[enriched_df["DEC"].isna()]["CHILD"].unique()
         )
@@ -1012,27 +1011,39 @@ class Datacontainer:
             axis=1,
         )
 
-        # Placement year stability 
-        enriched_df["Placements per return year"] = enriched_df.groupby(["CHILD", "YEAR"]).cumcount()
-        enriched_df["Placements per return year"] = enriched_df["Placements per return year"] + 1
+        # Placement year stability
+        enriched_df["Placements per return year"] = enriched_df.groupby(
+            ["CHILD", "YEAR"]
+        ).cumcount()
+        enriched_df["Placements per return year"] = (
+            enriched_df["Placements per return year"] + 1
+        )
 
-        enriched_df["Placement length"] = enriched_df.apply(lambda x: relativedelta(
-                        dt1=x["DECOM_dt"], dt2=x["DEC_dt"]
-                    ).normalized(), axis=1)
-        # enriched_df["Placement length"] = enriched_df["Placement length"] / pd.Timedelta(days=1)
+        # Finding the length of current placements
+        enriched_df["Current Episode Length (Days)"] = (
+            enriched_df["DEC_dt"] - enriched_df["DECOM_dt"]
+        )
+        enriched_df["Current Episode Length (Days)"] = enriched_df[
+            "Current Episode Length (Days)"
+        ] / pd.Timedelta(days=1)
+        enriched_df["Current Episode Length (Days)"] = abs(
+            enriched_df["Current Episode Length (Days)"].astype("int")
+        )
 
-
-        #Finding the time delta between current decom and first decom
+        # Finding the time delta between current decom and first decom
         first_episode_df = enriched_df[enriched_df["Number of Episodes"] == 1].copy()
         first_episode_df["First DECOM"] = first_episode_df["DECOM_dt"]
-        enriched_df = enriched_df.merge(first_episode_df[["CHILD", "First DECOM"]], how="left", on="CHILD")     
-        enriched_df["Time difference current DECOM and first episode"] =   enriched_df["DECOM_dt"] - enriched_df["First DECOM"]    
-        enriched_df["Time difference current DECOM and first episode"] = enriched_df["Time difference current DECOM and first episode"] / pd.Timedelta(days=1) 
+        enriched_df = enriched_df.merge(
+            first_episode_df[["CHILD", "First DECOM"]], how="left", on="CHILD"
+        )
+        enriched_df["Time difference current DECOM and first episode"] = (
+            enriched_df["DECOM_dt"] - enriched_df["First DECOM"]
+        )
+        enriched_df["Time difference current DECOM and first episode"] = abs(
+            enriched_df["Time difference current DECOM and first episode"]
+            / pd.Timedelta(days=1)
+        )
 
-        # enriched_df["Time difference current DECOM and first episode"] = enriched_df.apply(lambda x: relativedelta(
-        #                 dt1=x["DECOM_dt"], dt2=x["First DECOM"]
-        #             ).normalized(), axis=1)
-        # enriched_df["Time difference current DECOM and first episode"] = enriched_df["Time difference current DECOM and first episode"] / pd.Timedelta(days=1)
         return enriched_df
 
     @property
@@ -1322,7 +1333,7 @@ class Datacontainer:
         return all_child_df
 
 
-# @st.cache_data
+@st.cache_data
 def convert_data(_dfs: pd.DataFrame):
     """Used to make input data python readable and to enable caching.
     Runs Datacontainer to read in SSDA903 as an object containing enriched and cleaned data.
@@ -1394,162 +1405,221 @@ if input_file:
     #     ethnicity_selected
     # )
 
-    # with st.expander("Gapminder"):
-    #     test_df = ssda903.gapminder_df.sort_values("Days_string")
+    with st.expander("Gapminder"):
+        test_df = ssda903.gapminder_df.sort_values("Days_string")
+        test_df["Days_int"] = test_df["Days_string"].astype("int")
+        test_df = test_df[test_df["Days_int"] >= 20160000]
 
-    #     plot = px.scatter(
-    #         test_df,
-    #         x="Age (on day)",
-    #         y="Time in care (on day)",
-    #         size="Number of Episodes",
-    #         animation_frame="Days_string",
-    #         animation_group="CHILD",
-    #         range_y=[0, 5000],
-    #         range_x=[0, 25],
-    #         hover_name="CHILD",
-    #         color="EthnicityGroup",
-    #     )
-    #     st.plotly_chart(plot)
+        plot = px.scatter(
+            test_df,
+            x="Age (on day)",
+            y="Time in care (on day)",
+            size="Number of Episodes",
+            animation_frame="Days_string",
+            animation_group="CHILD",
+            range_y=[0, 5000],
+            range_x=[0, 25],
+            hover_name="CHILD",
+            color="EthnicityGroup",
+        )
+        plot.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
+        st.plotly_chart(plot, use_container_width=True, theme=None)
 
-    #     # st.table(test_df[test_df["CHILD"] == "L10197839"])
+    with st.expander("Journeys visualisation"):
+        # Good example child: L72949809
+        child = st.selectbox(
+            "Select child by ID", options=list(sliced_enriched_header["CHILD"].unique())
+        )
 
-    # with st.expander("Journeys visualisation"):
-    #     child = st.selectbox(
-    #         "Select child by ID", options=list(sliced_enriched_header["CHILD"].unique())
-    #     )
+        record_dfs = {
+            "episodes": ssda903.enriched_episodes[
+                ssda903.enriched_episodes["CHILD"] == child
+            ],
+            "missing": ssda903.enriched_missing[
+                ssda903.enriched_missing["CHILD"] == child
+            ],
+            "reviews": ssda903.enriched_reviews[
+                ssda903.enriched_reviews["CHILD"] == child
+            ],
+            "uasc": ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
+            "header": sliced_enriched_header[sliced_enriched_header["CHILD"] == child],
+        }
 
-    #     record_dfs = {
-    #         "episodes": ssda903.enriched_episodes[
-    #             ssda903.enriched_episodes["CHILD"] == child
-    #         ],
-    #         "missing": ssda903.enriched_missing[
-    #             ssda903.enriched_missing["CHILD"] == child
-    #         ],
-    #         "reviews": ssda903.enriched_reviews[
-    #             ssda903.enriched_reviews["CHILD"] == child
-    #         ],
-    #         "uasc": ssda903.enriched_uasc[ssda903.enriched_uasc["CHILD"] == child],
-    #         "header": sliced_enriched_header[sliced_enriched_header["CHILD"] == child],
-    #     }
+        record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
+        record_dfs["missing"]["MIS_END"].fillna(
+            ssda903.end_of_latest_return, inplace=True
+        )
 
-    #     record_dfs["episodes"]["DEC"].fillna(ssda903.end_of_latest_return, inplace=True)
-    #     record_dfs["missing"]["MIS_END"].fillna(
-    #         ssda903.end_of_latest_return, inplace=True
-    #     )
+        episodes_data = record_dfs["episodes"].copy()
+        episodes_data.rename(
+            columns={
+                "DECOM": "Start",
+                "DEC": "Finish",
+            },
+            inplace=True,
+        )
+        episodes_data["Task"] = "Episodes"
 
-    #     episodes_data = record_dfs["episodes"].copy()
-    #     episodes_data.rename(
-    #         columns={
-    #             "DECOM": "Start",
-    #             "DEC": "Finish",
-    #         },
-    #         inplace=True,
-    #     )
-    #     episodes_data["Task"] = "Episodes"
+        missing_data = record_dfs["missing"].copy()
+        missing_data.rename(
+            columns={
+                "MIS_START": "Start",
+                "MIS_END": "Finish",
+            },
+            inplace=True,
+        )
+        missing_data["Task"] = "Missing"
 
-    #     missing_data = record_dfs["missing"].copy()
-    #     missing_data.rename(
-    #         columns={
-    #             "MIS_START": "Start",
-    #             "MIS_END": "Finish",
-    #         },
-    #         inplace=True,
-    #     )
-    #     missing_data["Task"] = "Missing"
+        review_data = record_dfs["reviews"][["REVIEW", "REVIEW_CODE"]].copy()
+        review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
+        review_data["Finish"] = review_data["Finish"] + pd.DateOffset(days=1)
+        review_data.rename(
+            columns={
+                "REVIEW": "Start",
+            },
+            inplace=True,
+        )
+        review_data["Task"] = "Reviews"
 
-    #     review_data = record_dfs["reviews"][["REVIEW", "REVIEW_CODE"]].copy()
-    #     review_data["Finish"] = record_dfs["reviews"]["REVIEW"].copy()
-    #     review_data["Finish"] = review_data["Finish"] + pd.DateOffset(days=1)
-    #     review_data.rename(
-    #         columns={
-    #             "REVIEW": "Start",
-    #         },
-    #         inplace=True,
-    #     )
-    #     review_data["Task"] = "Reviews"
+        uasc_data = record_dfs["uasc"].copy()
+        uasc_data.rename(
+            columns={
+                "DUC": "Finish",
+            },
+            inplace=True,
+        )
+        uasc_data["Start"] = review_data["Finish"] - pd.DateOffset(days=1)
+        missing_data["Task"] = "Missing"
 
-    #     uasc_data = record_dfs["uasc"].copy()
-    #     uasc_data.rename(
-    #         columns={
-    #             "DUC": "Finish",
-    #         },
-    #         inplace=True,
-    #     )
-    #     uasc_data["Start"] = review_data["Finish"] - pd.DateOffset(days=1)
-    #     missing_data["Task"] = "Missing"
+        timelines_data = pd.concat([episodes_data, missing_data, review_data])
 
-    #     timelines_data = pd.concat([episodes_data, missing_data, review_data])
+        fig = px.timeline(
+            timelines_data,
+            x_start="Start",
+            x_end="Finish",
+            y="Task",
+            color="Task",
+            hover_data=[
+                "RNE",
+                "LS",
+                "PLACE",
+                "PLACE_PROVIDER",
+                "MISSING",
+                "REVIEW_CODE",
+            ],
+        )
+        fig.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
+        st.plotly_chart(fig, use_container_width=True, theme=None)
 
-    #     fig = px.timeline(
-    #         timelines_data,
-    #         x_start="Start",
-    #         x_end="Finish",
-    #         y="Task",
-    #         color="Task",
-    #         hover_data=[
-    #             "RNE",
-    #             "LS",
-    #             "PLACE",
-    #             "PLACE_PROVIDER",
-    #             "MISSING",
-    #             "REVIEW_CODE",
-    #         ],
-    #     )
-    #     st.plotly_chart(fig)
+        st.table(
+            record_dfs["header"][
+                ["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]
+            ]
+        )
 
-    #     st.table(
-    #         record_dfs["header"][
-    #             ["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]
-    #         ]
-    #     )
-
-    with st.expander("Breakdowns of cohorts experience differing leves of placement stability"):
+    with st.expander(
+        "Breakdowns of cohorts experience differing leves of placement stability"
+    ):
         st.subheader("How to read these charts")
         st.write(
-            "The groupings below are done based on rolling 12 month periods rather than the standard return years used by the DfE. Return year charts are in the section after this one." \
-            "The groupings below are organised by CYP's most ustable 12 month period. This means children only appear once in the processed data." \
-            "Accordingly, if a CYP has had a 12 month period with 6 placements, and another with 3, they will show up within the 'Highly unstable' cohort only." \
-            "This was a necessary decision to rule out counting children multiple times if they experienced particularly dense periods of instability." \
-            "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. " \
-            "For example, if a child's CIN code before their most unstable 12 month period is 'neglect' that will be their value in the CIN chart below." \
+            "The groupings below are done based on rolling 12 month periods rather than the standard return years used by the DfE. Return year charts are in the section after this one."
+            "The groupings below are organised by CYP's most ustable 12 month period. This means children only appear once in the processed data."
+            "Accordingly, if a CYP has had a 12 month period with 6 placements, and another with 3, they will show up within the 'Highly unstable' cohort only."
+            "This was a necessary decision to rule out counting children multiple times if they experienced particularly dense periods of instability."
+            "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. "
+            "For example, if a child's CIN code before their most unstable 12 month period is 'neglect' that will be their value in the CIN chart below."
             "Ages are calculated on the return date of the most unstable year."
         )
-        in_out_care_selected = st.multiselect("Current care status:", ["Still in care", "Closed"], default=["Still in care", "Closed"])
-        stability_levels_selected = st.multiselect("Breakdowns to include children with placements that are:", ["c) Highly unstable (5+ placements)", "b) Unstable (3-4 placements)", "a) Stable 2 or fewer placements"], default=["c) Highly unstable (5+ placements)", "b) Unstable (3-4 placements)"])
+        in_out_care_selected = st.multiselect(
+            "Current care status:",
+            ["Still in care", "Closed"],
+            default=["Still in care", "Closed"],
+        )
+        stability_levels_selected = st.multiselect(
+            "Breakdowns to include children with placements that are:",
+            [
+                "c) Highly unstable (5+ placements)",
+                "b) Unstable (3-4 placements)",
+                "a) Stable 2 or fewer placements",
+            ],
+            default=[
+                "c) Highly unstable (5+ placements)",
+                "b) Unstable (3-4 placements)",
+            ],
+        )
         stability_df = ssda903.enriched_episodes.copy()
         # total_cohort_df = stability_df.copy()
 
-        # most_unstable placement is the one that preceeds a child's most unstable period 
+        # most_unstable placement is the one that preceeds a child's most unstable period
         stability_df = stability_df.sort_values(
             "Number of placements in following 12 months", ascending=False
         ).drop_duplicates("CHILD", keep="first")
         total_cohort_df = stability_df.copy()
 
         stability_df["YEAR"] = stability_df["YEAR"].astype("str")
-        stability_year_select = st.multiselect("Years for most unstable placement:", sorted(stability_df["YEAR"].unique()), sorted(stability_df["YEAR"].unique()))
+        stability_year_select = st.multiselect(
+            "Years for most unstable placement:",
+            sorted(stability_df["YEAR"].unique()),
+            sorted(stability_df["YEAR"].unique()),
+        )
 
-        stability_df['Stability Level'] = stability_df["Number of placements in following 12 months"].apply(lambda x: "c) Highly unstable (5+ placements)" if x >= 5 else ("b) Unstable (3-4 placements)" if x >= 3 else "a) Stable 2 or fewer placements"))
+        stability_df["Stability Level"] = stability_df[
+            "Number of placements in following 12 months"
+        ].apply(
+            lambda x: (
+                "c) Highly unstable (5+ placements)"
+                if x >= 5
+                else (
+                    "b) Unstable (3-4 placements)"
+                    if x >= 3
+                    else "a) Stable 2 or fewer placements"
+                )
+            )
+        )
 
-        condition = stability_df["Stability Level"].isin(stability_levels_selected) & stability_df["Still in care"].isin(in_out_care_selected) & stability_df["YEAR"].isin(stability_year_select)
-      
+        condition = (
+            stability_df["Stability Level"].isin(stability_levels_selected)
+            & stability_df["Still in care"].isin(in_out_care_selected)
+            & stability_df["YEAR"].isin(stability_year_select)
+        )
+
         stability_df = stability_df[condition]
 
         plot_title_stem_in_care = " or ".join(in_out_care_selected)
-        plot_title_stem_stability_dict =  {"c) Highly unstable (5+ placements)":"Highly unstable",
-                                      "b) Unstable (3-4 placements)":"Unstable",
-                                      "a) Stable 2 or fewer placements":"Stable"}
-        plot_title_stem_stability = [plot_title_stem_stability_dict[x] for x in stability_levels_selected]
+        plot_title_stem_stability_dict = {
+            "c) Highly unstable (5+ placements)": "Highly unstable",
+            "b) Unstable (3-4 placements)": "Unstable",
+            "a) Stable 2 or fewer placements": "Stable",
+        }
+        plot_title_stem_stability = [
+            plot_title_stem_stability_dict[x] for x in stability_levels_selected
+        ]
         plot_title_stem_stability = " or ".join(plot_title_stem_stability)
         plot_title_stem = f"Children who have experienced {plot_title_stem_stability} placements whose care status is: {plot_title_stem_in_care}"
-
 
         st.header(plot_title_stem)
         stability_year_select.sort()
         years_selected_stem = ", ".join(stability_year_select)
-        st.subheader(f'For years: {years_selected_stem}')
+        st.subheader(f"For years: {years_selected_stem}")
 
         highly_unstable_col1, highly_unstable_col2 = st.columns(2)
-        
+
         with highly_unstable_col1:
             total_highly_unstable = make_indicator(
                 stability_df,
@@ -1629,21 +1699,24 @@ if input_file:
             )
             st.plotly_chart(highly_unstable_place, use_container_width=True, theme=None)
 
-        time_in_care = px.histogram(stability_df, 
-                                         x="Time difference current DECOM and first episode", 
-                                         title="Time in care at the start of most unstable period for selected stability levels",
-                                         labels={"Time difference current DECOM and first episode":"Time difference between the start of most unstable DECOM for selected stability levels and first episode (Days)"})
+        time_in_care = px.histogram(
+            stability_df,
+            x="Time difference current DECOM and first episode",
+            title="Time in care at the start of most unstable period for selected stability levels",
+            labels={
+                "Time difference current DECOM and first episode": "Time difference between the start of most unstable DECOM for selected stability levels and first episode (Days)"
+            },
+        )
         time_in_care.update_layout(
-                template="seaborn",
-                plot_bgcolor="lightgrey",
-                paper_bgcolor="lightgrey",
-                font_color="black",
-                title_font_color="black",
-                legend_font_color="black",
-                legend_title_font_color="black",
-            )
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
         st.plotly_chart(time_in_care, use_container_width=True, theme=None)
-        st.write(stability_df["Time difference current DECOM and first episode"].unique())
 
     with st.expander("Stability by 903 reutrn years"):
         st.write(
@@ -1651,24 +1724,235 @@ if input_file:
         )
         return_year_placements = ssda903.enriched_episodes.copy()
 
-        return_year_placements.sort_values(["CHILD", "Placements per return year"], inplace=True, ascending=False)
+        return_year_placements.sort_values(
+            ["CHILD", "Placements per return year"], inplace=True, ascending=False
+        )
         return_year_placements.drop_duplicates(["CHILD", "YEAR"], inplace=True)
 
-        return_year_placements['Stability Level'] = return_year_placements["Placements per return year"].apply(lambda x: "c) Highly unstable 5+ placements" if x >= 5 else ("b) Unstable 3-4 placements" if x >= 3 else "a) Stable 2 or fewer placements"))
-        return_year_stability_df = return_year_placements.groupby(["YEAR", "Stability Level"]).size().to_frame("Number of children with stability level").reset_index()
-        return_year_placements = return_year_placements.groupby(["YEAR", "Placements per return year"]).size().to_frame("Number of children with number of placements").reset_index()
-        
+        return_year_placements["Stability Level"] = return_year_placements[
+            "Placements per return year"
+        ].apply(
+            lambda x: (
+                "c) Highly unstable 5+ placements"
+                if x >= 5
+                else (
+                    "b) Unstable 3-4 placements"
+                    if x >= 3
+                    else "a) Stable 2 or fewer placements"
+                )
+            )
+        )
+        return_year_stability_df = (
+            return_year_placements.groupby(["YEAR", "Stability Level"])
+            .size()
+            .to_frame("Number of children with stability level")
+            .reset_index()
+        )
+        return_year_placements = (
+            return_year_placements.groupby(["YEAR", "Placements per return year"])
+            .size()
+            .to_frame("Number of children with number of placements")
+            .reset_index()
+        )
 
-        return_year_placements["Percentage of children with number of placements"] = return_year_placements['Number of children with number of placements'] / return_year_placements.groupby('YEAR')['Number of children with number of placements'].transform('sum')
-        return_year_placements["Percentage of children with number of placements"] = return_year_placements["Percentage of children with number of placements"] * 100
-        return_year_placements["Placements per return year"] = return_year_placements["Placements per return year"].astype(str)
+        return_year_placements[
+            "Percentage of children with number of placements"
+        ] = return_year_placements[
+            "Number of children with number of placements"
+        ] / return_year_placements.groupby(
+            "YEAR"
+        )[
+            "Number of children with number of placements"
+        ].transform(
+            "sum"
+        )
+        return_year_placements["Percentage of children with number of placements"] = (
+            return_year_placements["Percentage of children with number of placements"]
+            * 100
+        )
+        return_year_placements["Placements per return year"] = return_year_placements[
+            "Placements per return year"
+        ].astype(str)
 
-        return_year_stability_df["Percentage of Stability Level"] = return_year_stability_df['Number of children with stability level'] / return_year_stability_df.groupby('YEAR')['Number of children with stability level'].transform('sum')
-        return_year_stability_df["Percentage of Stability Level"] = return_year_stability_df["Percentage of Stability Level"] * 100
-        
+        return_year_stability_df[
+            "Percentage of Stability Level"
+        ] = return_year_stability_df[
+            "Number of children with stability level"
+        ] / return_year_stability_df.groupby(
+            "YEAR"
+        )[
+            "Number of children with stability level"
+        ].transform(
+            "sum"
+        )
+        return_year_stability_df["Percentage of Stability Level"] = (
+            return_year_stability_df["Percentage of Stability Level"] * 100
+        )
 
-        placements_per_year_bar = px.bar(return_year_placements, x="YEAR", y="Percentage of children with number of placements", color="Placements per return year", title="Number of placements per child by return year")
+        placements_per_year_bar = px.bar(
+            return_year_placements,
+            x="YEAR",
+            y="Percentage of children with number of placements",
+            color="Placements per return year",
+            title="Number of placements per child by return year",
+        )
         st.plotly_chart(placements_per_year_bar, use_container_width=True, theme=None)
 
-        stability_by_year_bar = px.bar(return_year_stability_df, x="YEAR", y="Percentage of Stability Level", color="Stability Level", title="Number of placements per child by return year")
+        stability_by_year_bar = px.bar(
+            return_year_stability_df,
+            x="YEAR",
+            y="Percentage of Stability Level",
+            color="Stability Level",
+            title="Number of placements per child by return year",
+        )
         st.plotly_chart(stability_by_year_bar, use_container_width=True, theme=None)
+
+    with st.expander("Breakdowns by placement length"):
+        st.write(
+            "This section gives descriptive statistics of CYP with placements for selected lengths. CYP can appear multiple times in these charts as the "
+            "breakdown is by placements and not CYP. "
+        )
+        placement_length_df = ssda903.enriched_episodes.copy()
+        total_cohort_df = ssda903.enriched_episodes.copy()
+
+        # st.table(placement_length_df.head())
+        min_val = int(placement_length_df["Current Episode Length (Days)"].min())
+        max_val = int(placement_length_df["Current Episode Length (Days)"].max())
+
+        placement_lengths_selected = st.slider(
+            "Select a range placement lengths for breakdown", value=(min_val, max_val)
+        )
+
+        placement_length_df = placement_length_df[
+            (
+                placement_length_df["Current Episode Length (Days)"]
+                >= placement_lengths_selected[0]
+            )
+            & (
+                placement_length_df["Current Episode Length (Days)"]
+                <= placement_lengths_selected[1]
+            )
+        ]
+
+        placement_length_col1, placement_length_col2 = st.columns(2)
+
+        with placement_length_col1:
+            total_placement_length = make_indicator(
+                placement_length_df,
+                f"Number of placements of selected length",
+            )
+            st.plotly_chart(total_placement_length, use_container_width=True)
+
+            # Age
+            placement_length_age = make_bar(
+                placement_length_df,
+                "AgeBuckets",
+                title="Age group breakdown for selected placement lengths",
+                x_label="Age group",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(placement_length_age, use_container_width=True, theme=None)
+
+            # Sex
+            placement_length_sex = make_bar(
+                placement_length_df,
+                "SEX",
+                title="Sex breakdown for selected placement lengths",
+                x_label="Sex",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(placement_length_sex, use_container_width=True, theme=None)
+
+            # RNE
+            placement_length_rne = make_bar(
+                placement_length_df,
+                "RNE",
+                title="RNE breakdown for selected placement lengths",
+                x_label="RNE",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(placement_length_rne, use_container_width=True, theme=None)
+
+        with placement_length_col2:
+            placement_length_ethnicity = make_bar(
+                placement_length_df,
+                "EthnicityGroup",
+                title="Ethnicity breakdown for selected placement lengths",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                placement_length_ethnicity, use_container_width=True, theme=None
+            )
+
+            # LS
+            placement_length_ls = make_bar(
+                placement_length_df,
+                "LS",
+                title="LS breakdown for selected placement lengths",
+                x_label="LS",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(placement_length_ls, use_container_width=True, theme=None)
+
+            # CIN
+            placement_length_cin = make_bar(
+                placement_length_df,
+                "CIN",
+                title="CIN type breakdown for selected placement lengths",
+                x_label="CIN",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(placement_length_cin, use_container_width=True, theme=None)
+
+            # Place
+            placement_length_place = make_bar(
+                placement_length_df,
+                "PLACE",
+                title="Placement Type breakdown for selected placement lengths",
+                x_label="Place",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                placement_length_place, use_container_width=True, theme=None
+            )
+
+        placement_length_time_in_care = px.histogram(
+            placement_length_df,
+            x="Time difference current DECOM and first episode",
+            title="Time in care breakdown for selected placement lengths",
+            labels={
+                "Time difference current DECOM and first episode": "Time difference breakdown for selected placement lengths and first episode (Days)"
+            },
+        )
+        placement_length_time_in_care.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
+        st.plotly_chart(
+            placement_length_time_in_care, use_container_width=True, theme=None
+        )
+
+        placement_number_hist = px.histogram(
+            placement_length_df,
+            x="Number of Episodes",
+            title="Episode number for placements of selected length",
+            labels={
+                "Number of Episodes": "Episode number for placements of selected length"
+            },
+        )
+        placement_number_hist.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
+        st.plotly_chart(placement_number_hist, use_container_width=True, theme=None)
