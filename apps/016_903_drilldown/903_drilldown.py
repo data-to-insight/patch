@@ -545,27 +545,66 @@ def make_bar(
         # df_sum = df_counts.groupby(column).sum()
         # cohort_sum = total_cohort_counts.groupby(column).sum()
 
-        all_counts = pd.concat([df_counts, total_cohort_counts])
-        # all_sum = pd.concat([df_sum, cohort_sum])
-
-        bar = px.bar(
-            all_counts,
-            x=column,
-            y="Percentage of children",
-            # y="Number of children",
-            title=title,
-            color="Cohort",
-            barmode="group",
-            # category_orders={"Sex": ["M", "F"]},
-            labels={column: x_label},
-            color_discrete_sequence=color_sequence,
+        all_counts = df_counts.merge(
+            total_cohort_counts, how="left", on=column, suffixes=["_selected", "_903"]
         )
+        all_counts["Percent difference"] = all_counts.apply(
+            lambda x: (
+                (x["Percentage of children_selected"] - x["Percentage of children_903"])
+                / x["Number of children_903"]
+            )
+            * 100,
+            axis=1,
+        )
+
+        bar = go.Figure(
+            data=[
+                go.Bar(
+                    name="Selected Cohort",
+                    x=all_counts[column],
+                    y=all_counts["Percentage of children_selected"],
+                ),
+                go.Bar(
+                    name="All 903",
+                    x=all_counts[column],
+                    y=all_counts["Percentage of children_903"],
+                    text=[
+                        (
+                            f"+{percent_change:.0f}%"
+                            if percent_change > 0
+                            else f"{percent_change:.0f}%"
+                        )
+                        for percent_change in all_counts["Percent difference"]
+                    ],
+                    textposition="outside",
+                    textfont_size=18,
+                    textfont_color="red",
+                ),
+            ]
+        )
+        # Change the bar mode
+        bar.update_layout(barmode="group")
+
+        # all_counts = pd.concat([df_counts, total_cohort_counts])
+
+        # bar = px.bar(
+        #     all_counts,
+        #     x=column,
+        #     y="Percentage of children",
+        #     # y="Number of children",
+        #     title=title,
+        #     color="Cohort",
+        #     barmode="group",
+        #     # category_orders={"Sex": ["M", "F"]},
+        #     labels={column: x_label},
+        #     color_discrete_sequence=color_sequence,
+        # )
         # bar.add_trace(
         #     go.Scatter(
         #         mode="text",
-        #         x=all_sum.index,
+        #         x=all_counts.index,
         #         #y=df_sum["Number of children"].tolist(),
-        #         y=all_sum["Percentage of children"].tolist(),
+        #         y=all_counts["Percentage of children"].tolist(),
         #         # text=[str(x) for x in df_sum["Number of children"].tolist()],
         #         text=[str(x) for x in df_sum["Percentage of children"].tolist()],
         #         textposition="bottom center",
