@@ -2,21 +2,17 @@
 # Notes
 ####
 
-
 # add schools data
 # chose most recent most unstable period (toggle to choose first OR most recent?)
 
-# Change all 903 data to be a yearly average proportion over the all the data per year (eg average number of ages 0-5 for all years)
-# decide where to slice total_cohort_df - keep in ALL placements OR only each childs most unstable 12 month period
+# Make title strings work better
 
 # add percentage difference in red and blue bars as a measure as it can be hard to see what differences are
 
-# Of children who became looked after in a given year with other given characteristics, what did they look like? What did the next 12 months look like? (cutoff before end of data) - do this?
-# last 24 months of a child's being looked after (inverse of the above)
+# Dont allow users to select initial care years before earliest year in data
 
 # Split in to multiple tools?
 
-# change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+?
 
 import pandas as pd
 import numpy as np
@@ -526,12 +522,16 @@ def make_bar(
         ].astype("int")
         df_counts["Cohort"] = "Selected stability cohort"
 
+        # We need to be able to select a year to compare the average to
+        total_year_selected = total_cohort["YEAR"].max()
+        total_cohort = total_cohort[total_cohort["YEAR"] == total_year_selected]
         total_cohort_counts = (
             total_cohort.groupby([column])
             .size()
             .to_frame("Number of children")
             .reset_index()
         )
+
         total_cohort_counts["Percentage of children"] = (
             total_cohort_counts["Number of children"] / len(total_cohort) * 100
         )
@@ -687,16 +687,19 @@ def convert_dates(column):
 
 def calculate_age_buckets(age):
     """Used to calculate age buckets for calculated ages in DataContainer"""
-    if age < 5:
-        return "a) Under 5 years"
-    elif age < 11:
-        return "b) 5 to 10 years"
+    # change age buckets: 0-2, 3-5, 6-8, 9-12, 13-15, 16+?
+    if age < 2:
+        return "a) Under 2 years"
+    elif age < 6:
+        return "b) 3 to 5 years"
+    elif age < 9:
+        return "c) 6 to 8 years"
+    elif age < 13:
+        return "d) 9 to 12 years"
     elif age < 16:
-        return "c) 11 to 15 years"
-    elif age < 20:
-        return "d) 16 to 19 years"
-    elif age >= 20:
-        return "e) 20 years and over"
+        return "d) 13 to 15 years"
+    elif age >= 16:
+        return "e) 16 years and over"
     else:
         return "f) Age error"
 
@@ -1082,6 +1085,15 @@ class Datacontainer:
         enriched_df = enriched_df.merge(
             first_episode_df[["CHILD", "First DECOM"]], how="left", on="CHILD"
         )
+
+        enriched_df["Year of entry to care"] = enriched_df["First DECOM"].astype("str")
+        enriched_df["Year of entry to care"] = enriched_df[
+            "Year of entry to care"
+        ].str.split("-")
+        enriched_df["Year of entry to care"] = enriched_df[
+            "Year of entry to care"
+        ].apply(lambda x: x[0])
+
         enriched_df["Time difference current DECOM and first episode"] = (
             enriched_df["DECOM_dt"] - enriched_df["First DECOM"]
         )
@@ -1579,192 +1591,198 @@ if input_file:
     #         ]
     #     )
 
-    # with st.expander(
-    #     "Breakdowns of cohorts experience differing leves of placement stability"
-    # ):
-    #     st.subheader("How to read these charts")
-    #     st.write(
-    #         "The groupings below are done based on rolling 12 month periods rather than the standard return years used by the DfE. Return year charts are in the section after this one."
-    #         "The groupings below are organised by CYP's most ustable 12 month period. This means children only appear once in the processed data."
-    #         "Accordingly, if a CYP has had a 12 month period with 6 placements, and another with 3, they will show up within the 'Highly unstable' cohort only."
-    #         "This was a necessary decision to rule out counting children multiple times if they experienced particularly dense periods of instability."
-    #         "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. "
-    #         "For example, if a child's CIN code before their most unstable 12 month period is 'neglect' that will be their value in the CIN chart below."
-    #         "Ages are calculated on the return date of the most unstable year."
-    #     )
-    #     in_out_care_selected = st.multiselect(
-    #         "Current care status:",
-    #         ["Still in care", "Closed"],
-    #         default=["Still in care", "Closed"],
-    #     )
-    #     stability_levels_selected = st.multiselect(
-    #         "Breakdowns to include children with placements that are:",
-    #         [
-    #             "c) Highly unstable (5+ placements)",
-    #             "b) Unstable (3-4 placements)",
-    #             "a) Stable 2 or fewer placements",
-    #         ],
-    #         default=[
-    #             "c) Highly unstable (5+ placements)",
-    #             "b) Unstable (3-4 placements)",
-    #         ],
-    #     )
-    #     stability_df = ssda903.enriched_episodes.copy()
-    #     # total_cohort_df = stability_df.copy()
+    with st.expander(
+        "Breakdowns of cohorts experience differing leves of placement stability"
+    ):
+        st.subheader("How to read these charts")
+        st.write(
+            "The groupings below are done based on rolling 12 month periods rather than the standard return years used by the DfE. Return year charts are in the section after this one."
+            "The groupings below are organised by CYP's most ustable 12 month period. This means children only appear once in the processed data."
+            "Accordingly, if a CYP has had a 12 month period with 6 placements, and another with 3, they will show up within the 'Highly unstable' cohort only."
+            "This was a necessary decision to rule out counting children multiple times if they experienced particularly dense periods of instability."
+            "All breakdowns shown for instability cohorts are the value for the first placement in a CYP's most unstable 12 month period. "
+            "For example, if a child's CIN code before their most unstable 12 month period is 'neglect' that will be their value in the CIN chart below."
+            "Ages are calculated on the return date of the most unstable year."
+        )
+        in_out_care_selected = st.multiselect(
+            "Current care status:",
+            ["Still in care", "Closed"],
+            default=["Still in care", "Closed"],
+        )
+        stability_levels_selected = st.multiselect(
+            "Breakdowns to include children with placements that are:",
+            [
+                "c) Highly unstable (5+ placements)",
+                "b) Unstable (3-4 placements)",
+                "a) Stable 2 or fewer placements",
+            ],
+            default=[
+                "c) Highly unstable (5+ placements)",
+                "b) Unstable (3-4 placements)",
+            ],
+        )
+        stability_df = ssda903.enriched_episodes.copy()
 
-    #     # most_unstable placement is the one that preceeds a child's most unstable period
-    #     stability_df = stability_df.sort_values(
-    #         "Number of placements in following 12 months", ascending=False
-    #     ).drop_duplicates("CHILD", keep="first")
-    #     total_cohort_df = stability_df.copy()
+        # most_unstable placement is the one that preceeds a child's most unstable period
+        stability_df = stability_df.sort_values(
+            "Number of placements in following 12 months", ascending=False
+        ).drop_duplicates("CHILD", keep="first")
+        total_cohort_df = stability_df.copy()
 
-    #     stability_df["YEAR"] = stability_df["YEAR"].astype("str")
-    #     stability_year_select = st.multiselect(
-    #         "Years for most unstable placement:",
-    #         sorted(stability_df["YEAR"].unique()),
-    #         sorted(stability_df["YEAR"].unique()),
-    #     )
+        stability_df["YEAR"] = stability_df["YEAR"].astype("str")
+        stability_year_select = st.multiselect(
+            "Years for most unstable placement:",
+            sorted(stability_df["YEAR"].unique()),
+            sorted(stability_df["YEAR"].unique()),
+        )
 
-    #     stability_df["Stability Level"] = stability_df[
-    #         "Number of placements in following 12 months"
-    #     ].apply(
-    #         lambda x: (
-    #             "c) Highly unstable (5+ placements)"
-    #             if x >= 5
-    #             else (
-    #                 "b) Unstable (3-4 placements)"
-    #                 if x >= 3
-    #                 else "a) Stable 2 or fewer placements"
-    #             )
-    #         )
-    #     )
+        first_placement_select = st.multiselect(
+            "Select years of CYP's first placement for breakdown:",
+            sorted(stability_df["Year of entry to care"].unique()),
+            sorted(stability_df["Year of entry to care"].unique()),
+        )
 
-    #     condition = (
-    #         stability_df["Stability Level"].isin(stability_levels_selected)
-    #         & stability_df["Still in care"].isin(in_out_care_selected)
-    #         & stability_df["YEAR"].isin(stability_year_select)
-    #     )
+        stability_df["Stability Level"] = stability_df[
+            "Number of placements in following 12 months"
+        ].apply(
+            lambda x: (
+                "c) Highly unstable (5+ placements)"
+                if x >= 5
+                else (
+                    "b) Unstable (3-4 placements)"
+                    if x >= 3
+                    else "a) Stable 2 or fewer placements"
+                )
+            )
+        )
 
-    #     stability_df = stability_df[condition]
+        condition = (
+            stability_df["Stability Level"].isin(stability_levels_selected)
+            & stability_df["Still in care"].isin(in_out_care_selected)
+            & stability_df["YEAR"].isin(stability_year_select)
+            & stability_df["Year of entry to care"].isin(first_placement_select)
+        )
 
-    #     plot_title_stem_in_care = " or ".join(in_out_care_selected)
-    #     plot_title_stem_stability_dict = {
-    #         "c) Highly unstable (5+ placements)": "Highly unstable",
-    #         "b) Unstable (3-4 placements)": "Unstable",
-    #         "a) Stable 2 or fewer placements": "Stable",
-    #     }
-    #     plot_title_stem_stability = [
-    #         plot_title_stem_stability_dict[x] for x in stability_levels_selected
-    #     ]
-    #     plot_title_stem_stability = " or ".join(plot_title_stem_stability)
-    #     plot_title_stem = f"Children who have experienced {plot_title_stem_stability} placements whose care status is: {plot_title_stem_in_care}"
+        stability_df = stability_df[condition]
 
-    #     st.header(plot_title_stem)
-    #     stability_year_select.sort()
-    #     years_selected_stem = ", ".join(stability_year_select)
-    #     st.subheader(f"For years: {years_selected_stem}")
+        plot_title_stem_in_care = " or ".join(in_out_care_selected)
+        plot_title_stem_stability_dict = {
+            "c) Highly unstable (5+ placements)": "Highly unstable",
+            "b) Unstable (3-4 placements)": "Unstable",
+            "a) Stable 2 or fewer placements": "Stable",
+        }
+        plot_title_stem_stability = [
+            plot_title_stem_stability_dict[x] for x in stability_levels_selected
+        ]
+        plot_title_stem_stability = " or ".join(plot_title_stem_stability)
+        plot_title_stem = f"Children who have experienced {plot_title_stem_stability} placements whose care status is: {plot_title_stem_in_care}"
 
-    #     highly_unstable_col1, highly_unstable_col2 = st.columns(2)
+        st.header(plot_title_stem)
+        stability_year_select.sort()
+        years_selected_stem = ", ".join(stability_year_select)
+        st.subheader(f"For years: {years_selected_stem}")
 
-    #     with highly_unstable_col1:
-    #         total_highly_unstable = make_indicator(
-    #             stability_df,
-    #             f"Selected stability cohort",
-    #         )
-    #         st.plotly_chart(total_highly_unstable, use_container_width=True)
+        highly_unstable_col1, highly_unstable_col2 = st.columns(2)
 
-    #         # Age
-    #         highly_unstable_age = make_bar(
-    #             stability_df,
-    #             "AgeBuckets",
-    #             title="Age group at the start of most unstable period for selected stability levels",
-    #             x_label="Age group",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(highly_unstable_age, use_container_width=True, theme=None)
+        with highly_unstable_col1:
+            total_highly_unstable = make_indicator(
+                stability_df,
+                f"Selected stability cohort",
+            )
+            st.plotly_chart(total_highly_unstable, use_container_width=True)
 
-    #         # Sex
-    #         highly_unstable_sex = make_bar(
-    #             stability_df,
-    #             "SEX",
-    #             title="Sex",
-    #             x_label="Sex",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(highly_unstable_sex, use_container_width=True, theme=None)
+            # Age
+            highly_unstable_age = make_bar(
+                stability_df,
+                "AgeBuckets",
+                title="Age group at the start of most unstable period for selected stability levels",
+                x_label="Age group",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(highly_unstable_age, use_container_width=True, theme=None)
 
-    #         # RNE
-    #         highly_unstable_rne = make_bar(
-    #             stability_df,
-    #             "RNE",
-    #             title="RNE at the start of most unstable period for selected stability levels",
-    #             x_label="RNE",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(highly_unstable_rne, use_container_width=True, theme=None)
+            # Sex
+            highly_unstable_sex = make_bar(
+                stability_df,
+                "SEX",
+                title="Sex",
+                x_label="Sex",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(highly_unstable_sex, use_container_width=True, theme=None)
 
-    #     with highly_unstable_col2:
-    #         highly_unstable_ethnicity = make_bar(
-    #             stability_df,
-    #             "EthnicityGroup",
-    #             title="Ethnicity",
-    #             x_label="Ethnicity",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(
-    #             highly_unstable_ethnicity, use_container_width=True, theme=None
-    #         )
+            # RNE
+            highly_unstable_rne = make_bar(
+                stability_df,
+                "RNE",
+                title="RNE at the start of most unstable period for selected stability levels",
+                x_label="RNE",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(highly_unstable_rne, use_container_width=True, theme=None)
 
-    #         # LS
-    #         highly_unstable_ls = make_bar(
-    #             stability_df,
-    #             "LS",
-    #             title="LS at the start of most unstable period for selected stability levels",
-    #             x_label="LS",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(highly_unstable_ls, use_container_width=True, theme=None)
+        with highly_unstable_col2:
+            highly_unstable_ethnicity = make_bar(
+                stability_df,
+                "EthnicityGroup",
+                title="Ethnicity",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                highly_unstable_ethnicity, use_container_width=True, theme=None
+            )
 
-    #         # CIN
-    #         highly_unstable_cin = make_bar(
-    #             stability_df,
-    #             "CIN",
-    #             title="CIN type at the start of most unstable period for selected stability levels",
-    #             x_label="CIN",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(highly_unstable_cin, use_container_width=True, theme=None)
+            # LS
+            highly_unstable_ls = make_bar(
+                stability_df,
+                "LS",
+                title="LS at the start of most unstable period for selected stability levels",
+                x_label="LS",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(highly_unstable_ls, use_container_width=True, theme=None)
 
-    #         # Place
-    #         highly_unstable_place = make_bar(
-    #             stability_df,
-    #             "PLACE",
-    #             title="Placement Type at the start of most unstable period for selected stability levels",
-    #             x_label="Place",
-    #             total_cohort=total_cohort_df,
-    #         )
-    #         st.plotly_chart(highly_unstable_place, use_container_width=True, theme=None)
+            # CIN
+            highly_unstable_cin = make_bar(
+                stability_df,
+                "CIN",
+                title="CIN type at the start of most unstable period for selected stability levels",
+                x_label="CIN",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(highly_unstable_cin, use_container_width=True, theme=None)
 
-    #     time_in_care = px.histogram(
-    #         stability_df,
-    #         x="Time difference current DECOM and first episode",
-    #         title="Time in care at the start of most unstable period for selected stability levels",
-    #         labels={
-    #             "Time difference current DECOM and first episode": "Time difference between the start of most unstable DECOM for selected stability levels and first episode (Days)"
-    #         },
-    #     )
-    #     time_in_care.update_layout(
-    #         template="seaborn",
-    #         plot_bgcolor="lightgrey",
-    #         paper_bgcolor="lightgrey",
-    #         font_color="black",
-    #         title_font_color="black",
-    #         legend_font_color="black",
-    #         legend_title_font_color="black",
-    #     )
-    #     st.plotly_chart(time_in_care, use_container_width=True, theme=None)
+            # Place
+            highly_unstable_place = make_bar(
+                stability_df,
+                "PLACE",
+                title="Placement Type at the start of most unstable period for selected stability levels",
+                x_label="Place",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(highly_unstable_place, use_container_width=True, theme=None)
 
-    # with st.expander("Stability by 903 reutrn years"):
+        time_in_care = px.histogram(
+            stability_df,
+            x="Time difference current DECOM and first episode",
+            title="Time in care at the start of most unstable period for selected stability levels",
+            labels={
+                "Time difference current DECOM and first episode": "Time difference between the start of most unstable DECOM for selected stability levels and first episode (Days)"
+            },
+        )
+        time_in_care.update_layout(
+            template="seaborn",
+            plot_bgcolor="lightgrey",
+            paper_bgcolor="lightgrey",
+            font_color="black",
+            title_font_color="black",
+            legend_font_color="black",
+            legend_title_font_color="black",
+        )
+        st.plotly_chart(time_in_care, use_container_width=True, theme=None)
+
+    # with st.expander("Stability by 903 reuturn years"):
     #     st.write(
     #         "Rather than finding the most unstable periods of a child's care period like the section above, this section finds the stability levels based on 903 return periods."
     #     )
@@ -2060,23 +2078,13 @@ if input_file:
 
         st.subheader("How to read these charts")
         st.write("Re-write this copy")
-        # in_out_care_selected = st.multiselect(
-        #     "Current care status:",
-        #     ["Still in care", "Closed"],
-        #     default=["Still in care", "Closed"],
-        # )
-        # stability_levels_selected = st.multiselect(
-        #     "Breakdowns to include children with placements that are:",
-        #     [
-        #         "c) Highly unstable (5+ placements)",
-        #         "b) Unstable (3-4 placements)",
-        #         "a) Stable 2 or fewer placements",
-        #     ],
-        #     default=[
-        #         "c) Highly unstable (5+ placements)",
-        #         "b) Unstable (3-4 placements)",
-        #     ],
-        # )
+        in_out_care_selected_all_instability = st.multiselect(
+            "Current care status:",
+            ["Still in care", "Closed"],
+            default=["Still in care", "Closed"],
+            key="1",
+        )
+
         stability_df = df.copy()
         total_cohort_df = stability_df.copy()
 
@@ -2084,36 +2092,31 @@ if input_file:
         stability_df = stability_df[
             stability_df["assigned period"] == "Unstable begins"
         ]
-        # total_cohort_df = stability_df.copy()
 
-        # stability_df["YEAR"] = stability_df["YEAR"].astype("str")
-        # stability_year_select = st.multiselect(
-        #     "Years for most unstable placement:",
-        #     sorted(stability_df["YEAR"].unique()),
-        #     sorted(stability_df["YEAR"].unique()),
-        # )
+        stability_df["YEAR"] = stability_df["YEAR"].astype("str")
+        stability_year_select_all_instability = st.multiselect(
+            "Years for most unstable placement:",
+            sorted(stability_df["YEAR"].unique()),
+            sorted(stability_df["YEAR"].unique()),
+            key="2",
+        )
 
-        # stability_df["Stability Level"] = stability_df[
-        #     "Number of placements in following 12 months"
-        # ].apply(
-        #     lambda x: (
-        #         "c) Highly unstable (5+ placements)"
-        #         if x >= 5
-        #         else (
-        #             "b) Unstable (3-4 placements)"
-        #             if x >= 3
-        #             else "a) Stable 2 or fewer placements"
-        #         )
-        #     )
-        # )
+        first_placement_select_all_instability = st.multiselect(
+            "Select years of CYP's first placement for breakdown:",
+            sorted(stability_df["Year of entry to care"].unique()),
+            sorted(stability_df["Year of entry to care"].unique()),
+            key="3",
+        )
 
-        # condition = (
-        #     stability_df["Stability Level"].isin(stability_levels_selected)
-        #     & stability_df["Still in care"].isin(in_out_care_selected)
-        #     & stability_df["YEAR"].isin(stability_year_select)
-        # )
+        condition = (
+            stability_df["Still in care"].isin(in_out_care_selected_all_instability)
+            & stability_df["YEAR"].isin(stability_year_select_all_instability)
+            & stability_df["Year of entry to care"].isin(
+                first_placement_select_all_instability
+            )
+        )
 
-        # stability_df = stability_df[condition]
+        stability_df = stability_df[condition]
 
         # plot_title_stem_in_care = " or ".join(in_out_care_selected)
         # plot_title_stem_stability_dict = {
@@ -2231,3 +2234,221 @@ if input_file:
             legend_title_font_color="black",
         )
         st.plotly_chart(time_in_care, use_container_width=True, theme=None)
+
+    with st.expander(
+        "Characteristics of children who became looked after in given years"
+    ):
+        year_became_looked_after = ssda903.enriched_episodes.copy()
+
+        first_placement_select_entry_to_care = st.multiselect(
+            "Select years of CYP's first placement for breakdown:",
+            sorted(stability_df["Year of entry to care"].unique()),
+            sorted(stability_df["Year of entry to care"].unique()),
+            key="4",
+        )
+
+        condition = year_became_looked_after["Year of entry to care"].isin(
+            first_placement_select_entry_to_care
+        )
+
+        year_became_looked_after = year_became_looked_after[condition]
+
+        initial_characteristics = year_became_looked_after.sort_values(
+            ["CHILD", "DECOM_dt"], ascending=True
+        )
+        initial_characteristics.drop_duplicates("CHILD", keep="first")
+
+        final_characteristics = year_became_looked_after.sort_values(
+            ["CHILD", "DECOM_dt"], ascending=False
+        )
+        final_characteristics.drop_duplicates("CHILD", keep="first")
+
+        st.header(
+            f"Initial characteristics of children who became looked after in: {first_placement_select_entry_to_care}"
+        )
+        initial_characteristics_col1, initial_characteristics_col2 = st.columns(2)
+
+        with initial_characteristics_col1:
+            total_initial_characteristics = make_indicator(
+                initial_characteristics,
+                f"Selected stability cohort",
+            )
+            st.plotly_chart(total_initial_characteristics, use_container_width=True)
+
+            # Age
+            initial_characteristics_age = make_bar(
+                initial_characteristics,
+                "AgeBuckets",
+                title="Age group at the start of most unstable period for selected stability levels",
+                x_label="Age group",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_age, use_container_width=True, theme=None
+            )
+
+            # Sex
+            initial_characteristics_sex = make_bar(
+                initial_characteristics,
+                "SEX",
+                title="Sex",
+                x_label="Sex",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_sex, use_container_width=True, theme=None
+            )
+
+            # RNE
+            initial_characteristics_rne = make_bar(
+                initial_characteristics,
+                "RNE",
+                title="RNE at the start of most unstable period for selected stability levels",
+                x_label="RNE",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_rne, use_container_width=True, theme=None
+            )
+
+        with initial_characteristics_col2:
+            initial_characteristics_ethnicity = make_bar(
+                initial_characteristics,
+                "EthnicityGroup",
+                title="Ethnicity",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_ethnicity, use_container_width=True, theme=None
+            )
+
+            # LS
+            initial_characteristics_ls = make_bar(
+                initial_characteristics,
+                "LS",
+                title="LS at the start of most unstable period for selected stability levels",
+                x_label="LS",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_ls, use_container_width=True, theme=None
+            )
+
+            # CIN
+            initial_characteristics_cin = make_bar(
+                initial_characteristics,
+                "CIN",
+                title="CIN type at the start of most unstable period for selected stability levels",
+                x_label="CIN",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics, use_container_width=True, theme=None
+            )
+
+            # Place
+            initial_characteristics_place = make_bar(
+                initial_characteristics,
+                "PLACE",
+                title="Placement Type at the start of most unstable period for selected stability levels",
+                x_label="Place",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_place, use_container_width=True, theme=None
+            )
+
+        st.header(
+            f"Most recent characteristics of children who became looked after in: {first_placement_select_entry_to_care}"
+        )
+        final_characteristics_col1, final_characteristics_col2 = st.columns(2)
+
+        with final_characteristics_col1:
+            total_final_characteristics = make_indicator(
+                final_characteristics,
+                f"Selected stability cohort",
+            )
+            st.plotly_chart(total_final_characteristics, use_container_width=True)
+
+            # Age
+            final_characteristics_age = make_bar(
+                final_characteristics,
+                "AgeBuckets",
+                title="Age group at the start of most unstable period for selected stability levels",
+                x_label="Age group",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_age, use_container_width=True, theme=None
+            )
+
+            # Sex
+            final_characteristics_sex = make_bar(
+                final_characteristics,
+                "SEX",
+                title="Sex",
+                x_label="Sex",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_sex, use_container_width=True, theme=None
+            )
+
+            # RNE
+            final_characteristics_rne = make_bar(
+                final_characteristics,
+                "RNE",
+                title="RNE at the start of most unstable period for selected stability levels",
+                x_label="RNE",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_rne, use_container_width=True, theme=None
+            )
+
+        with final_characteristics_col2:
+            final_characteristics_ethnicity = make_bar(
+                final_characteristics,
+                "EthnicityGroup",
+                title="Ethnicity",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_ethnicity, use_container_width=True, theme=None
+            )
+
+            # LS
+            final_characteristics_ls = make_bar(
+                final_characteristics,
+                "LS",
+                title="LS at the start of most unstable period for selected stability levels",
+                x_label="LS",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_ls, use_container_width=True, theme=None
+            )
+
+            # CIN
+            final_characteristics_cin = make_bar(
+                final_characteristics,
+                "CIN",
+                title="CIN type at the start of most unstable period for selected stability levels",
+                x_label="CIN",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(final_characteristics, use_container_width=True, theme=None)
+
+            # Place
+            final_characteristics_place = make_bar(
+                final_characteristics,
+                "PLACE",
+                title="Placement Type at the start of most unstable period for selected stability levels",
+                x_label="Place",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_place, use_container_width=True, theme=None
+            )
