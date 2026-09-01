@@ -2,17 +2,21 @@
 # Notes
 ####
 
-# What is the tool doing, what kind of report can we make of it? - example explanations etc
+# What is the tool doing, what kind of report can we make of it? - example explanations etc - Sample Report done
+
+
+# do they want all of this in tables too?
 
 # add schools data
 # chose most recent most unstable period (toggle to choose first OR most recent?)
 
+# attach filters - Done
 # address user friendliness and how to explain it to a non-technical audience
 # Make title strings work better
 # fix chart titles
 # change chart text to fit
-# fix percentages
-# Dont allow users to select initial care years before earliest year in data
+# fix placement length buckets
+
 
 # Split in to multiple tools?
 
@@ -541,7 +545,7 @@ def make_bar(
         total_cohort_counts["Percentage of children"] = total_cohort_counts[
             "Percentage of children"
         ].astype("int")
-        total_cohort_counts["Cohort"] = "All 903"
+        total_cohort_counts["Cohort"] = "Selected 903 cohort"
 
         # Needed to add total stacked bar heights where we are using sex to split bars
         # Makes a scatter using text lined up with the top of the bar chart above
@@ -579,6 +583,23 @@ def make_bar(
                     name="All 903",
                     x=all_counts[column],
                     y=all_counts["Percentage of children_903"],
+                    # text=[
+                    #     (
+                    #         f"+{percent_change:.0f}%"
+                    #         if percent_change > 0
+                    #         else f"{percent_change:.0f}%"
+                    #     )
+                    #     for percent_change in all_counts["Percent difference"]
+                    # ],
+                    textposition="outside",
+                    textfont_size=18,
+                    textfont_color="black",
+                    marker_color="blue",
+                ),
+                go.Bar(
+                    name="Relative difference",
+                    x=all_counts[column],
+                    y=all_counts["Percent difference"],
                     text=[
                         (
                             f"+{percent_change:.0f}%"
@@ -587,10 +608,7 @@ def make_bar(
                         )
                         for percent_change in all_counts["Percent difference"]
                     ],
-                    textposition="outside",
-                    textfont_size=18,
-                    textfont_color="black",
-                    marker_color="blue",
+                    textposition="auto",
                 ),
             ]
         )
@@ -602,6 +620,7 @@ def make_bar(
         )
         # Change the bar mode
         bar.update_layout(barmode="group")
+        bar.update_yaxes(range=[-100, 100])
 
         # all_counts = pd.concat([df_counts, total_cohort_counts])
 
@@ -1513,15 +1532,13 @@ if input_file:
         ssda903.enriched_header, sex_selected, age_selected, ethnicity_selected
     )
 
-    sliced_enriched_episodes = ssda903.enriched_episodes  # apply_filters(
-    #     ssda903.enriched_episodes,
-    #     sex_selected,
-    #     age_selected,
-    #     ethnicity_selected
-    # )
+    sliced_enriched_episodes = apply_filters(
+        ssda903.enriched_episodes, sex_selected, age_selected, ethnicity_selected
+    )
 
     with st.expander("Gapminder"):
-        test_df = ssda903.gapminder_df.sort_values("Days_string")
+        # test_df = ssda903.gapminder_df.sort_values("Days_string")
+        test_df = sliced_enriched_episodes.sort_values("Days_string")
         test_df["Days_int"] = test_df["Days_string"].astype("int")
         test_df = test_df[test_df["Days_int"] >= 20160000]
 
@@ -1678,7 +1695,8 @@ if input_file:
                 "b) Unstable (3-4 placements)",
             ],
         )
-        stability_df = ssda903.enriched_episodes.copy()
+        # stability_df = ssda903.enriched_episodes.copy()
+        stability_df = sliced_enriched_episodes
 
         # most_unstable placement is the one that preceeds a child's most unstable period
         stability_df = stability_df.sort_values(
@@ -1693,10 +1711,13 @@ if input_file:
             sorted(stability_df["YEAR"].unique()),
         )
 
+        # placement_years_list = sorted([x for x in stability_df["Year of entry to care"].unique() if int(x) >= int(stability_df["YEAR"].min())])
+        placement_years_list = stability_df["Year of entry to care"].unique()
+
         first_placement_select = st.multiselect(
             "Select years of CYP's first placement for breakdown:",
-            sorted(stability_df["Year of entry to care"].unique()),
-            sorted(stability_df["Year of entry to care"].unique()),
+            placement_years_list,
+            placement_years_list,
         )
 
         stability_df["Stability Level"] = stability_df[
@@ -1951,8 +1972,10 @@ if input_file:
             "This section gives descriptive statistics of CYP with placements for selected lengths. CYP can appear multiple times in these charts as the "
             "breakdown is by placements and not CYP. "
         )
-        placement_length_df = ssda903.enriched_episodes.copy()
-        total_cohort_df = ssda903.enriched_episodes.copy()
+        # placement_length_df = ssda903.enriched_episodes.copy()
+        # total_cohort_df = ssda903.enriched_episodes.copy()
+        placement_length_df = sliced_enriched_episodes
+        total_cohort_df = sliced_enriched_episodes
 
         # st.table(placement_length_df.head())
         min_val = int(placement_length_df["Current Episode Length (Days)"].min())
@@ -2099,7 +2122,8 @@ if input_file:
 
     with st.expander("Finding unstable periods"):
         st.write("Finding unstable periods")
-        df = ssda903.enriched_episodes.copy()
+        # df = ssda903.enriched_episodes.copy()
+        df = sliced_enriched_episodes
 
         # Logic for the selection - sort by DECOM_dt and find the first row where "Number of placements in following 12 months" > 3 (or stability type is unstable)
         # From there find the first row where "Number of placements in following 12 months" == 1, this is the first stable placement
@@ -2150,6 +2174,8 @@ if input_file:
             stability_df["assigned period"] == "Unstable begins"
         ]
 
+        # placement_years_list = sorted([x for x in stability_df["Year of entry to care"].unique() if int(x) >= int(stability_df["YEAR"].min())])
+        placement_years_list = stability_df["Year of entry to care"].unique()
         stability_df["YEAR"] = stability_df["YEAR"].astype("str")
         stability_year_select_all_instability = st.multiselect(
             "Years for most unstable placement:",
@@ -2160,8 +2186,8 @@ if input_file:
 
         first_placement_select_all_instability = st.multiselect(
             "Select years of CYP's first placement for breakdown:",
-            sorted(stability_df["Year of entry to care"].unique()),
-            sorted(stability_df["Year of entry to care"].unique()),
+            placement_years_list,
+            placement_years_list,
             key="3",
         )
 
@@ -2295,7 +2321,8 @@ if input_file:
     with st.expander(
         "Characteristics of children who became looked after in given years"
     ):
-        year_became_looked_after = ssda903.enriched_episodes.copy()
+        # year_became_looked_after = ssda903.enriched_episodes.copy()
+        year_became_looked_after = sliced_enriched_episodes
 
         first_placement_select_entry_to_care = st.multiselect(
             "Select years of CYP's first placement for breakdown:",
