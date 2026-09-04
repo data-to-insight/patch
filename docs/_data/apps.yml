@@ -73,4 +73,12 @@
   url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/015_SEN2_app/send2_app.py&req=plotly==5.5.0&req=pyarrow
   description: "Dashboard and drilldown for sen2"
 
+- name: 903 Journeys Tool
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/016_903_journeys/903_drilldown.py&req=plotly==5.0.0&req=pyarrow&req=openpyxl
+  description: "Dashboard and drilldown for sen2"
+
+- name: 903 Stability Tool
+  url: https://patch.datatoinsight.org/app?file=https://raw.githubusercontent.com/data-to-insight/patch/main/apps/017_903_stability_tool/903_drilldown.py&req=plotly==5.0.0&req=pyarrow&req=openpyxl
+  description: "Dashboard and drilldown for sen2"
+
  
