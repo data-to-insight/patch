@@ -1421,73 +1421,73 @@ class Datacontainer:
 
         return enriched_df
 
-    # @property
-    # def gapminder_df(self):
-    #     all_child_df = pd.DataFrame()
+    @property
+    def gapminder_df(self):
+        all_child_df = pd.DataFrame()
 
-    #     head = self.enriched_header.copy()
-    #     epis = self.data["episodes"].copy()
-    #     df = epis.merge(head, on=["CHILD"], how="left")
-    #     children = df["CHILD"].unique()
+        head = self.enriched_header.copy()
+        epis = self.data["episodes"].copy()
+        df = epis.merge(head, on=["CHILD"], how="left")
+        children = df["CHILD"].unique()
 
-    #     df["DECOM_dt"] = convert_dates(df["DECOM"])
-    #     df["DEC_dt"] = convert_dates(df["DEC"])
+        df["DECOM_dt"] = convert_dates(df["DECOM"])
+        df["DEC_dt"] = convert_dates(df["DEC"])
 
-    #     df["DEC_cleaned"] = df["DEC_dt"].apply(
-    #         lambda x: x if pd.notnull(x) else self.end_of_latest_return
-    #     )
+        df["DEC_cleaned"] = df["DEC_dt"].apply(
+            lambda x: x if pd.notnull(x) else self.end_of_latest_return
+        )
 
-    #     df.sort_values("DECOM_dt", inplace=True, ascending=True)
-    #     df["Number of Episodes"] = df.groupby("CHILD").cumcount()
-    #     df["Number of Episodes"] = df["Number of Episodes"] + 1
+        df.sort_values("DECOM_dt", inplace=True, ascending=True)
+        df["Number of Episodes"] = df.groupby("CHILD").cumcount()
+        df["Number of Episodes"] = df["Number of Episodes"] + 1
 
-    #     df["First DECOM"] = df.apply(
-    #         lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1
-    #     )
-    #     df["Last DEC"] = df.apply(
-    #         lambda x: df.sort_values("DEC_cleaned", ascending=False)[
-    #             df["CHILD"] == x["CHILD"]
-    #         ]["DEC_cleaned"].iloc[0],
-    #         axis=1,
-    #     )
+        df["First DECOM"] = df.apply(
+            lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1
+        )
+        df["Last DEC"] = df.apply(
+            lambda x: df.sort_values("DEC_cleaned", ascending=False)[
+                df["CHILD"] == x["CHILD"]
+            ]["DEC_cleaned"].iloc[0],
+            axis=1,
+        )
 
-    #     val = 0
-    #     dfs_dict = {}
-    #     for child in children:
-    #         val += 1
-    #         child_df = df[df["CHILD"] == child]
-    #         dates = pd.date_range(
-    #             start=child_df["First DECOM"].iloc[0],
-    #             end=child_df["Last DEC"].iloc[0],
-    #             freq="M",
-    #         )
-    #         dates_df = pd.DataFrame({"Days": dates, "CHILD": [child for date in dates]})
-    #         # dates_df["Days_string"] = [
-    #         #     str(str(x).split(" ")[0]).replace("-", "") for x in dates_df["Days"]
-    #         # ]
+        val = 0
+        dfs_dict = {}
+        for child in children:
+            val += 1
+            child_df = df[df["CHILD"] == child]
+            dates = pd.date_range(
+                start=child_df["First DECOM"].iloc[0],
+                end=child_df["Last DEC"].iloc[0],
+                freq="M",
+            )
+            dates_df = pd.DataFrame({"Days": dates, "CHILD": [child for date in dates]})
+            # dates_df["Days_string"] = [
+            #     str(str(x).split(" ")[0]).replace("-", "") for x in dates_df["Days"]
+            # ]
 
-    #         child_df = child_df.merge(dates_df, on=["CHILD"], how="outer").ffill()
+            child_df = child_df.merge(dates_df, on=["CHILD"], how="outer").ffill()
 
-    #         # child_df = child_df[(child_df["Days"] >= child_df["DECOM_dt"]) & (child_df["Days"] <= child_df["DEC_dt"])].copy()
-    #         dfs_dict[val] = child_df
+            # child_df = child_df[(child_df["Days"] >= child_df["DECOM_dt"]) & (child_df["Days"] <= child_df["DEC_dt"])].copy()
+            dfs_dict[val] = child_df
 
-    #         # all_child_df = pd.concat([all_child_df, child_df])
+            # all_child_df = pd.concat([all_child_df, child_df])
 
-    #     all_child_df = pd.concat(dfs_dict.values())
-    #     all_child_df["Days_string"] = [
-    #         str(str(x).split(" ")[0]).replace("-", "") for x in all_child_df["Days"]
-    #     ]
-    #     all_child_df = all_child_df[
-    #         (all_child_df["Days"] >= all_child_df["DECOM_dt"])
-    #         & (all_child_df["Days"] <= all_child_df["DEC_dt"])
-    #     ].copy()
-    #     all_child_df["Age (on day)"] = all_child_df.apply(
-    #         lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
-    #     )
-    #     all_child_df["Time in care (on day)"] = all_child_df.apply(
-    #         lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
-    #     )
-    #     return all_child_df
+        all_child_df = pd.concat(dfs_dict.values())
+        all_child_df["Days_string"] = [
+            str(str(x).split(" ")[0]).replace("-", "") for x in all_child_df["Days"]
+        ]
+        all_child_df = all_child_df[
+            (all_child_df["Days"] >= all_child_df["DECOM_dt"])
+            & (all_child_df["Days"] <= all_child_df["DEC_dt"])
+        ].copy()
+        all_child_df["Age (on day)"] = all_child_df.apply(
+            lambda x: (x["Days"] - x["DOB_dt"]) / pd.Timedelta(days=365.25), axis=1
+        )
+        all_child_df["Time in care (on day)"] = all_child_df.apply(
+            lambda x: (x["Days"] - x["First DECOM"]) / pd.Timedelta(days=1), axis=1
+        )
+        return all_child_df
 
 
 @st.cache_data
