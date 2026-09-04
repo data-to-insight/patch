@@ -1503,7 +1503,7 @@ def convert_data(_dfs: pd.DataFrame):
 ###########################
 # Main App
 ###########################
-st.title("903 drilldown tool")
+st.title("903 Longitudinal Stability Tool")
 st.markdown(
     "See an [explanation of why the tool is safe to use](https://www.datatoinsight.org/patch) on D2I's website."
 )
