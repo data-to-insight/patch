@@ -1574,7 +1574,7 @@ if input_file:
             "Select named plan length (includes closed plans)",
             min_value=int(sen2.enriched_persons["NamedPlanLength (days)"].min()),
             max_value=int(sen2.enriched_persons["NamedPlanLength (days)"].max()),
-            value=[0, int(sen2.enriched_persons["NamedPlanLength (days)"].max())],
+            value=[int(sen2.enriched_persons["NamedPlanLength (days)"].min()), int(sen2.enriched_persons["NamedPlanLength (days)"].max())],
         )
 
         phase_transfer_years_selected = st.sidebar.multiselect(
@@ -1637,6 +1637,8 @@ if input_file:
 
     with st.expander("All children in data (every child with a persons block)"):
         col1, col2, col3 = st.columns(3)
+
+        # sliced_enriched_persons = sen2.enriched_persons
 
         with col1:
             gender_all = make_indicator(sliced_enriched_persons, "Total children")
@@ -2371,4 +2373,4 @@ if input_file:
 
     with st.expander("CYP in selected drilldown:"):
         st.write("Drilldown appears here")
-        # st.table(sliced_enriched_persons)
+        st.table(sliced_enriched_persons)
