@@ -1149,8 +1149,8 @@ class Datacontainer:
         plan_lengths["CeaseDate"].fillna(self.reference_period["end"], inplace=True)
 
         plan_lengths["NamedPlanLength (days)"] = (
-            plan_lengths["CeaseDate"] - plan_lengths["StartDate"]
-        ) / pd.Timedelta(days=1)
+            abs(plan_lengths["CeaseDate"] - plan_lengths["StartDate"]
+        ) / pd.Timedelta(days=1))
 
         plan_lengths["NamedPlanLength (years)"] = (
             plan_lengths["NamedPlanLength (days)"] / 365.25
