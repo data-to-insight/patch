@@ -317,8 +317,7 @@ def apply_filters(
         & (df["EthnicitySubGroup"].isin(ethnicity_selected))
         & (df["SENtype"].isin(sen_type_selected))
         & (df["SENSetting_mapped"].isin(sen_setting_selected))
-        & (df["NamedPlanLength (days)"] >= plan_length[0])
-        & (df["NamedPlanLength (days)"] <= plan_length[1])
+        & (df["NamedPlanLength (years)"].isin(plan_length))
         & (df["PhaseTransferDue_year"].isin(phase_transfer_years_selected))
     ]
 
@@ -439,7 +438,9 @@ def request_days_buckets(days):
 
 def make_year_buckets(years):
     """Used to make buckets for open plan lengths for named plans"""
-    if years < 1:
+    if (years == 0) | (years == "No plan"):
+        return "No plan"
+    elif years < 1:
         return "a) Less than 1 year"
     elif years < 2:
         return "b) 1-2 years"
@@ -1028,6 +1029,8 @@ class Datacontainer:
 
         self.reference_period = self._get_reference_period(self.data.header)
 
+        self.total_children = self.data.total_children
+
         self.persons = self.data.persons
 
     def _get_reference_period(self, df):
@@ -1109,6 +1112,7 @@ class Datacontainer:
         sen_types["EntryDate"] = pd.to_datetime(
             sen_types["EntryDate"], format="%Y-%m-%d"
         )
+
         sen_types.sort_values(["EntryDate"], ascending=False, inplace=True)
         sen_types.drop_duplicates(subset="child_id", keep="first", inplace=True)
         sen_types = sen_types[
@@ -1123,6 +1127,7 @@ class Datacontainer:
                 "PhaseTransferDue_month",
             ]
         ]
+
         enriched_df = enriched_df.merge(sen_types, on="child_id", how="left")
 
         enriched_df["SENtype"] = enriched_df["SENtype"].apply(
@@ -1155,6 +1160,8 @@ class Datacontainer:
         plan_lengths["NamedPlanLength (years)"] = (
             plan_lengths["NamedPlanLength (days)"] / 365.25
         )
+        plan_lengths["NamedPlanLength (days)"].fillna("No plan")
+
 
         plan_lengths["NamedPlanLength (years)"] = plan_lengths[
             "NamedPlanLength (years)"
@@ -1186,7 +1193,7 @@ class Datacontainer:
                     "child_id",
                     "SENtype",
                     "SENSetting_mapped",
-                    "NamedPlanLength (days)",
+                    "NamedPlanLength (years)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
                     "PhaseTransferDue_month",
@@ -1265,7 +1272,7 @@ class Datacontainer:
                     "child_id",
                     "SENtype",
                     "SENSetting_mapped",
-                    "NamedPlanLength (days)",
+                    "NamedPlanLength (years)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
                     "PhaseTransferDue_month",
@@ -1416,7 +1423,7 @@ class Datacontainer:
                     "Sex",
                     "child_id",
                     "SENSetting_mapped",
-                    "NamedPlanLength (days)",
+                    "NamedPlanLength (years)",
                     "PhaseTransferDue_year",
                     "PhaseTransferFinal_year",
                     "PhaseTransferDue_month",
@@ -1549,7 +1556,7 @@ if input_file:
             "Select age range (on day of census)",
             min_value=int(sen2.enriched_persons["Age"].min()),
             max_value=int(sen2.enriched_persons["Age"].max()),
-            value=[0, int(sen2.enriched_persons["Age"].max())],
+            value=[int(sen2.enriched_persons["Age"].min()), int(sen2.enriched_persons["Age"].max())],
         )
 
         sen_type_selected = st.sidebar.multiselect(
@@ -1570,13 +1577,12 @@ if input_file:
             default=(sen2.enriched_persons["SENSetting_mapped"].unique()),
         )
 
-        plan_length = st.sidebar.slider(
+        plan_length = st.sidebar.multiselect(
             "Select named plan length (includes closed plans)",
-            min_value=int(sen2.enriched_persons["NamedPlanLength (days)"].min()),
-            max_value=int(sen2.enriched_persons["NamedPlanLength (days)"].max()),
-            value=[int(sen2.enriched_persons["NamedPlanLength (days)"].min()), int(sen2.enriched_persons["NamedPlanLength (days)"].max())],
+            (sen2.enriched_persons["NamedPlanLength (years)"].unique()),
+            default=(sen2.enriched_persons["NamedPlanLength (years)"].unique()),
         )
-
+        
         phase_transfer_years_selected = st.sidebar.multiselect(
             "Select phase transfer years",
             (sen2.enriched_persons["PhaseTransferDue_year"].unique()),
@@ -1638,11 +1644,12 @@ if input_file:
     with st.expander("All children in data (every child with a persons block)"):
         col1, col2, col3 = st.columns(3)
 
-        # sliced_enriched_persons = sen2.enriched_persons
-
         with col1:
             gender_all = make_indicator(sliced_enriched_persons, "Total children")
             st.plotly_chart(gender_all, use_container_width=True)
+
+            # gender_all_unenriched = make_indicator(sen2.persons, "Total children")
+            # st.plotly_chart(gender_all_unenriched, use_container_width=True)
 
         with col2:
             age_chart = make_bar(
@@ -2372,5 +2379,12 @@ if input_file:
         st.plotly_chart(phase_transfers_due_year, use_container_width=True, theme=None)
 
     with st.expander("CYP in selected drilldown:"):
-        st.write("Drilldown appears here")
+        st.download_button(
+                    "Download output excel here", sliced_enriched_persons.to_csv(index=False), file_name="SEN2 tool output.csv"
+            )
+
+        
         st.table(sliced_enriched_persons)
+
+
+        
