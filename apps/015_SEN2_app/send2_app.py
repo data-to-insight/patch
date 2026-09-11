@@ -324,7 +324,7 @@ def apply_filters(
     return df
 
 
-@st.cache_data
+# @st.cache_data
 def read_lookups():
     """Reads lookups for the URN, and UKPRNs to map SENsettings, also reads LA names and codes to map transfers.
 
@@ -1004,7 +1004,7 @@ class XMLtoDF:
             )
 
 
-@st.cache_data
+# @st.cache_data
 def convert_data(_root: ET.Element):
     """Used to make input data python readable and to enable caching.
     Runs XMLtoDF to read in SEN2 XML as a dictionary of dataframes, ready to be passed to DataContainer for cleaning.
@@ -1153,15 +1153,14 @@ class Datacontainer:
 
         plan_lengths["CeaseDate"].fillna(self.reference_period["end"], inplace=True)
 
-        plan_lengths["NamedPlanLength (days)"] = (
-            abs(plan_lengths["CeaseDate"] - plan_lengths["StartDate"]
-        ) / pd.Timedelta(days=1))
+        plan_lengths["NamedPlanLength (days)"] = abs(
+            plan_lengths["CeaseDate"] - plan_lengths["StartDate"]
+        ) / pd.Timedelta(days=1)
 
         plan_lengths["NamedPlanLength (years)"] = (
             plan_lengths["NamedPlanLength (days)"] / 365.25
         )
         plan_lengths["NamedPlanLength (days)"].fillna("No plan")
-
 
         plan_lengths["NamedPlanLength (years)"] = plan_lengths[
             "NamedPlanLength (years)"
@@ -1174,12 +1173,17 @@ class Datacontainer:
             on="child_id",
         )
 
+        enriched_df.drop_duplicates(
+            subset=["Forename", "Surname", "PersonBirthDate"], inplace=True
+        )
+
         return enriched_df
 
     @property
     def enriched_requests(self):
         enriched_df = self.data.requests[
-            self.data.requests["ReceivedDate"].notna()
+            (self.data.requests["ReceivedDate"].notna())
+            & (self.data.requests["RequestOutcome"] != "H")
         ].copy()
 
         enriched_df = enriched_df.merge(
@@ -1187,6 +1191,7 @@ class Datacontainer:
                 [
                     "Age",
                     "AgeBuckets",
+                    "PersonBirthDate",
                     "EthnicityGroup",
                     "EthnicitySubGroup",
                     "Sex",
@@ -1255,17 +1260,22 @@ class Datacontainer:
             lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT
         )
 
+        enriched_df.drop_duplicates(subset=["child_id"], inplace=True)
+
         return enriched_df
 
     @property
     def enriched_assessments(self):
-        enriched_df = self.data.assessments.copy()
+        enriched_df = self.data.assessments[
+            self.data.assessments["AssessmentOutcomeDate"].notna()
+        ].copy()
 
         enriched_df = enriched_df.merge(
             self.enriched_persons[
                 [
                     "Age",
                     "AgeBuckets",
+                    "PersonBirthDate",
                     "EthnicityGroup",
                     "EthnicitySubGroup",
                     "Sex",
@@ -1303,8 +1313,10 @@ class Datacontainer:
                 # else
                 (
                     "Assessment Mediation"
-                    if ((x["AssessmentOutcome"] != "H")
-                    & (x["AssessmentMediation"] in ["1", "true"]))
+                    if (
+                        (x["AssessmentOutcome"] != "H")
+                        & (x["AssessmentMediation"] in ["1", "true"])
+                    )
                     else (
                         "Assessment Tribunal"
                         if (x["AssessmentOutcome"] != "H")
@@ -1326,16 +1338,17 @@ class Datacontainer:
             axis=1,
         )
 
-
         enriched_df["Week20"].fillna("No value", inplace=True)
         enriched_df["Week20"] = enriched_df.apply(
             lambda x: (
                 "Yes"
-                if ((x["AssessmentOutcome"] != "H") & (x["Week20"] in ["1", "true"])) 
+                if ((x["AssessmentOutcome"] != "H") & (x["Week20"] in ["1", "true"]))
                 else "No"
             ),
             axis=1,
         )
+
+        enriched_df.drop_duplicates(subset=["child_id"], inplace=True)
 
         return enriched_df
 
@@ -1533,7 +1546,7 @@ if input_file:
         root = tree.getroot()
         data_files = convert_data(root)
 
-        @st.cache_data
+        # @st.cache_data
         def get_datacontainer(_data_files):
             """This function exists to create a datacontainer object for the sen2 so we can cache it
             with the st.cache_data decorator, this cant be done with the class directly.
@@ -1556,7 +1569,10 @@ if input_file:
             "Select age range (on day of census)",
             min_value=int(sen2.enriched_persons["Age"].min()),
             max_value=int(sen2.enriched_persons["Age"].max()),
-            value=[int(sen2.enriched_persons["Age"].min()), int(sen2.enriched_persons["Age"].max())],
+            value=[
+                int(sen2.enriched_persons["Age"].min()),
+                int(sen2.enriched_persons["Age"].max()),
+            ],
         )
 
         sen_type_selected = st.sidebar.multiselect(
@@ -1582,7 +1598,7 @@ if input_file:
             (sen2.enriched_persons["NamedPlanLength (years)"].unique()),
             default=(sen2.enriched_persons["NamedPlanLength (years)"].unique()),
         )
-        
+
         phase_transfer_years_selected = st.sidebar.multiselect(
             "Select phase transfer years",
             (sen2.enriched_persons["PhaseTransferDue_year"].unique()),
@@ -1806,6 +1822,8 @@ if input_file:
 
     with st.expander("Assessments"):
         ass_col1, ass_col2 = st.columns(2)
+
+        st.table(sliced_enriched_assessments.head())
 
         with ass_col1:
             total_assessments = make_indicator(
@@ -2380,11 +2398,9 @@ if input_file:
 
     with st.expander("CYP in selected drilldown:"):
         st.download_button(
-                    "Download output excel here", sliced_enriched_persons.to_csv(index=False), file_name="SEN2 tool output.csv"
-            )
+            "Download output excel here",
+            sliced_enriched_persons.to_csv(index=False),
+            file_name="SEN2 tool output.csv",
+        )
 
-        
         st.table(sliced_enriched_persons)
-
-
-        
