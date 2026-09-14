@@ -1184,6 +1184,7 @@ class Datacontainer:
         enriched_df = self.data.requests[
             (self.data.requests["ReceivedDate"].notna())
             & (self.data.requests["RequestOutcome"] != "H")
+            
         ].copy()
 
         enriched_df = enriched_df.merge(
@@ -1236,6 +1237,9 @@ class Datacontainer:
         enriched_df["ReceivedDate"] = pd.to_datetime(
             enriched_df["ReceivedDate"], format="%Y-%m-%d", errors="coerce"
         )
+        # slice out historical requests
+        enriched_df = enriched_df[enriched_df["ReceivedDate"] >= self.reference_period["start"]]
+
         enriched_df["RequestOutcomeDate"] = pd.to_datetime(
             enriched_df["RequestOutcomeDate"], format="%Y-%m-%d", errors="coerce"
         )
