@@ -2,18 +2,16 @@
 # Notes
 ####
 
-# ‘View the code’ button link is broken
-# Instructions
-# Clarify that time is in days
-# Tidy up date format if possible (+ rename days_string)
-# Please use main ethnicity groups rather than detailed
-# Write down somewhere that the size of bubbles = number of placements
-# Can we clarify whether the bubble size is number of episodes or number of placements?
-# Eg. where a child changes legal status but is still in the same placement, does this count as a new thing or not?
-# When we tried to look at an individual child in the journey visualisation,
-# nothing happened in the ~20 minutes we waited but since there is no indication that
-# it’s loading I think people may just give up. Looking at the tool later it seems to have worked ok,
-# but the slices are so thin that they’re a little hard to see – I wonder if changing the border of the blocks to red/green instead of white might make them more readable?
+# Fixed view the code button
+# Added instructions to instructions dropdown
+# Clarified that time is in days
+# Fixed date format
+# Changed ethnicities to main groups rather than detailed
+# Added instructions to gapminder and changed gapminder name (still a placeholder, happy to name it whatever you want)
+# Clarified that bubble size is episodes, not placements (I'm sure I can change this to be placements if you'd like)
+
+# Reduced time taken for journeys visualisation to render (still takes over a minute, this might need work)
+# Added borders to journeys plot to make it easier to see lines
 
 
 import pandas as pd
@@ -61,26 +59,47 @@ journey_events = {
 class EthnicSubcategories(Enum):
     """Used to map ethnicity codes to main groups, uses long GIAS code-set"""
 
-    WBRI = "White British"
-    WIRI = "White Irish"
-    WOTH = "Any other White background"
-    WIRT = "Traveller of Irish Heritage"
-    WROM = "Gypsy/Roma"
-    MWBC = "White and Black Caribbean"
-    MWBA = "White and Black African"
-    MWAS = "White and Asian"
-    MOTH = "Any other Mixed background"
-    AIND = "Indian"
-    APKN = "Pakistani"
-    ABAN = "Bangladeshi"
-    AOTH = "Any other Asian background"
-    BCRB = "Caribbean"
-    BAFR = "African"
-    BOTH = "Any other Black background"
-    CHNE = "Chinese"
-    OOTH = "Any other ethnic group"
-    REFU = "Refused"
-    NOBT = "Information not yet obtained"
+    WBRI = "White"
+    WIRI = "White"
+    WOTH = "White"
+    WIRT = "White"
+    WROM = "White"
+    MWBC = "Mixed"
+    MWBA = "Mixed"
+    MWAS = "Mixed"
+    MOTH = "Mixed"
+    AIND = "Asian"
+    APKN = "Asian"
+    ABAN = "Asian"
+    AOTH = "Asian"
+    BCRB = "Black"
+    BAFR = "Black"
+    BOTH = "Black"
+    CHNE = "Asian"
+    OOTH = "Other"
+    REFU = "Refused or not obtained"
+    NOBT = "Refused or not obtained"
+
+    # WBRI = "White British"
+    # WIRI = "White Irish"
+    # WOTH = "Any other White background"
+    # WIRT = "Traveller of Irish Heritage"
+    # WROM = "Gypsy/Roma"
+    # MWBC = "White and Black Caribbean"
+    # MWBA = "White and Black African"
+    # MWAS = "White and Asian"
+    # MOTH = "Any other Mixed background"
+    # AIND = "Indian"
+    # APKN = "Pakistani"
+    # ABAN = "Bangladeshi"
+    # AOTH = "Any other Asian background"
+    # BCRB = "Caribbean"
+    # BAFR = "African"
+    # BOTH = "Any other Black background"
+    # CHNE = "Chinese"
+    # OOTH = "Any other ethnic group"
+    # REFU = "Refused"
+    # NOBT = "Information not yet obtained"
 
 
 class UPNCodes(Enum):
@@ -1514,11 +1533,26 @@ st.markdown(
 )
 st.markdown(
     "[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
-             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/015_SEN2_app/sen2_app.py)"
+             [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/tree/main)"
 )
 
 with st.expander("Instructions"):
-    st.write("Instructions")
+    st.write("""
+    Upload your longitudinal 903 data from the data platform.
+    The data may take some time to load on initial upload. Even if no loading indication occurs, the processing is happening (this is also the case when making selections).
+    One loading is complete, dropdowns will appear allowing you to sue the visualisations. If using different data, refresh the entire website before loading data.
+      
+    The first visualisation maps age against time in care on the X and Y axes with
+    point colour indicating ethnicity and point size indicating the number of episodes. Use the play button to see how these change with time. This can be used to
+    identify interesting clusters of children, or individual children of interest. Hover over a plot point to see information about each child represented by a point.
+      
+    The second plot allows you to input the ID of a child of interest to view their journey through the care system allowing you to see their episode changes through time,
+    and if they have had them their reviews and instances of going missing. If a child has had none of these the chart WILL appear blank.
+      
+    Make selections for cohorts using the side bar on the left (this can be expanded and collapsed using the arrow in the top left of the page).
+        
+    If you have issues contact: datatoinsight.enquiries@gmail.com
+    """)
 
 input_file = st.file_uploader("Upload processed 903 .xlsx here")
 
@@ -1563,11 +1597,29 @@ if input_file:
         ssda903.gapminder_df, sex_selected, age_selected, ethnicity_selected
     )
 
-    with st.expander("Gapminder"):
-        # test_df = ssda903.gapminder_df.sort_values("Days_string")
+    with st.expander("Episodes through time visualisation"):
+
+        st.markdown("""
+                    Use this visualisation to follow children and episodes they have had through time. 
+                    Children are represented by plot points on the graph below. 
+                    Use the play button or drag the slider to move the visualisation through time.
+                    Point colour represents ethnicity, size represents the number of episodes a child has had.
+                    Hover over points for more information.
+                      
+                    A good use of this graph is to identify children of interest to look at closer in the journeys visualisation visualisation below.
+                    """)
+
+        def configure_dates(d_string):
+            year = d_string[:4]
+            month = d_string[4:6]
+            fixed_date = f"{year}/{month}"
+            return fixed_date
+
         test_df = sliced_enriched_gapminder.sort_values("Days_string")
         test_df["Days_int"] = test_df["Days_string"].astype("int")
         test_df = test_df[test_df["Days_int"] >= 20160000]
+
+        test_df["Days_string"] = test_df["Days_string"].apply(configure_dates)
 
         plot = px.scatter(
             test_df,
@@ -1580,6 +1632,12 @@ if input_file:
             range_x=[0, 20],
             hover_name="CHILD",
             color="EthnicityGroup",
+            labels={
+                "Age (on day)": "Age (years)",
+                "Time in care (on day)": "Days",
+                "Days_string": "Date (Year/Month)",
+                # "Number of Episodes":"Number of placements"
+            },
         )
         plot.update_layout(
             template="seaborn",
@@ -1683,6 +1741,10 @@ if input_file:
             title_font_color="black",
             legend_font_color="black",
             legend_title_font_color="black",
+        )
+
+        fig.update_traces(
+            marker_line_color="rgb(0,0,0)", marker_line_width=1.5, opacity=0.6
         )
         st.plotly_chart(fig, use_container_width=True, theme=None)
 
