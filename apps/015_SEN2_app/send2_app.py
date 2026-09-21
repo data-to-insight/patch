@@ -1930,12 +1930,13 @@ if input_file:
             active_census_day = make_indicator(
                 sliced_enriched_np[
                     (
-                        sliced_enriched_np["CeaseDate"].isna()
-                        | sliced_enriched_np["CeaseDate"]
-                        >= sen2.reference_period["end"]
+                        (sliced_enriched_np["CeaseDate"].isna())
+                        | (
+                            sliced_enriched_np["CeaseDate"]
+                            >= sen2.reference_period["end"]
+                        )
                     )
-                    & sliced_enriched_np["StartDate"]
-                    <= sen2.reference_period["end"]
+                    & (sliced_enriched_np["StartDate"] <= sen2.reference_period["end"])
                 ],
                 "Plans active on census day",
             )
