@@ -2,18 +2,18 @@
 # Notes
 ####
 
-# What is the tool doing, what kind of report can we make of it? - example explanations etc - Sample Report done
-
-# wording as placement periods not placements
-# add tables
-# add pre-processed data download
-
-# do they want all of this in tables too?
-
-# add schools data
-# chose most recent most unstable period (toggle to choose first OR most recent?)
-
-# Split in to multiple tools?
+# ‘View the code’ button link is broken
+# Instructions
+# Clarify that time is in days
+# Tidy up date format if possible (+ rename days_string)
+# Please use main ethnicity groups rather than detailed
+# Write down somewhere that the size of bubbles = number of placements
+# Can we clarify whether the bubble size is number of episodes or number of placements?
+# Eg. where a child changes legal status but is still in the same placement, does this count as a new thing or not?
+# When we tried to look at an individual child in the journey visualisation,
+# nothing happened in the ~20 minutes we waited but since there is no indication that
+# it’s loading I think people may just give up. Looking at the tool later it seems to have worked ok,
+# but the slices are so thin that they’re a little hard to see – I wonder if changing the border of the blocks to red/green instead of white might make them more readable?
 
 
 import pandas as pd
@@ -766,7 +766,7 @@ def stable_period_checker(row):
         return f'{row["Stable or unstable period"]} begins'
 
 
-# @st.cache_data
+@st.cache_data
 def read_903(df):
     dfs = pd.read_excel(df, sheet_name=None)
 

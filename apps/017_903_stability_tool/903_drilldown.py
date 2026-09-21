@@ -2,18 +2,18 @@
 # Notes
 ####
 
-# What is the tool doing, what kind of report can we make of it? - example explanations etc - Sample Report done
-
-# wording as placement periods not placements
-# add tables
-# add pre-processed data download
-
-# do they want all of this in tables too?
-
-# add schools data
-# chose most recent most unstable period (toggle to choose first OR most recent?)
-
-# Split in to multiple tools?
+# Top para says ‘comparisons to the 903’ – could you please make this more explicit that it’s the latest year of the 903?
+# Please can you add an explicit statement that when there are two equally unstable periods, the first/latest (I thought it was first, Rashid thought most recent – we couldn’t remember!) gets presented
+# In the sentence about entry to care before 2017 we think a positive statement would be easier to read than the negative (swapping second half of the sentence for something like ‘only children who were looked after at some point in the 2016/17 year onwards will appear’)
+# Please have graph with main ethnic groups
+# If you could add ‘%’ to the tooltips of these graphs (so eg. the below would say 8%) that would be helpful, we’re a bit worried that people won’t read the axis
+# Maybe add a note to say that positive bars mean the group is overrepresented in the unstable cohort
+# Have you removed care leavers from the comparator 903 cohort or are you using the whole header file?
+# Two of the age groups have d) so are the wrong way round
+# As with first tool, confirmation on whether you’re using episodes or placements – eg. if a child has a change of legal status but not placement, is that showing as instability or not?
+# Any ability to wrap the titles? Otherwise might be worth just having one chart per row, instead of 2
+# Would it be possible to have dynamic titles on charts instead of ‘selected cohort’? (‘nice to have’ not essential)
+# I have found an issue with using only the latest 903 cohort for the comparator group. I compared a chart sliced for ‘unstable’ and ‘highly unstable’ and then compared it to ‘stable’ only and some of the differences go in the same direction. Initially I thought this should be impossible – (‘if every child appears in one of the stability groups, then surely characteristic groups which are overrepresented in the unstable cohorts must be underrepresented in the stable cohort’). But on reflection I’ve realised that this is possible where groups are overrepresented in the whole history of the 903 vs the most recent year. So where GRT pupils are underrepresented in both the unstable and stable cohorts, it’s because they make up a greater proportion of the latest 903 cohort than of the 903 cohort over the last 9 years of data. So that’s a bit of a confounding factor when trying to understand how ethnicity affects stability
 
 
 import pandas as pd
@@ -766,7 +766,7 @@ def stable_period_checker(row):
         return f'{row["Stable or unstable period"]} begins'
 
 
-# @st.cache_data
+@st.cache_data
 def read_903(df):
     dfs = pd.read_excel(df, sheet_name=None)
 
