@@ -1,3 +1,13 @@
+# Fixes
+# Changed slice on requests from taking only completed requests to all requests received
+# Sliced requests received to be jan 01 to dec 31 of return year (inclusive)
+# Assessments changed to only include calendar year
+# Removed random table in the middle of assessments
+# Plans starting and plans ending both sliced to include only calendar year and not entire census period
+# Added note to Named Plans to say it includes transferred in (I can remove these and make transferred in a different section if you want?)
+# Changed plans active on census day to only include Starting before calendar year end, and either no cease date, or a cease date after calendar year
+
+
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -1183,8 +1193,7 @@ class Datacontainer:
     def enriched_requests(self):
         enriched_df = self.data.requests[
             (self.data.requests["ReceivedDate"].notna())
-            & (self.data.requests["RequestOutcome"] != "H")
-            
+            # & (self.data.requests["RequestOutcome"] != "H")
         ].copy()
 
         enriched_df = enriched_df.merge(
@@ -1238,7 +1247,10 @@ class Datacontainer:
             enriched_df["ReceivedDate"], format="%Y-%m-%d", errors="coerce"
         )
         # slice out historical requests
-        enriched_df = enriched_df[enriched_df["ReceivedDate"] >= self.reference_period["start"]]
+        enriched_df = enriched_df[
+            (enriched_df["ReceivedDate"] >= self.reference_period["start"])
+            & (enriched_df["ReceivedDate"] <= self.reference_period["end"])
+        ]
 
         enriched_df["RequestOutcomeDate"] = pd.to_datetime(
             enriched_df["RequestOutcomeDate"], format="%Y-%m-%d", errors="coerce"
@@ -1299,6 +1311,15 @@ class Datacontainer:
         enriched_df["AssessmentOutcomeDate"] = pd.to_datetime(
             enriched_df["AssessmentOutcomeDate"], format="%Y-%m-%d", errors="coerce"
         )
+
+        # slice out calendar year outcome dates
+        enriched_df = enriched_df[
+            (enriched_df["AssessmentOutcomeDate"] >= self.reference_period["start"])
+            & (enriched_df["AssessmentOutcomeDate"] <= self.reference_period["end"])
+        ]
+
+        # slice out transfer LAs
+        enriched_df = enriched_df
 
         enriched_df["AssessmentOutcomeDate_month"] = enriched_df[
             "AssessmentOutcomeDate"
@@ -1827,8 +1848,6 @@ if input_file:
     with st.expander("Assessments"):
         ass_col1, ass_col2 = st.columns(2)
 
-        st.table(sliced_enriched_assessments.head())
-
         with ass_col1:
             total_assessments = make_indicator(
                 sliced_enriched_assessments, "Total assessments"
@@ -1883,14 +1902,15 @@ if input_file:
         )
         st.plotly_chart(assessments_months_bar, use_container_width=True, theme=None)
 
-    with st.expander("Named Plans"):
+    with st.expander("Named Plans (Including transferred in)"):
         np_c1r1, np_c2r1, np_c3r1 = st.columns(3)
         np_c1r2, np_c2r2 = st.columns(2)
 
         with np_c1r1:
             plans_starting = make_indicator(
                 sliced_enriched_np[
-                    (sliced_enriched_np["StartDate"] > sen2.reference_period["start"])
+                    (sliced_enriched_np["StartDate"] >= sen2.reference_period["start"])
+                    & (sliced_enriched_np["StartDate"] <= sen2.reference_period["end"])
                 ],
                 "Plans starting (year)",
             )
@@ -1899,7 +1919,8 @@ if input_file:
         with np_c2r1:
             plans_ending = make_indicator(
                 sliced_enriched_np[
-                    (sliced_enriched_np["CeaseDate"] > sen2.reference_period["start"])
+                    (sliced_enriched_np["CeaseDate"] >= sen2.reference_period["start"])
+                    & (sliced_enriched_np["CeaseDate"] <= sen2.reference_period["end"])
                 ],
                 "Plans ending (year)",
             )
@@ -1907,7 +1928,15 @@ if input_file:
 
         with np_c3r1:
             active_census_day = make_indicator(
-                sliced_enriched_np[sliced_enriched_np["CeaseDate"].isna()],
+                sliced_enriched_np[
+                    (
+                        sliced_enriched_np["CeaseDate"].isna()
+                        | sliced_enriched_np["CeaseDate"]
+                        >= sen2.reference_period["end"]
+                    )
+                    & sliced_enriched_np["StartDate"]
+                    <= sen2.reference_period["end"]
+                ],
                 "Plans active on census day",
             )
             st.plotly_chart(active_census_day, use_container_width=True, theme=None)
