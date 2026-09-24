@@ -2,18 +2,31 @@
 # Notes
 ####
 
-# Top para says ‘comparisons to the 903’ – could you please make this more explicit that it’s the latest year of the 903?
-# Please can you add an explicit statement that when there are two equally unstable periods, the first/latest (I thought it was first, Rashid thought most recent – we couldn’t remember!) gets presented
-# In the sentence about entry to care before 2017 we think a positive statement would be easier to read than the negative (swapping second half of the sentence for something like ‘only children who were looked after at some point in the 2016/17 year onwards will appear’)
-# Please have graph with main ethnic groups
-# If you could add ‘%’ to the tooltips of these graphs (so eg. the below would say 8%) that would be helpful, we’re a bit worried that people won’t read the axis
-# Maybe add a note to say that positive bars mean the group is overrepresented in the unstable cohort
-# Have you removed care leavers from the comparator 903 cohort or are you using the whole header file?
-# Two of the age groups have d) so are the wrong way round
+# Fixes
+# Improved clarity in instructions for 'most unstable placement' section including sentence about children not appearing in data if they left care
+# (this sentence builds dynamically using the lowest value in the YEAR column)
+# Added ethnicity main group plots to all relevant section
+# Fixed age group ordering
+# Added percents to bar chart tool tips
+# Added a note explaning that positive green bars show overrepresentation
+
+# Notes
+# The graphing library doesn't allow wrapping titles but does allow line breaks (although these wouldn't be dynamic). Happy to do one column but I think it makes it harder to read
+# It would be possiblet to have dynamic titles (I've opted to put those at the beginning of each section not int he charts but I can do it) but they might be very long
+# The whole header for the most recent year is used for the 903 comparator group, and for the normal charts care leavers are not excluded either
+
 # As with first tool, confirmation on whether you’re using episodes or placements – eg. if a child has a change of legal status but not placement, is that showing as instability or not?
-# Any ability to wrap the titles? Otherwise might be worth just having one chart per row, instead of 2
-# Would it be possible to have dynamic titles on charts instead of ‘selected cohort’? (‘nice to have’ not essential)
-# I have found an issue with using only the latest 903 cohort for the comparator group. I compared a chart sliced for ‘unstable’ and ‘highly unstable’ and then compared it to ‘stable’ only and some of the differences go in the same direction. Initially I thought this should be impossible – (‘if every child appears in one of the stability groups, then surely characteristic groups which are overrepresented in the unstable cohorts must be underrepresented in the stable cohort’). But on reflection I’ve realised that this is possible where groups are overrepresented in the whole history of the 903 vs the most recent year. So where GRT pupils are underrepresented in both the unstable and stable cohorts, it’s because they make up a greater proportion of the latest 903 cohort than of the 903 cohort over the last 9 years of data. So that’s a bit of a confounding factor when trying to understand how ethnicity affects stability
+
+
+# I have found an issue with using only the latest 903 cohort for the comparator group.
+# I compared a chart sliced for ‘unstable’ and ‘highly unstable’ and then compared it to
+# ‘stable’ only and some of the differences go in the same direction.
+# Initially I thought this should be impossible –
+# (‘if every child appears in one of the stability groups, then surely characteristic groups which are overrepresented
+# in the unstable cohorts must be underrepresented in the stable cohort’).
+# But on reflection I’ve realised that this is possible where groups are overrepresented in the whole history of the 903 vs the most recent year.
+# So where GRT pupils are underrepresented in both the unstable and stable cohorts, it’s because they make up a greater proportion of the latest
+# 903 cohort than of the 903 cohort over the last 9 years of data. So that’s a bit of a confounding factor when trying to understand how ethnicity affects stability
 
 
 import pandas as pd
@@ -81,6 +94,31 @@ class EthnicSubcategories(Enum):
     OOTH = "Any other ethnic group"
     REFU = "Refused"
     NOBT = "Information not yet obtained"
+
+
+class EthnicMaincategories(Enum):
+    """Used to map ethnicity codes to main groups, uses long GIAS code-set"""
+
+    WBRI = "White"
+    WIRI = "White"
+    WOTH = "White"
+    WIRT = "White"
+    WROM = "White"
+    MWBC = "Mixed"
+    MWBA = "Mixed"
+    MWAS = "Mixed"
+    MOTH = "Mixed"
+    AIND = "Asian"
+    APKN = "Asian"
+    ABAN = "Asian"
+    AOTH = "Asian"
+    BCRB = "Black"
+    BAFR = "Black"
+    BOTH = "Black"
+    CHNE = "Asian"
+    OOTH = "Other"
+    REFU = "Refused or not obtained"
+    NOBT = "Refused or not obtained"
 
 
 class UPNCodes(Enum):
@@ -573,19 +611,19 @@ def make_bar(
                     x=all_counts[column],
                     y=all_counts["Percentage of children_selected"],
                     marker_color="red",
+                    text=[
+                        (f"+{percent:.0f}%" if percent > 0 else f"{percent:.0f}%")
+                        for percent in all_counts["Percentage of children_selected"]
+                    ],
                 ),
                 go.Bar(
                     name="All 903",
                     x=all_counts[column],
                     y=all_counts["Percentage of children_903"],
-                    # text=[
-                    #     (
-                    #         f"+{percent_change:.0f}%"
-                    #         if percent_change > 0
-                    #         else f"{percent_change:.0f}%"
-                    #     )
-                    #     for percent_change in all_counts["Percent difference"]
-                    # ],
+                    text=[
+                        (f"+{percent:.0f}%" if percent > 0 else f"{percent:.0f}%")
+                        for percent in all_counts["Percentage of children_903"]
+                    ],
                     textposition="outside",
                     textfont_size=18,
                     textfont_color="black",
@@ -790,11 +828,11 @@ def calculate_age_buckets(age):
     elif age < 13:
         return "d) 9 to 12 years"
     elif age < 16:
-        return "d) 13 to 15 years"
+        return "e) 13 to 15 years"
     elif age >= 16:
-        return "e) 16 years and over"
+        return "f) 16 years and over"
     else:
-        return "f) Age error"
+        return "g) Age error"
 
 
 def make_year_buckets(years):
@@ -1055,6 +1093,10 @@ class Datacontainer:
             lambda x: EthnicSubcategories[x].value
         )
 
+        enriched_df["EthnicityGroupMain"] = enriched_df["ETHNIC"].apply(
+            lambda x: EthnicMaincategories[x].value
+        )
+
         enriched_df["UPN"] = enriched_df["UPN"].apply(
             lambda x: (
                 UPNCodes[x].value
@@ -1105,6 +1147,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1216,6 +1259,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1246,6 +1290,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1308,6 +1353,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1341,6 +1387,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1380,6 +1427,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1409,6 +1457,7 @@ class Datacontainer:
                     "Age (on return date)",
                     "AgeBuckets",
                     "EthnicityGroup",
+                    "EthnicityGroupMain",
                     "SEX",
                 ]
             ],
@@ -1518,7 +1567,9 @@ st.markdown(
 )
 
 with st.expander("Instructions"):
-    st.write("Instructions")
+    st.write("""
+            Upload your longitudinal 903 (from the data platform) for an overview of placements and instability.
+            """)
 
 input_file = st.file_uploader("Upload processed 903 .xlsx here")
 
@@ -1698,14 +1749,18 @@ if input_file:
         st.subheader("How to read these charts")
         st.write(
             "The following plots show characteristics children had preceding their most unstable 12 month period. "
+            "If a child has has two equally unstable periods the dashboard uses the first of these."
             "It uses rolling 12 month periods rather than return years. This means that, for instance, children who had 2 placements in March and 1 in April (crossing a return period) will show up "
             "as experiencing instability here where they would not using standard calculations."
+            "On smaller screens some plots may be easier to see if expanded by using the expand arrows appearing to the top right of the plot when mousing over."
             " We can filter to include children whose most unstable period was\: "
             "Highly unstable (5+ placements in any 12 month period), "
             "unstable (3-4 placements in any 12 months), "
             "or stable (2 or less placements in any 12 months). "
             "The plots show comparisons to the 903 after filters/slices have been applied with relative percentage differences. "
-            "We can use this to identify factors or characteristics that are overrepresented in children who have experienced instability compared to the overall 903 cohort. "
+            "We can use this to identify factors or characteristics that are overrepresented in children who have experienced instability compared to the most recent 903 cohort. "
+            "Positive comparator bars show that the relevant group is overrepresented. For instance, if looking at children with a 5+ placement period of instability, if there is a positive relative difference"
+            "for the White group, that means the percentage of white children in the group with more than 5 placements is higher than in the most recent 903, meaning they are overrepresented."
             ""
             "Note that children who have left care before the first year in the data will not appear when selecting years children first became looked after before the first return year of data."
         )
@@ -1751,7 +1806,8 @@ if input_file:
             placement_years_list,
         )
         st.write(
-            f"Note that when selecting year of entry to care before {int(stability_df['YEAR'].min())}, children who left care before this year will not appear in the data."
+            f"Note that when selecting year of entry to care before {int(stability_df['YEAR'].min())} (the earliest SSDA903 return included in the dataset), "
+            "only children who were still in care after this period will appear in the data."
         )
 
         stability_df["Stability Level"] = stability_df[
@@ -1804,6 +1860,17 @@ if input_file:
             )
             st.plotly_chart(total_highly_unstable, use_container_width=True)
 
+            highly_unstable_ethnicity_main = make_bar(
+                stability_df,
+                "EthnicityGroupMain",
+                title="Ethnicity (main groups)",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                highly_unstable_ethnicity_main, use_container_width=True, theme=None
+            )
+
             # Age
             highly_unstable_age = make_bar(
                 stability_df,
@@ -1838,7 +1905,7 @@ if input_file:
             highly_unstable_ethnicity = make_bar(
                 stability_df,
                 "EthnicityGroup",
-                title="Ethnicity",
+                title="Ethnicity (detailed groups)",
                 x_label="Ethnicity",
                 total_cohort=total_cohort_df,
             )
@@ -2065,6 +2132,17 @@ if input_file:
             )
             st.plotly_chart(total_placement_length, use_container_width=True)
 
+            placement_length_ethnicity_main = make_bar(
+                placement_length_df,
+                "EthnicityGroupMain",
+                title="Ethnicity (main groups)",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                placement_length_ethnicity_main, use_container_width=True, theme=None
+            )
+
             # Age
             placement_length_age = make_bar(
                 placement_length_df,
@@ -2270,23 +2348,6 @@ if input_file:
 
         stability_df = stability_df[condition]
 
-        # plot_title_stem_in_care = " or ".join(in_out_care_selected)
-        # plot_title_stem_stability_dict = {
-        #     "c) Highly unstable (5+ placements)": "Highly unstable",
-        #     "b) Unstable (3-4 placements)": "Unstable",
-        #     "a) Stable 2 or fewer placements": "Stable",
-        # }
-        # plot_title_stem_stability = [
-        #     plot_title_stem_stability_dict[x] for x in stability_levels_selected
-        # ]
-        # plot_title_stem_stability = " or ".join(plot_title_stem_stability)
-        # plot_title_stem = f"Children who have experienced {plot_title_stem_stability} placements whose care status is: {plot_title_stem_in_care}"
-
-        # st.header(plot_title_stem)
-        # stability_year_select.sort()
-        # years_selected_stem = ", ".join(stability_year_select)
-        # st.subheader(f"For years: {years_selected_stem}")
-
         st.header(
             f"Characteristics of children who are {', '.join(in_out_care_selected_all_instability)}"
         )
@@ -2305,6 +2366,17 @@ if input_file:
                 f"Selected stability cohort",
             )
             st.plotly_chart(total_highly_unstable, use_container_width=True)
+
+            highly_unstable_ethnicity_main = make_bar(
+                stability_df,
+                "EthnicityGroupMain",
+                title="Ethnicity (main groups)",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                highly_unstable_ethnicity_main, use_container_width=True, theme=None
+            )
 
             # Age
             highly_unstable_age = make_bar(
@@ -2456,6 +2528,19 @@ if input_file:
             )
             st.plotly_chart(total_initial_characteristics, use_container_width=True)
 
+            initial_characteristics_ethnicity_main = make_bar(
+                initial_characteristics,
+                "EthnicityGroupMain",
+                title="Ethnicity (main groups)",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                initial_characteristics_ethnicity_main,
+                use_container_width=True,
+                theme=None,
+            )
+
             # Age
             initial_characteristics_age = make_bar(
                 initial_characteristics,
@@ -2551,6 +2636,19 @@ if input_file:
                 f"Selected stability cohort",
             )
             st.plotly_chart(total_final_characteristics, use_container_width=True)
+
+            final_characteristics_ethnicity_main = make_bar(
+                final_characteristics,
+                "EthnicityGroupMain",
+                title="Ethnicity (main groups)",
+                x_label="Ethnicity",
+                total_cohort=total_cohort_df,
+            )
+            st.plotly_chart(
+                final_characteristics_ethnicity_main,
+                use_container_width=True,
+                theme=None,
+            )
 
             # Age
             final_characteristics_age = make_bar(
