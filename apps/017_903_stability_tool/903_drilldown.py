@@ -2,6 +2,9 @@
 # Notes
 ####
 
+# We need to change how we calculate placement length, it's not just episode length
+
+
 # Fixes
 # Improved clarity in instructions for 'most unstable placement' section including sentence about children not appearing in data if they left care
 # (this sentence builds dynamically using the lowest value in the YEAR column)
@@ -1177,10 +1180,35 @@ class Datacontainer:
         # enriched_df["REASON_PLACE_CHANGE"] = enriched_df["REASON_PLACE_CHANGE"].apply(
         #     lambda x: REASONPLACECHANGECodes[x].value if pd.notnull(x) else "N/A"
         # )
-
+ 
         # Number of episodes
-        enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
-        enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
+        # enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
+        # enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
+
+        # enriched_df["Number of placements in following 12 months"] = enriched_df.apply(
+        #     lambda x: len(
+        #         enriched_df[
+        #             (enriched_df["CHILD"] == x["CHILD"])
+        #             & (
+        #                 enriched_df["DECOM_dt"]
+        #                 <= x["DECOM_dt"] + pd.DateOffset(months=12)
+        #             )
+        #             & (enriched_df["DECOM_dt"] >= x["DECOM_dt"])
+        #         ]
+        #     ),
+        #     axis=1,
+        # )
+
+        # Tracking number of placements
+        # Placement changes are P and B, initial placement is S. L is only a legal change (so not a placement change).
+        # We need to cound placement changes. Can we simply cut out all Ls and get the right numbers? We can if we consider 
+        # the numbers to be per placement.
+
+        # Logic, remove all episodes that don't feature a placement change and then only count those which do. 
+        # Everything else should stay the same?
+        enriched_df = enriched_df[[enriched_df["REASON_PLACE_CHANGE"].isin(["S", "P", "B"])]]
+        enriched_df["Number of Placements"] = enriched_df.groupby("CHILD").cumcount()
+        enriched_df["Number of Placements"] = enriched_df["Number of Placements"] + 1
 
         enriched_df["Number of placements in following 12 months"] = enriched_df.apply(
             lambda x: len(
@@ -1196,6 +1224,8 @@ class Datacontainer:
             axis=1,
         )
 
+
+  
         # Placement year stability
         enriched_df["Placements per return year"] = enriched_df.groupby(
             ["CHILD", "YEAR"]
@@ -1204,19 +1234,20 @@ class Datacontainer:
             enriched_df["Placements per return year"] + 1
         )
 
+        # We need maths to find the length of each placement
         # Finding the length of current placements
-        enriched_df["Current Episode Length (Days)"] = (
+        enriched_df["Current Placement Length (Days)"] = (
             enriched_df["DEC_dt"] - enriched_df["DECOM_dt"]
         )
-        enriched_df["Current Episode Length (Days)"] = enriched_df[
-            "Current Episode Length (Days)"
+        enriched_df["Current Placement Length (Days)"] = enriched_df[
+            "Current Placement Length (Days)"
         ] / pd.Timedelta(days=1)
-        enriched_df["Current Episode Length (Days)"] = abs(
-            enriched_df["Current Episode Length (Days)"].astype("int")
+        enriched_df["Current Placement Length (Days)"] = abs(
+            enriched_df["Current Placement Length (Days)"].astype("int")
         )
 
         # Finding the time delta between current decom and first decom
-        first_episode_df = enriched_df[enriched_df["Number of Episodes"] == 1].copy()
+        first_episode_df = enriched_df[enriched_df["Number of Placements"] == 1].copy()
         first_episode_df["First DECOM"] = first_episode_df["DECOM_dt"]
         enriched_df = enriched_df.merge(
             first_episode_df[["CHILD", "First DECOM"]], how="left", on="CHILD"
@@ -1230,16 +1261,16 @@ class Datacontainer:
             "Year of entry to care"
         ].apply(lambda x: x[0])
 
-        enriched_df["Time difference current DECOM and first episode"] = (
+        enriched_df["Time difference current DECOM and first Placement"] = (
             enriched_df["DECOM_dt"] - enriched_df["First DECOM"]
         )
-        enriched_df["Time difference current DECOM and first episode"] = abs(
-            enriched_df["Time difference current DECOM and first episode"]
+        enriched_df["Time difference current DECOM and first Placement"] = abs(
+            enriched_df["Time difference current DECOM and first Placement"]
             / pd.Timedelta(days=1)
         )
 
-        enriched_df["Time difference current DECOM and first episode - buckets"] = (
-            enriched_df["Time difference current DECOM and first episode"].apply(
+        enriched_df["Time difference current DECOM and first Placement - buckets"] = (
+            enriched_df["Time difference current DECOM and first Placement"].apply(
                 month_year_bins
             )
         )
@@ -1487,8 +1518,8 @@ class Datacontainer:
         )
 
         df.sort_values("DECOM_dt", inplace=True, ascending=True)
-        df["Number of Episodes"] = df.groupby("CHILD").cumcount()
-        df["Number of Episodes"] = df["Number of Episodes"] + 1
+        df["Number of Placements"] = df.groupby("CHILD").cumcount()
+        df["Number of Placements"] = df["Number of Placements"] + 1
 
         df["First DECOM"] = df.apply(
             lambda x: df[df["CHILD"] == x["CHILD"]]["DECOM_dt"].iloc[0], axis=1
@@ -1945,10 +1976,10 @@ if input_file:
 
         time_in_care = px.histogram(
             stability_df,
-            x="Time difference current DECOM and first episode - buckets",
+            x="Time difference current DECOM and first Placement - buckets",
             title="Time in care at the start of most unstable period for selected stability levels",
             labels={
-                "Time difference current DECOM and first episode - buckets": "Time difference between the start of most unstable DECOM for selected stability levels and first episode (Days)"
+                "Time difference current DECOM and first Placement - buckets": "Time difference between the start of most unstable DECOM for selected stability levels and first Placement (Days)"
             },
             # category_orders=dict(day=["a) <10 days",  "b) 10 days - 1 month", "c) 1-2 months", "d) 2-3 months", "e) 3-6 months", "f) 6 months - 1 year", "g) 1-2 years", "h) 2+ years"]),
         )
@@ -2101,8 +2132,8 @@ if input_file:
         total_cohort_df = sliced_enriched_episodes
 
         # st.table(placement_length_df.head())
-        min_val = int(placement_length_df["Current Episode Length (Days)"].min())
-        max_val = int(placement_length_df["Current Episode Length (Days)"].max())
+        min_val = int(placement_length_df["Current Placement Length (Days)"].min())
+        max_val = int(placement_length_df["Current Placement Length (Days)"].max())
 
         placement_lengths_selected = st.slider(
             "Select a range placement lengths for breakdown", value=(min_val, max_val)
@@ -2110,11 +2141,11 @@ if input_file:
 
         placement_length_df = placement_length_df[
             (
-                placement_length_df["Current Episode Length (Days)"]
+                placement_length_df["Current Placement Length (Days)"]
                 >= placement_lengths_selected[0]
             )
             & (
-                placement_length_df["Current Episode Length (Days)"]
+                placement_length_df["Current Placement Length (Days)"]
                 <= placement_lengths_selected[1]
             )
         ]
@@ -2219,10 +2250,10 @@ if input_file:
 
         placement_length_time_in_care = px.histogram(
             placement_length_df,
-            x="Time difference current DECOM and first episode",
+            x="Time difference current DECOM and first Placement",
             title="Time in care breakdown for selected placement lengths",
             labels={
-                "Time difference current DECOM and first episode": "Time difference breakdown for selected placement lengths and first episode (Days)"
+                "Time difference current DECOM and first Placement": "Time difference breakdown for selected placement lengths and first Placement (Days)"
             },
         )
         placement_length_time_in_care.update_layout(
@@ -2240,10 +2271,10 @@ if input_file:
 
         placement_number_hist = px.histogram(
             placement_length_df,
-            x="Number of Episodes",
-            title="Episode number for placements of selected length",
+            x="Number of Placements",
+            title="Placement number for placements of selected length",
             labels={
-                "Number of Episodes": "Episode number for placements of selected length"
+                "Number of Placements": "Placement number for placements of selected length"
             },
         )
 
@@ -2453,10 +2484,10 @@ if input_file:
         # make bins for histogram
         time_in_care = px.histogram(
             stability_df,
-            x="Time difference current DECOM and first episode - buckets",
+            x="Time difference current DECOM and first placement - buckets",
             title="Time in care at the start of unstable periods for selected cohort",
             labels={
-                "Time difference current DECOM and first episode - buckets": "Time difference between the start of unstable DECOM for selected stability levels and first episode (Days)"
+                "Time difference current DECOM and first placement - buckets": "Time difference between the start of unstable DECOM for selected stability levels and first placement (Days)"
             },
             # category_orders=dict(day=["a) <10 days",  "b) 10 days - 1 month", "c) 1-2 months", "d) 2-3 months", "e) 3-6 months", "f) 6 months - 1 year", "g) 1-2 years", "h) 2+ years"]),
         )
