@@ -1180,7 +1180,7 @@ class Datacontainer:
         # enriched_df["REASON_PLACE_CHANGE"] = enriched_df["REASON_PLACE_CHANGE"].apply(
         #     lambda x: REASONPLACECHANGECodes[x].value if pd.notnull(x) else "N/A"
         # )
- 
+
         # Number of episodes
         # enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
         # enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
@@ -1200,32 +1200,52 @@ class Datacontainer:
         # )
 
         # Tracking number of placements
-        # Placement changes are P and B, initial placement is S. L is only a legal change (so not a placement change).
-        # We need to cound placement changes. Can we simply cut out all Ls and get the right numbers? We can if we consider 
-        # the numbers to be per placement.
+        # The length of a placement if the time between the initial DECOM in one placement and the final DEC in the same placement
+        # (or the end of the return period of they don't have a dec for that placement).
+        # I presumably CAN'T just do the time difference between placement DECOMs because they may have,
+        # for instance, left care in that time. So, for every reason_place_change of S, B, or P,
+        # I need to find what the DECOM of the last episode that is an L (or take the DECOM of that episode if the next one is an S, B or P).
 
-        # Logic, remove all episodes that don't feature a placement change and then only count those which do. 
+        # df['next_time'] = (df.apply(lambda x: next((z for (y, z) in zip(df['price'], df['time'])
+        #                                     if y > x['price'] if z > x['time']), None), axis=1))
+
+        def eop_date_finder(row, enriched_df):
+            return 1
+
+        def placements_in_following_12_months(row, enriched_df):
+            df = enriched_df[
+                (enriched_df["CHILD"] == row["CHILD"])
+                & (
+                    enriched_df["DECOM_dt"]
+                    <= row["DECOM_dt"] + pd.DateOffset(months=12)
+                )
+                & (enriched_df["DECOM_dt"] >= row["DECOM_dt"])
+                #     & (enriched_df["REASON_PLACE_CHANGE"].isin(["S", "P", "B"]))
+            ]
+            length = len(df)
+
+            return length
+
+        # enriched_df["End of current placement"] = enriched_df.apply(eop_date_finder, args=(enriched_df,), axis=1)
+
+        # Logic, remove all episodes that don't feature a placement change and then only count those which do.
         # Everything else should stay the same?
-        enriched_df = enriched_df[[enriched_df["REASON_PLACE_CHANGE"].isin(["S", "P", "B"])]]
+        # S = "Started to be looked-after"
+        # L = "Change of legal status only"
+        # P = "Change of placement and carer(s) only"
+        # T = "Change of placement (but same carer(s)) only"
+        # B = "Change of legal status and placement and carer(s) at the same time"
+        # U = "Change of legal status and change of placement (but same carer(s)) at the same time"
+        enriched_df = enriched_df[
+            enriched_df["RNE"].isin(["S", "P", "T", "B", "U"])
+        ].copy()
         enriched_df["Number of Placements"] = enriched_df.groupby("CHILD").cumcount()
         enriched_df["Number of Placements"] = enriched_df["Number of Placements"] + 1
 
         enriched_df["Number of placements in following 12 months"] = enriched_df.apply(
-            lambda x: len(
-                enriched_df[
-                    (enriched_df["CHILD"] == x["CHILD"])
-                    & (
-                        enriched_df["DECOM_dt"]
-                        <= x["DECOM_dt"] + pd.DateOffset(months=12)
-                    )
-                    & (enriched_df["DECOM_dt"] >= x["DECOM_dt"])
-                ]
-            ),
-            axis=1,
+            placements_in_following_12_months, args=(enriched_df,), axis=1
         )
 
-
-  
         # Placement year stability
         enriched_df["Placements per return year"] = enriched_df.groupby(
             ["CHILD", "YEAR"]
@@ -1234,8 +1254,8 @@ class Datacontainer:
             enriched_df["Placements per return year"] + 1
         )
 
-        # We need maths to find the length of each placement
-        # Finding the length of current placements
+        # Placement length is time difference between a DECOM of a new placement
+        # and the DEC of their last episode in the same placement
         enriched_df["Current Placement Length (Days)"] = (
             enriched_df["DEC_dt"] - enriched_df["DECOM_dt"]
         )
@@ -2484,10 +2504,10 @@ if input_file:
         # make bins for histogram
         time_in_care = px.histogram(
             stability_df,
-            x="Time difference current DECOM and first placement - buckets",
+            x="Time difference current DECOM and first Placement - buckets",
             title="Time in care at the start of unstable periods for selected cohort",
             labels={
-                "Time difference current DECOM and first placement - buckets": "Time difference between the start of unstable DECOM for selected stability levels and first placement (Days)"
+                "Time difference current DECOM and first Placement - buckets": "Time difference between the start of unstable DECOM for selected stability levels and first placement (Days)"
             },
             # category_orders=dict(day=["a) <10 days",  "b) 10 days - 1 month", "c) 1-2 months", "d) 2-3 months", "e) 3-6 months", "f) 6 months - 1 year", "g) 1-2 years", "h) 2+ years"]),
         )
