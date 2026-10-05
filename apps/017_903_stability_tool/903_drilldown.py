@@ -1254,7 +1254,7 @@ class Datacontainer:
         # Placement length is time difference between a DECOM of a new placement
         # and the DEC of their last episode in the same placement
         enriched_df["Current Placement Length (Days)"] = (
-            enriched_df["DEC_dt"] - enriched_df["DECOM_dt"]
+            enriched_df["End of current placement"] - enriched_df["DECOM_dt"]
         )
         enriched_df["Current Placement Length (Days)"] = enriched_df[
             "Current Placement Length (Days)"
