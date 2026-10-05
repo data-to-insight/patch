@@ -1840,7 +1840,7 @@ if input_file:
         ssda903.gapminder_df, sex_selected, age_selected, ethnicity_selected
     )
 
-    with st.expander("Placementss through time visualisation"):
+    with st.expander("Placements through time visualisation"):
 
         st.markdown("""
                     Use this visualisation to follow children and placements they have had through time. 
