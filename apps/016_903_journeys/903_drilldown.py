@@ -1922,7 +1922,7 @@ if input_file:
         episodes_data.rename(
             columns={
                 "DECOM": "Start",
-                "End of current Placement": "Finish",
+                "DEC": "Finish",
             },
             inplace=True,
         )
