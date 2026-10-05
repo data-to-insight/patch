@@ -1185,20 +1185,6 @@ class Datacontainer:
         # enriched_df["Number of Episodes"] = enriched_df.groupby("CHILD").cumcount()
         # enriched_df["Number of Episodes"] = enriched_df["Number of Episodes"] + 1
 
-        # enriched_df["Number of placements in following 12 months"] = enriched_df.apply(
-        #     lambda x: len(
-        #         enriched_df[
-        #             (enriched_df["CHILD"] == x["CHILD"])
-        #             & (
-        #                 enriched_df["DECOM_dt"]
-        #                 <= x["DECOM_dt"] + pd.DateOffset(months=12)
-        #             )
-        #             & (enriched_df["DECOM_dt"] >= x["DECOM_dt"])
-        #         ]
-        #     ),
-        #     axis=1,
-        # )
-
         # Tracking number of placements
         # The length of a placement if the time between the initial DECOM in one placement and the final DEC in the same placement
         # (or the end of the return period of they don't have a dec for that placement).
@@ -1206,11 +1192,23 @@ class Datacontainer:
         # for instance, left care in that time. So, for every reason_place_change of S, B, or P,
         # I need to find what the DECOM of the last episode that is an L (or take the DECOM of that episode if the next one is an S, B or P).
 
-        # df['next_time'] = (df.apply(lambda x: next((z for (y, z) in zip(df['price'], df['time'])
-        #                                     if y > x['price'] if z > x['time']), None), axis=1))
 
         def eop_date_finder(row, enriched_df):
-            return 1
+            df = enriched_df[
+                (enriched_df["CHILD"] == row["CHILD"])]
+
+            max_dec = df["DEC_dt"].max()
+            df["prev_dec"] = df["DEC_dt"].shift(1)
+            
+            df = df[df["DECOM_dt"] > row["DECOM_dt"]
+                ].reset_index()
+
+            this_place_dec = next((dec for (rne, dec) in zip(df["RNE"], df["prev_dec"]) if rne in ["P", "T", "B", "U"]), "FINAL PLACEMENT")
+
+            if (this_place_dec == "FINAL PLACEMENT") | (pd.isnull(this_place_dec)):
+                this_place_dec = max_dec
+
+            return this_place_dec
 
         def placements_in_following_12_months(row, enriched_df):
             df = enriched_df[
@@ -1220,13 +1218,12 @@ class Datacontainer:
                     <= row["DECOM_dt"] + pd.DateOffset(months=12)
                 )
                 & (enriched_df["DECOM_dt"] >= row["DECOM_dt"])
-                #     & (enriched_df["REASON_PLACE_CHANGE"].isin(["S", "P", "B"]))
             ]
             length = len(df)
 
             return length
 
-        # enriched_df["End of current placement"] = enriched_df.apply(eop_date_finder, args=(enriched_df,), axis=1)
+        enriched_df["End of current placement"] = enriched_df.apply(eop_date_finder, args=(enriched_df,), axis=1)
 
         # Logic, remove all episodes that don't feature a placement change and then only count those which do.
         # Everything else should stay the same?
@@ -1793,28 +1790,28 @@ if input_file:
     #             ["CHILD", "SEX", "ETHNIC", "UPN", "Age (on return date)"]
     #         ]
     #     )
-
+    with st.expander("How to read these charts"):
+                st.write(
+                    "The following plots show characteristics children had preceding their most unstable 12 month period. "
+                    "If a child has has two equally unstable periods the dashboard uses the first of these."
+                    "It uses rolling 12 month periods rather than return years. This means that, for instance, children who had 2 placements in March and 1 in April (crossing a return period) will show up "
+                    "as experiencing instability here where they would not using standard calculations."
+                    "On smaller screens some plots may be easier to see if expanded by using the expand arrows appearing to the top right of the plot when mousing over."
+                    " We can filter to include children whose most unstable period was\: "
+                    "Highly unstable (5+ placements in any 12 month period), "
+                    "unstable (3-4 placements in any 12 months), "
+                    "or stable (2 or less placements in any 12 months). "
+                    "The plots show comparisons to the 903 after filters/slices have been applied with relative percentage differences. "
+                    "We can use this to identify factors or characteristics that are overrepresented in children who have experienced instability compared to the most recent 903 cohort. "
+                    "Positive comparator bars show that the relevant group is overrepresented. For instance, if looking at children with a 5+ placement period of instability, if there is a positive relative difference"
+                    "for the White group, that means the percentage of white children in the group with more than 5 placements is higher than in the most recent 903, meaning they are overrepresented."
+                    ""
+                    "Note that children who have left care before the first year in the data will not appear when selecting years children first became looked after before the first return year of data."
+                )
     with st.expander(
         "Child characteristics at the start of their most unstable period"
     ):
-        st.subheader("How to read these charts")
-        st.write(
-            "The following plots show characteristics children had preceding their most unstable 12 month period. "
-            "If a child has has two equally unstable periods the dashboard uses the first of these."
-            "It uses rolling 12 month periods rather than return years. This means that, for instance, children who had 2 placements in March and 1 in April (crossing a return period) will show up "
-            "as experiencing instability here where they would not using standard calculations."
-            "On smaller screens some plots may be easier to see if expanded by using the expand arrows appearing to the top right of the plot when mousing over."
-            " We can filter to include children whose most unstable period was\: "
-            "Highly unstable (5+ placements in any 12 month period), "
-            "unstable (3-4 placements in any 12 months), "
-            "or stable (2 or less placements in any 12 months). "
-            "The plots show comparisons to the 903 after filters/slices have been applied with relative percentage differences. "
-            "We can use this to identify factors or characteristics that are overrepresented in children who have experienced instability compared to the most recent 903 cohort. "
-            "Positive comparator bars show that the relevant group is overrepresented. For instance, if looking at children with a 5+ placement period of instability, if there is a positive relative difference"
-            "for the White group, that means the percentage of white children in the group with more than 5 placements is higher than in the most recent 903, meaning they are overrepresented."
-            ""
-            "Note that children who have left care before the first year in the data will not appear when selecting years children first became looked after before the first return year of data."
-        )
+       
         in_out_care_selected = st.multiselect(
             "Current care status:",
             ["Still in care", "Closed"],
