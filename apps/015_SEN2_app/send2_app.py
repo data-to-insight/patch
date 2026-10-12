@@ -1,11 +1,11 @@
 # Fixes
-# Changed slice on requests from taking only completed requests to all requests received
-# Sliced requests received to be jan 01 to dec 31 of return year (inclusive)
-# Assessments changed to only include calendar year
-# Removed random table in the middle of assessments
-# Plans starting and plans ending both sliced to include only calendar year and not entire census period
-# Added note to Named Plans to say it includes transferred in (I can remove these and make transferred in a different section if you want?)
-# Changed plans active on census day to only include Starting before calendar year end, and either no cease date, or a cease date after calendar year
+# Drop duplicates of children moved earlier to *hopefully* catch children with multiple names plans appearing twice
+# Requests: changed count from number of children with requests to count of requests by removing drop of duplicates for child IDs
+
+# Need to fix: 
+# Plans starting: Need 615, have 616
+# Plans ending: Need 319 have 321
+# Active on census day: need 3944 have 3940 - change to on census day
 
 
 import pandas as pd
@@ -1037,26 +1037,40 @@ class Datacontainer:
     def __init__(self, data_dict: dict):
         self.data = data_dict
 
-        self.reference_period = self._get_reference_period(self.data.header)
+        self.reference_date = self._get_reference_date(self.data.header)
+        self.reference_period = self._get_census_period(self.data.header)
 
         self.total_children = self.data.total_children
 
         self.persons = self.data.persons
 
-    def _get_reference_period(self, df):
-        """Takes the Year value from the header and uses it to set the reference period start and end dates."""
+    def _get_reference_date(self, df):
+        """Takes the reference date value from the header set the reference date for the datacontainer."""
+        reference_date_xml = df["ReferenceDate"].iloc[0]
+
+        reference_date = pd.to_datetime(reference_date_xml, format=f"%Y-%m-%d")
+        
+
+        return reference_date
+
+
+    def _get_census_period(self, df):
+        """Takes the Year value from the header and uses it to set the census period start and end dates."""
         year = int(df["Year"].iloc[0])
 
         start = pd.to_datetime(f"{str(year-1)}-01-01", format=f"%Y-%m-%d")
         end = pd.to_datetime(f"{str(year-1)}-12-31", format=f"%Y-%m-%d")
 
-        reference_period = {"start": start, "end": end}
+        census_period = {"start": start, "end": end}
 
-        return reference_period
+        return census_period
 
     @property
     def enriched_persons(self):
         enriched_df = self.data.persons.copy()
+
+        enriched_df.drop_duplicates(subset=["Forename", "Surname", "PersonBirthDate"], inplace=True)
+
         enriched_df["EthnicityGroup"] = enriched_df["Ethnicity"].apply(
             lambda x: EthnicMaincategories[x].value
         )
@@ -1193,7 +1207,6 @@ class Datacontainer:
     def enriched_requests(self):
         enriched_df = self.data.requests[
             (self.data.requests["ReceivedDate"].notna())
-            # & (self.data.requests["RequestOutcome"] != "H")
         ].copy()
 
         enriched_df = enriched_df.merge(
@@ -1276,7 +1289,7 @@ class Datacontainer:
             lambda x: calendar.month_name[x.month] if pd.notnull(x) else pd.NaT
         )
 
-        enriched_df.drop_duplicates(subset=["child_id"], inplace=True)
+        #enriched_df.drop_duplicates(subset=["child_id"], inplace=True)
 
         return enriched_df
 
@@ -1933,10 +1946,10 @@ if input_file:
                         (sliced_enriched_np["CeaseDate"].isna())
                         | (
                             sliced_enriched_np["CeaseDate"]
-                            >= sen2.reference_period["end"]
+                            >= sen2.reference_date
                         )
                     )
-                    & (sliced_enriched_np["StartDate"] <= sen2.reference_period["end"])
+                    & (sliced_enriched_np["StartDate"] <= sen2.reference_date)
                 ],
                 "Plans active on census day",
             )
