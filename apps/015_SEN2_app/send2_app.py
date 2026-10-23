@@ -1,11 +1,11 @@
 # Fixes
 # Drop duplicates of children moved earlier to *hopefully* catch children with multiple names plans appearing twice
 # Requests: changed count from number of children with requests to count of requests by removing drop of duplicates for child IDs
+# Plans active on census day changed to correct day
 
 # Need to fix: 
 # Plans starting: Need 615, have 616
 # Plans ending: Need 319 have 321
-# Active on census day: need 3944 have 3940 - change to on census day
 
 
 import pandas as pd
